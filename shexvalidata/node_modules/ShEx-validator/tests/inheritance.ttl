@@ -1,0 +1,10 @@
+PREFIX ex: <http://ex.example/#>
+PREFIX foaf: <http://xmlns.com/foaf/>
+
+<Somebody>
+    foaf:name "Sarah Ann Holmes";
+    ex:biologicalParent
+      [ ex:gender ex:Male;
+        foaf:name "Pat Jones" ],
+      [ ex:gender ex:Female;
+        foaf:name "Gene Holmes" ].

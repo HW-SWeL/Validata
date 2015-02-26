@@ -1,0 +1,303 @@
+PREFIX cito:	<http://purl.org/spar/cito/>
+PREFIX dcat:	<http://www.w3.org/ns/dcat#>
+PREFIX dctypes:	<http://purl.org/dc/dcmitype/>
+PREFIX dct:	    <http://purl.org/dc/terms/>
+PREFIX foaf:	<http://xmlns.com/foaf/0.1/>
+PREFIX freq:	<http://purl.org/cld/freq/>
+PREFIX idot:	<http://identifiers.org/terms#>
+PREFIX lexvo:	<http://lexvo.org/ontology#>
+PREFIX pav:	    <http://purl.org/pav/>
+PREFIX prov:	<http://www.w3.org/ns/prov#>
+PREFIX rdf:	    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:	<http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sd:	    <http://www.w3.org/ns/sparql-service-description#>
+PREFIX xsd:	    <http://www.w3.org/2001/XMLSchema#>
+PREFIX vann:	<http://purl.org/vocab/vann/>
+PREFIX void:    <http://rdfs.org/ns/void#>
+
+start = <SummaryLevelShape>
+
+<SummaryLevelShape> {
+	rdf:type (dctypes:Dataset),    ###void:Dataset should only be used for RDF distributions of the dataset
+	dct:title rdf:langString,    ###
+	dct:identifier xsd:string?,    ###
+	dct:alternative rdf:langString?,    ###
+	dct:description rdf:langString,    ###
+	
+	
+	###so w3c people messed up here. created is NEVER for sumamry, yet createdOn is a MAY?
+	###and one or the other need to be supplied? need to ask somebody about this
+	
+	!dct:created.,    ###One of dct:created or dct:issued MUST be provided.
+	pav:createdOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	
+	pav:authoredOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	pav:curatedOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	!dct:creator .,    ###
+	
+	(dct:contributor IRI? | dct:contributor xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:createdBy IRI? | pav:createdBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:authoredBy IRI? | pav:authoredBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:curatedBy IRI? | pav:curatedBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	
+	!dct:issued .,    ###One of dct:created or dct:issued MUST be provided.
+	dct:publisher IRI,    ###
+	foaf:page IRI?,    ###SHOULD### 
+	dct:license IRI,    ###
+	dct:rights rdf:langString?,    ###
+	!dct:language .,    ###
+	
+	###another weird w3c thing. what is skos?
+	#dcat:theme skos:Concept?,    ###
+	
+	
+	dcat:keyword xsd:string?,    ###
+	!void:vocabulary .,    ###Only for RDF datasets
+	!dct:conformsTo .,    ###
+	cito:citesAsAuthority IRI?,    ###
+	!dct:hasPart .,    ###For non-RDF datasets
+	!void:subset .,    ###Only for RDF datasets
+	!idot:preferredPrefix .,    ###
+	!idot:alternatePrefix .,    ###
+	!idot:identifierPattern .,    ###
+	!void:uriRegexPattern .,    ###
+	!idot:accessPattern .,    ###
+	!idot:exampleIdentifier .,    ###
+	!void:exampleResource .,    ###
+	!void:inDataset .,    ###Only for RDF datasets
+	!pav:version .,    ###Some datasets are versioned by date released
+	!pav:isVersionOf .,    ###A data provider MAY choose to also include a pav:hasCurrentVersion from the Summary Level dataset description to the most recent Version Level description. If the property is provided then the provider takes on the task of ensuring that it is uptodate.
+	!pav:previousVersion .,    ###Note that it is nonsensical to have an unversioned description point to a previous version of the dataset using the PAV property.
+	pav:hasCurrentVersion IRI?,    ###Should only be used by authoriative sources. Users of the data should ensure that there is only one such relation for each summary level dataset.
+	!dct:source .,    ###For datasets used in whole or in part.
+	!pav:retrievedFrom .,    ###For datasets used in whole without modification.
+	!prov:wasDerivedFrom .,    ###For datasets used in whole or in part with modification.
+	!pav:createdWith .,    ###Identifies the version of the tool/script used to generate the instance data in the specified format
+	
+	
+	#dctype not defined either...
+	#dct:accrualPeriodicity dctype:Frequency,    ###SHOULD### Frequency of change is a property of the abstract dataset. The version level MUST never change. A new version MUST be created.
+	
+	!dct:format .,    ###Indicates the specific format of the formatted dataset files.
+	!dcat:distribution .,    ###Versioned description should point to the description of all formatted dataset descriptions.Formatted descriptions should point to the files containing the data.
+	dcat:accessURL IRI? ,    ###To indicate a page/location to download files.
+	!dcat:downloadURL .,    ###For non-RDF resources we need a way of pointing to the download
+	!void:dataDump .,    ###Only used for formatted descriptions of RDF datasets. Must point to RDF file in some serialisation; file may be compressed. Must not point to the directory containing the files.
+	!dcat:landingPage .,    ###Link to the documentation page for an API through which the data can be accessed.
+	!void:triples .,    ###Only for RDF datasets
+	!void:entities .,    ###Only for RDF datasets
+	!void:distinctSubjects .,    ###Only for RDF datasets
+	!void:properties .,    ###Only for RDF datasets
+	!void:distinctObjects .,    ###Only for RDF datasets
+	
+	#why are there comments here?
+	#!###:distinctLiterals .,    ###Only for RDF datasets
+	
+	!sd:namedGraph .,    ###Only for RDF datasets
+	!void:propertyPartition .,    ###Only for RDF datasets
+	!void:classPartition .    ###Only for RDF datasets
+}
+
+<VersionLevelShape> {
+	rdf:type (dctypes:Dataset) ,    ###void:Dataset should only be used for RDF distributions of the dataset
+	dct:title rdf:langString,    ###
+	dct:identifier xsd:string?,    ###
+	dct:alternative rdf:langString?,    ###
+	dct:description rdf:langString,    ###
+	dct:created xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.
+	pav:createdOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	pav:authoredOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	pav:curatedOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	
+	(dct:creator IRI? | dct:creator xsd:string?),    ###
+	(dct:contributor IRI? | dct:contributor xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:createdBy IRI? | pav:createdBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:authoredBy IRI? | pav:authoredBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:curatedBy IRI? | pav:curatedBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	
+	dct:issued xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.
+	dct:publisher IRI,    ###
+	foaf:page IRI?,    ###SHOULD###
+	dct:license IRI,    ###
+	dct:rights rdf:langString?,    ###
+	
+	# god damn it w3c, what does this even mean
+	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD### 
+	
+	!void:vocabulary .,    ###Only for RDF datasets
+	dct:conformsTo IRI?,    ###
+	cito:citesAsAuthority IRI?,    ###
+	!dct:hasPart .,    ###For non-RDF datasets
+	!void:subset .,    ###Only for RDF datasets
+	!idot:preferredPrefix .,    ###
+	!idot:alternatePrefix .,    ###
+	!idot:identifierPattern .,    ###
+	!void:uriRegexPattern .,    ###
+	!idot:accessPattern .,    ###
+	!idot:exampleIdentifier .,    ###
+	!void:exampleResource .,    ###
+	!void:inDataset .,    ###Only for RDF datasets
+	pav:version xsd:string,    ###Some datasets are versioned by date released
+	pav:isVersionOf IRI,    ###A data provider MAY choose to also include a pav:hasCurrentVersion from the Summary Level dataset description to the most recent Version Level description. If the property is provided then the provider takes on the task of ensuring that it is uptodate.
+	pav:previousVersion IRI?,    ###SHOULD### Note that it is nonsensical to have an unversioned description point to a previous version of the dataset using the PAV property.
+	!pav:hasCurrentVersion .,    ###Should only be used by authoriative sources. Users of the data should ensure that there is only one such relation for each summary level dataset.
+	dct:source IRI?,    ###SHOULD### For datasets used in whole or in part.
+	pav:retrievedFrom IRI?,    ###SHOULD### For datasets used in whole without modification.
+	prov:wasDerivedFrom IRI?,    ###SHOULD### For datasets used in whole or in part with modification.
+	!pav:createdWith .,    ###Identifies the version of the tool/script used to generate the instance data in the specified format
+	!dct:accrualPeriodicity .,    ###Frequency of change is a property of the abstract dataset. The version level MUST never change. A new version MUST be created.
+	!dct:format .,    ###Indicates the specific format of the formatted dataset files.
+	
+	#more unclear table syntax by w3c
+	#dcat:distribution [ a dcat:Distribution; dcat:downloadURL <uri>],    ###SHOULD### Versioned description should point to the description of all formatted dataset descriptions.Formatted descriptions should point to the files containing the data.
+	
+	
+	dcat:accessURL IRI?,    ###To indicate a page/location to download files.
+	!dcat:downloadURL .,    ###For non-RDF resources we need a way of pointing to the download
+	!void:dataDump .,    ###Only used for formatted descriptions of RDF datasets. Must point to RDF file in some serialisation; file may be compressed. Must not point to the directory containing the files.
+	dcat:landingPage IRI?,    ###Link to the documentation page for an API through which the data can be accessed.
+	!void:triples .,    ###Only for RDF datasets
+	!void:entities .,    ###Only for RDF datasets
+	!void:distinctSubjects .,    ###Only for RDF datasets
+	!void:properties .,    ###Only for RDF datasets
+	!void:distinctObjects .,    ###Only for RDF datasets
+	
+	#more w3c chaos
+	#!###:distinctLiterals .,    ###Only for RDF datasets
+	
+	!sd:namedGraph .,    ###Only for RDF datasets
+	!void:propertyPartition .,    ###Only for RDF datasets
+	!void:classPartition .    ###Only for RDF datasets
+}
+
+<DistributionLevelShape> {
+	rdf:type (dctypes:Dataset),    ###void:Dataset should only be used for RDF distributions of the dataset
+	dct:title rdf:langString,    ###
+	dct:identifier xsd:string?,    ###
+	dct:alternative rdf:langString?,    ###
+	dct:description rdf:langString,    ###
+	dct:created xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.
+	pav:createdOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	pav:authoredOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	pav:curatedOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	
+	(dct:creator IRI | dct:creator xsd:string),    ###
+	(dct:contributor IRI? | dct:contributor  xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:createdBy IRI? | pav:createdBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:authoredBy IRI? | pav:authoredBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	(pav:curatedBy IRI? | pav:curatedBy xsd:string?)?,    ###Fine-grained assignation of the creation task
+	
+	dct:issued xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.
+	dct:publisher IRI,    ###
+	foaf:page IRI?,    ###SHOULD### 
+	dct:license IRI,    ###
+	dct:rights rdf:langString?,    ###
+	
+	#w3c
+	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD### 
+	
+	dct:conformsTo IRI?,    ###SHOULD### 
+	cito:citesAsAuthority IRI?,    ###
+	dct:hasPart IRI?,    ###For non-RDF datasets
+	idot:preferredPrefix xsd:string?,    ###
+	idot:alternatePrefix xsd:string?,    ###
+	idot:identifierPattern xsd:string?,    ###
+	void:uriRegexPattern xsd:string?,    ###
+	idot:accessPattern xsd:string?,    ###
+	idot:exampleIdentifier xsd:string?,    ###SHOULD### 
+	void:exampleResource IRI?,    ###SHOULD### 
+	pav:version xsd:string?,    ###SHOULD### Some datasets are versioned by date released
+	!pav:isVersionOf .,    ###A data provider MAY choose to also include a pav:hasCurrentVersion from the Summary Level dataset description to the most recent Version Level description. If the property is provided then the provider takes on the task of ensuring that it is uptodate.
+	pav:previousVersion IRI?,    ###SHOULD### Note that it is nonsensical to have an unversioned description point to a previous version of the dataset using the PAV property.
+	!pav:hasCurrentVersion .,    ###Should only be used by authoriative sources. Users of the data should ensure that there is only one such relation for each summary level dataset.
+	dct:source IRI?,    ###SHOULD### For datasets used in whole or in part.
+	pav:retrievedFrom IRI?,    ###SHOULD### For datasets used in whole without modification.
+	prov:wasDerivedFrom IRI?,    ###SHOULD### For datasets used in whole or in part with modification.
+	pav:createdWith IRI?,    ###Identifies the version of the tool/script used to generate the instance data in the specified format
+	!dct:accrualPeriodicity .,    ###Frequency of change is a property of the abstract dataset. The version level MUST never change. A new version MUST be created.
+	
+	#w3c
+	#dct:format [ iana | edam | biosharing | xsd:String ],    ###Indicates the specific format of the formatted dataset files.
+	
+	!dcat:distribution .,    ###Versioned description should point to the description of all formatted dataset descriptions.Formatted descriptions should point to the files containing the data.
+	dcat:accessURL IRI?,    ###To indicate a page/location to download files.
+	dcat:downloadURL IRI?,    ###SHOULD### For non-RDF resources we need a way of pointing to the download
+	dcat:landingPage IRI?    ###Link to the documentation page for an API through which the data can be accessed.
+
+	
+	#w3c
+	#void:propertyPartition [void:property <IRI>; void:triples "###"^^xsd:integer],    ###SHOULD### Only for RDF datasets
+	#void:classPartition [void:class <IRI>; void:entities "###"^^xsd:integer],    ###SHOULD### Only for RDF datasets
+
+}
+
+<RDFDistributionLevelShape> {
+	rdf:type (void:Dataset),    ###void:Dataset should only be used for RDF distributions of the dataset
+	dct:title rdf:langString,    ###
+	dct:identifier xsd:string?,    ###
+	dct:alternative rdf:langString?,    ###
+	dct:description rdf:langString,    ###
+	dct:created xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.
+	pav:createdOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	pav:authoredOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	pav:curatedOn xsd:dateTime?,    ###Fine-grained assignation of the creation task
+	(dct:creator IRI | dct:creator xsd:string),    ###
+	(dct:contributor IRI | dct:contributor  xsd:string)?,    ###Fine-grained assignation of the creation task
+	(pav:createdBy IRI | pav:createdBy xsd:string)?,    ###Fine-grained assignation of the creation task
+	(pav:authoredBy IRI | pav:authoredBy xsd:string)?,    ###Fine-grained assignation of the creation task
+	(pav:curatedBy IRI | pav:curatedBy xsd:string)?,    ###Fine-grained assignation of the creation task
+	dct:issued xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.
+	dct:publisher IRI,    ###
+	foaf:page IRI?,    ###SHOULD### 
+	dct:license IRI,    ###
+	dct:rights rdf:langString?,    ###
+	
+	#w3c
+	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD### 
+	
+	void:vocabulary IRI?,    ###SHOULD### Only for RDF datasets
+	dct:conformsTo IRI?,    ###SHOULD### 
+	cito:citesAsAuthority IRI?,    ###
+	void:subset IRI?,    ###Only for RDF datasets
+	idot:preferredPrefix xsd:string?,    ###
+	idot:alternatePrefix xsd:string?,    ###
+	idot:identifierPattern xsd:string?,    ###
+	void:uriRegexPattern xsd:string?,    ###
+	idot:accessPattern xsd:string?,    ###
+	idot:exampleIdentifier xsd:string?,    ###SHOULD### 
+	void:exampleResource IRI?,    ###SHOULD### 
+	void:inDataset IRI?,    ###SHOULD### Only for RDF datasets
+	pav:version xsd:string?,    ###SHOULD### Some datasets are versioned by date released
+	!pav:isVersionOf .,    ###A data provider MAY choose to also include a pav:hasCurrentVersion from the Summary Level dataset description to the most recent Version Level description. If the property is provided then the provider takes on the task of ensuring that it is uptodate.
+	pav:previousVersion IRI?,    ###SHOULD### Note that it is nonsensical to have an unversioned description point to a previous version of the dataset using the PAV property.
+	!pav:hasCurrentVersion .,    ###Should only be used by authoriative sources. Users of the data should ensure that there is only one such relation for each summary level dataset.
+	dct:source IRI?,    ###SHOULD### For datasets used in whole or in part.
+	pav:retrievedFrom IRI?,    ###SHOULD### For datasets used in whole without modification.
+	prov:wasDerivedFrom IRI?,    ###SHOULD### For datasets used in whole or in part with modification.
+	pav:createdWith IRI?,    ###Identifies the version of the tool/script used to generate the instance data in the specified format
+	!dct:accrualPeriodicity .,    ###Frequency of change is a property of the abstract dataset. The version level MUST never change. A new version MUST be created.
+	
+	#w3c
+	#dct:format [ iana | edam | biosharing | xsd:String ],    ###Indicates the specific format of the formatted dataset files.
+	
+	!dcat:distribution .,    ###Versioned description should point to the description of all formatted dataset descriptions.Formatted descriptions should point to the files containing the data.
+	dcat:accessURL IRI?,    ###To indicate a page/location to download files.
+	dcat:downloadURL IRI?,    ###SHOULD### For non-RDF resources we need a way of pointing to the download
+	void:dataDump IRI?,    ###SHOULD### Only used for formatted descriptions of RDF datasets. Must point to RDF file in some serialisation; file may be compressed. Must not point to the directory containing the files.
+	dcat:landingPage IRI?,    ###Link to the documentation page for an API through which the data can be accessed.
+	void:triples xsd:integer?,    ###SHOULD### Only for RDF datasets
+	void:entities xsd:integer?,    ###SHOULD### Only for RDF datasets
+	void:distinctSubjects xsd:integer?,    ###SHOULD### Only for RDF datasets
+	void:properties xsd:integer?,    ###SHOULD### Only for RDF datasets
+	void:distinctObjects xsd:integer?,    ###SHOULD### Only for RDF datasets
+	
+	#W3C
+	###:distinctLiterals xsd:integer?,    ###SHOULD### Only for RDF datasets
+	
+	sd:namedGraph sd:NamedGraph?    ###SHOULD### Only for RDF datasets
+	
+	#w3c
+	#void:propertyPartition [void:property <IRI>; void:triples "###"^^xsd:integer],    ###SHOULD### Only for RDF datasets
+	#void:classPartition [void:class <IRI>; void:entities "###"^^xsd:integer],    ###SHOULD### Only for RDF datasets
+
+}

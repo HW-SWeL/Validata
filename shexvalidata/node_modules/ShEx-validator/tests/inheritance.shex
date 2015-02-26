@@ -1,0 +1,25 @@
+PREFIX ex: <http://ex.example/#>
+PREFIX foaf: <http://xmlns.com/foaf/>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+start = <birthCertificateShape>
+
+<PersonShape> { # common structure for shapes below
+    foaf:name xsd:string
+}
+
+<birthCertificateShape> {
+    &<PersonShape>,
+    ex:biologicalParent @<FatherShape>,
+    ex:biologicalParent @<MotherShape>
+}
+
+<FatherShape> {
+    &<PersonShape>,
+    ex:gender (ex:Male)
+}
+
+<MotherShape> {
+    &<PersonShape>,
+    ex:gender (ex:Female)
+}

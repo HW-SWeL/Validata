@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+    <head lang="en">
+        <meta charset="UTF-8">
+        <title></title>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+
+        <link rel="icon" type="image/png" href="images/icon-16.png"/>
+
+        <title>Coords</title>
+        <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css"/>
+        <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.css"/>
+        <link rel="stylesheet" href="bower_components/lato/css/lato.css"/>
+        <link rel="stylesheet" href="bower_components/animate.css/animate.css"/>
+
+        <link rel="stylesheet" href="stylesheets/structure.css"/>
+        <link rel="stylesheet" href="stylesheets/media-sizes.css"/>
+    </head>
+    <body>
+
+        <div class="container-fluid">
+
+            <div class="col-md-12 column">
+
+                <div class="row">
+
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">ShEx Validata</h3>
+                        </div>
+                        <div class="panel-body">
+                            ShEx Validata is an intuitive web interface for the
+                            <a href="https://github.com/HeriotWattMEng2015/ShEx-validator">ShEx Validator</a> project...
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <div class="row clearfix">
+                        <div class="col-md-6 column">
+
+                            <div class="panel panel-primary">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">Schema</h3>
+                                </div>
+                                <div class="panel-body">
+                                    <textarea id="schemaText" class="fullHeightTextarea"></textarea>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="col-md-6 column">
+
+                            <div class="panel panel-primary">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">Data</h3>
+                                </div>
+                                <div class="panel-body">
+                                    <textarea id="dataText" class="fullHeightTextarea"></textarea>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+
+                    <div class="panel-group" id="validation-messages-accordion" role="tablist" aria-multiselectable="true">
+                        
+                        <div class="panel panel-danger">
+                            <div class="panel-heading" role="tab" id="headingOne">
+                                <a class="panel-title" data-toggle="collapse" data-parent="#validation-messages-accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                    Errors
+                                </a>
+                            </div>
+                            <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
+                                <div class="panel-body">
+                                    Example error message
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="panel panel-warning">
+                            <div class="panel-heading" role="tab" id="headingTwo">
+                                <a class="panel-title collapsed" data-toggle="collapse" data-parent="#validation-messages-accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                    Warnings
+                                </a>
+                            </div>
+                            <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+                                <div class="panel-body">
+                                    Example warning message
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="panel panel-success">
+                            <div class="panel-heading" role="tab" id="headingThree">
+                                <a class="panel-title collapsed" data-toggle="collapse" data-parent="#validation-messages-accordion" href="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                    Pass
+                                </a>
+                            </div>
+                            <div id="collapseThree" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
+                                <div class="panel-body">
+                                    Example validation success message
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+
+            </div>
+
+        </div>
+
+        <script src="bower_components/jquery/dist/jquery.js"></script>
+        <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+
+        <script src="javascripts/ShExLog.js"></script>
+        <script src="javascripts/DocumentReady.js"></script>
+        <script src="javascripts/validata-bundled.js"></script>
+
+    </body>
+</html>
