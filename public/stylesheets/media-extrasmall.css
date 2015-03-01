@@ -1,0 +1,22 @@
+
+body > .container-fluid {
+    padding-top: 15px;
+}
+
+.fullHeightTextarea {
+    width: 100%;
+    height: 400px;
+}
+
+div#validation-messages-accordion a.panel-title {
+    user-select: none;
+    -webkit-user-select: none;
+    
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+div#validation-messages-accordion a.panel-title:hover {
+    text-decoration: none;
+}

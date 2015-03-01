@@ -1,0 +1,21 @@
+/* 
+    Open-source icons featured in the Google Material Design specification 
+    Source: https://github.com/google/material-design-icons
+    Preview: http://google.github.io/material-design-icons/
+*/
+
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-action.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-alert.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-av.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-communication.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-content.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-device.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-editor.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-file.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-hardware.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-image.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-maps.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-navigation.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-notification.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-social.css);
+@import url(../../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.css);
