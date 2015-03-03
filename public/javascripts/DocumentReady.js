@@ -58,31 +58,24 @@ $(function documentReady()
                 rawValidationResults.append( JSON.stringify(errorMessage) + "\n\n" );
             },
 
-            tripleValidated: function (validation) {
-                ShExLog.i("callback: tripleValidated");
-                ShExLog.i(validation);
+            validationResult: function (resultObject) {
+                ShExLog.i("callback: dataParseError");
+                ShExLog.i(resultObject);
 
-                rawValidationResults.append("callback: tripleValidated\n");
-                rawValidationResults.append( JSON.stringify(validation) + "\n\n" );
-            },
-
-            validationError: function (validationError) {
-                ShExLog.i("callback: validationError");
-                ShExLog.i(validationError);
-
-                rawValidationResults.append("callback: validationError\n");
-                rawValidationResults.append( JSON.stringify(validationError) + "\n\n" );
+                rawValidationResults.append("callback: validationResult\n");
+                rawValidationResults.append( JSON.stringify(resultObject) + "\n\n" );
             }
+            
         };
 
         var options = {
             closedShapes: true,
-            startingNodes: []
+            startingNodes: ['Somebody']
         };
 
         ShExValidator.validate(schemaText, dataText, callbacks, options);
     });
-
+    
     function onNext(parent, panel) {
         hash = "#" + panel.id;
         $(".acc-wizard-sidebar",$(parent))

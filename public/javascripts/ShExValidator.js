@@ -10231,10 +10231,9 @@ function validate(schemaText, dataText, callbacks, options) {
             a[1].db,                       // db
             a[1].resolver,
             options.closedShapes,       // closed shapes
-            callbacks.tripleValidated,  // Success callback
-            callbacks.validationError  // Error callback
+            callbacks.validationResult  // validation result
         );
-    }, function(err) { throw err; });
+    });
 }
 
 module.exports.validate = validate;
@@ -12491,13 +12490,18 @@ exports.parseSchema = function parseSchema(schemaText) {
 };
 
 },{"./includes/Erics_RDF.js":2,"./includes/shexParser.js":3,"promise":13}],20:[function(require,module,exports){
-var shexSchemaParser = require('./includes/shexParser.js');
 var RDF = require('./includes/Erics_RDF.js');
 var dataParser = require("./dataParser.js");
 
 
-function validate(schema, schemaResolver, startingNodes, db, dbResolver, closedShapes, tripleValidatedCallback, validationErrorCallback) {
-    //BEGIN HACKINESS
+function validate(schema,
+                  schemaResolver,
+                  startingNodes,
+                  db,
+                  dbResolver,
+                  closedShapes,
+                  validationResult) {
+
 
     schema.alwaysInvoke = {};
 
@@ -12516,16 +12520,41 @@ function validate(schema, schemaResolver, startingNodes, db, dbResolver, closedS
             true
         );
 
-        if(validation.passed()) tripleValidatedCallback(validation);
-        else validationErrorCallback(validation);
+        var cleanedResults = cleanupValidation(validation, dbResolver, startingNode);
+
+        validationResult(cleanedResults);
 
     }
+}
 
+function cleanupValidation(valRes, resolver, startingNode) {
+    var errors = valRes.errors.map(function(fail) {
+        var rule = RDF.Triple(fail.rule.label, fail.rule.nameClass.term, fail.rule.valueClass.type);
+        return {
+            name: fail._,
+            triple : rule
+        }
+    });
+
+    var matches = valRes.matches.map(function (ruleMatch) {
+        var match = RDF.Triple(ruleMatch.rule.label, ruleMatch.rule.nameClass.term, ruleMatch.rule.valueClass.type);
+        return {
+            rule : match,
+            triple : ruleMatch.triple
+        }
+    });
+
+    return {
+        errors: errors,
+        matches: matches,
+        startingNode: startingNode,
+        passed: valRes.passed()
+    };
 }
 
 module.exports.validate = validate;
 
-},{"./dataParser.js":1,"./includes/Erics_RDF.js":2,"./includes/shexParser.js":3}],21:[function(require,module,exports){
+},{"./dataParser.js":1,"./includes/Erics_RDF.js":2}],21:[function(require,module,exports){
 /* 
     Build ShExValidator.js client side bundle using browserify with the following commands:
     cd /home/shex/ShExValidata
