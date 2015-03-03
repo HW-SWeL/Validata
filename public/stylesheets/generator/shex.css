@@ -1,0 +1,66 @@
+/* ShEx Creator*/
+
+.shex-shape-name {
+	font-size: medium;
+}
+
+.shex-rule-arc:after {
+	content: " (" attr(cardinality) ") ";
+	padding: 2px;
+}
+
+.shex-rule-arc[cardinality=1]:after 
+{	content: "";
+}
+
+/*.shex-rule-arc:after:after {
+	content: " (" attr(requirement) ") ";
+	position: relative;
+	right: 0px;
+	padding: 2px;
+}*/
+
+.shex-rule-group {
+	padding: 15px;
+}
+
+.shex-rule-arc {
+
+}
+
+.shex-rule-arc > .shex-class {
+	display: inline-block;
+}
+
+.shex-rule-add {
+	cursor: pointer;
+	border-radius: 5px;
+	background: #FF0;
+	padding: 2px;
+}
+
+
+.shex-type > .shex-prefix, .shex-type > .shex-identifier {
+	display: inline-block;
+}
+
+.shex-prefix {
+	font-weight: bold;
+	color: #886;
+}
+
+.shex-prefix + .shex-identifier:before {
+	margin-left: -4px;
+	content: ":";
+	color: #886;
+}
+
+.shex-class-name + .shex-class-value:before {
+	margin-left: -4px;
+	content: " - ";
+	color: #888;
+}
+
+.shex-class-name + .shex-class-value {
+	margin-left: -8px;
+}

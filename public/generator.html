@@ -2,28 +2,112 @@
 <html>
     <head lang="en">
         <meta charset="UTF-8">
-        <title></title>
-
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 
         <title>ShEx Schema Generator</title>
         <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css"/>
         <link rel="stylesheet" href="components/animate.css/animate.css"/>
-
         <link rel="stylesheet" href="stylesheets/vendor/material-design-icons.css"/>
 
         <link rel="stylesheet" href="stylesheets/media-sizes.css"/>
+
+        <link rel="stylesheet" href="stylesheets/generator/shex.css"/>
     </head>
     <body>
-        <h1>ShEx Schema Generator</h1>
-        <p>This works!</p>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="lead well">
+                    <h2>ShEx Creator: Shape Expression creator</h2>
+                    <p>
+                        Create, modify and export shex documents.
+                    </p>
+                </div>
+            </div>
 
+            <div class="row acc-wizard">
 
+                <div class="col-md-3">
+                    <button class="btn btn-success">Load ShEx</button>
+                    <button class="btn btn-success disabled">Create ShEx From OWL</button>
+                </div>
+
+                <div class="col-md-9">
+
+                    <div id="validation-steps" class="panel-group">
+
+                        <div class="panel panel-primary">
+
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    Subjects
+                                </h4>
+                            </div>
+
+                            <div class="panel-body">
+                                <div class="shex-shapes">
+                                    <div class="panel panel-default shex-shape">
+                                        <div class="panel-heading panel-title shex-shape-name">SubjectName</div>
+                                        <div class="panel-body shex-rule-group">
+                                            <div class="shex-rule-arc">
+                                                <div class="shex-class shex-class-name">
+                                                    <div class="shex-type">
+                                                        <div class="shex-prefix">foaf</div>
+                                                        <div class="shex-identifier">name</div>
+                                                    </div>
+                                                </div>
+                                                <div class="shex-class shex-class-value">
+                                                    <div class="shex-reference">
+                                                        SubjectName
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="shex-rule-or">
+                                                <div class="shex-rule-or-a">
+                                                    <div class="shex-rule-group">
+                                                        <div class="shex-rule-arc" cardinality="1" requirement="MUST">
+                                                            <div class="shex-name">foaf:name</div>
+                                                            <div class="shex-value">xsd:string</div>
+                                                        </div>
+                                                        <button class="shex-rule-add">Add rule...</button>
+                                                    </div>
+                                                </div>
+                                                <div class="shex-rule-or-b">
+                                                    <div class="shex-rule-group">
+                                                        <div class="shex-rule-arc">
+                                                            <div class="shex-name">foaf:name</div>
+                                                            <div class="shex-value">xsd:string</div>
+                                                        </div>
+                                                        <div class="shex-rule-arc">
+                                                            <div class="shex-name">foaf:name</div>
+                                                            <div class="shex-value">xsd:string</div>
+                                                        </div>
+                                                        <div class="shex-rule-arc">
+                                                            <div class="shex-name">foaf:name</div>
+                                                            <div class="shex-value">xsd:string</div>
+                                                        </div>
+                                                        <button class="shex-rule-add">Add rule...</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button class="shex-rule-add btn btn-success">Add rule...</button>
+                                        </div>
+                                    </div>
+                                    <button class="shex-shape-add btn btn-success">Add subject...</button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
         <script src="components/jquery/dist/jquery.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.js"></script>
+        <script src="javascripts/vendor/acc-wizard.js"></script>
 
         <script src="javascripts/ShExLog.js"></script>
-        <script src="javascripts/admin/DocumentReady.js"></script>
-
+        <script src="javascripts/DocumentReady.js"></script>
+        <script src="javascripts/ShExValidator.js"></script>
     </body>
 </html>
