@@ -1,20 +1,20 @@
 
-ol.acc-wizard-sidebar {
-    counter-reset: acc-wizard-counter;
+ol.accordionwizard-sidebar {
+    counter-reset: accordionwizard-counter;
     margin-left: 0;
     padding-left: 0;
 }
 
-ol.acc-wizard-sidebar li {
+ol.accordionwizard-sidebar li {
     position: relative;
     margin: 0 0 0.5em 2em;
     padding: 0.25em 0.75em;
     list-style: none;
 }
 
-ol.acc-wizard-sidebar li:before {
-    content: counter(acc-wizard-counter);
-    counter-increment: acc-wizard-counter;
+ol.accordionwizard-sidebar li:before {
+    content: counter(accordionwizard-counter);
+    counter-increment: accordionwizard-counter;
     position: absolute;
     left: -2em;
     top: 50%;
@@ -30,27 +30,27 @@ ol.acc-wizard-sidebar li:before {
     border-radius: 2em;
 }
 
-ol.acc-wizard-sidebar li a {
+ol.accordionwizard-sidebar li a {
     color: #333333;
 }
 
-ol.acc-wizard-sidebar li:before {
+ol.accordionwizard-sidebar li:before {
     background: #333333;
 }
 
-ol.acc-wizard-sidebar li.acc-wizard-completed {
+ol.accordionwizard-sidebar li.accordionwizard-completed {
     color: #999999;
 }
 
-ol.acc-wizard-sidebar li.acc-wizard-completed a {
+ol.accordionwizard-sidebar li.accordionwizard-completed a {
     color: #999999;
 }
 
-ol.acc-wizard-sidebar li.acc-wizard-completed:before {
+ol.accordionwizard-sidebar li.accordionwizard-completed:before {
     background: #999999;
 }
 
-ol.acc-wizard-sidebar li.acc-wizard-completed:after {
+ol.accordionwizard-sidebar li.accordionwizard-completed:after {
     display: inline-block;
     vertical-align: middle;
     font-size: 1.3333333333333333em;
@@ -60,23 +60,23 @@ ol.acc-wizard-sidebar li.acc-wizard-completed:after {
     bottom: 0.1em;
 }
 
-ol.acc-wizard-sidebar li.acc-wizard-active {
+ol.accordionwizard-sidebar li.accordionwizard-active {
     color: #0088cc;
 }
 
-ol.acc-wizard-sidebar li.acc-wizard-active a {
+ol.accordionwizard-sidebar li.accordionwizard-active a {
     color: #0088cc;
 }
 
-ol.acc-wizard-sidebar li.acc-wizard-active:before {
+ol.accordionwizard-sidebar li.accordionwizard-active:before {
     background: #0088cc;
 }
 
-ol.acc-wizard-sidebar li:first-child {
+ol.accordionwizard-sidebar li:first-child {
     margin-top: 0.75em;
 }
 
-.acc-wizard-step {
+.accordionwizard-step {
     margin-top: 2em;
 }
 

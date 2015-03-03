@@ -49,7 +49,7 @@
 
     //    "use strict";
 
-    var pluginName = 'accwizard';
+    var pluginName = 'accordionwizard';
 
     // The plug-in itself is implemented as an object. Here's the
     // constructor function
@@ -295,8 +295,8 @@
         }
 
         // Get/set a plugin option.
-        // Get usage: $('#el').acc-wizard('option', 'key');
-        // Set usage: $('#el').acc-wizard('option', 'key', value);
+        // Get usage: $('#el').accordionwizard('option', 'key');
+        // Set usage: $('#el').accordionwizard('option', 'key', value);
         function option (key, val) {
             if (val) {
                 options[key] = val;
@@ -306,7 +306,7 @@
         }
 
         // Destroy plugin.
-        // Usage: $('#el').acc-wizard('destroy');
+        // Usage: $('#el').accordionwizard('destroy');
         function destroy() {
             hook('onDestroy');
         }
@@ -389,11 +389,11 @@
     // $('#el').acc-wazard('option', 'key', value);
     $.fn[pluginName].defaults = {
         addButtons:     true,                   // add next/prev buttons to panels
-        sidebar:        ".acc-wizard-sidebar",  // selector for task sidebar
-        activeClass:    "acc-wizard-active",    // class to indicate the active task in sidebar
-        completedClass: "acc-wizard-completed", // class to indicate task is complete
-        todoClass:      "acc-wizard-todo",      // class to indicate task is still pending
-        stepClass:      "acc-wizard-step",      // class for step buttons within panels
+        sidebar:        ".accordionwizard-sidebar",  // selector for task sidebar
+        activeClass:    "accordionwizard-active",    // class to indicate the active task in sidebar
+        completedClass: "accordionwizard-completed", // class to indicate task is complete
+        todoClass:      "accordionwizard-todo",      // class to indicate task is still pending
+        stepClass:      "accordionwizard-step",      // class for step buttons within panels
         nextText:       "Next Step",            // text for next button
         backText:       "Go Back",              // text for back button
         nextType:       "submit",               // HTML input type for next button

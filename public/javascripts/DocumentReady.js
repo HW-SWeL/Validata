@@ -74,20 +74,20 @@ $(function documentReady()
         };
 
         ShExValidator.validate(schemaText, dataText, callbacks, options);
+        
     });
     
-    function onNext(parent, panel) {
-        hash = "#" + panel.id;
-        $(".acc-wizard-sidebar",$(parent))
-            .children("li")
-            .children("a[href='" + hash + "']")
-            .parent("li")
-            .removeClass("acc-wizard-todo")
-            .addClass("acc-wizard-completed");
-    }
     
-    $(".acc-wizard").accwizard({
-        onNext: onNext
+    $(".accordionwizard").accordionwizard({
+        onNext: function onNext(parent, panel) {
+            hash = "#" + panel.id;
+            $(".accordionwizard-sidebar",$(parent))
+                .children("li")
+                .children("a[href='" + hash + "']")
+                .parent("li")
+                .removeClass("accordionwizard-todo")
+                .addClass("accordionwizard-completed");
+        }
     });
     
 });
