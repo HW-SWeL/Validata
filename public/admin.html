@@ -17,8 +17,86 @@
         <link rel="stylesheet" href="stylesheets/media-sizes.css"/>
     </head>
     <body>
-        
-        
+
+        <div class="container-fluid">
+            <div class="row">
+                <div class="lead well">
+                    <h2>ShEx Admin Panel</h2>
+                    <p>Create, modify and export config files for use with Validata</p>
+                </div>
+            </div>
+
+            <div class="col-md-9">
+
+                <div class="panel panel-primary">
+
+                    <div class="panel-heading">
+                        <h4 class="panel-title">
+                            Upload a schema
+                        </h4>
+                    </div>
+
+                    <div class="panel-body">
+                        <form class="form-horizontal">
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Title</label>
+                                <div class="col-sm-10">
+                                    <input type="text" name="Title" class="form-control"/>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Description</label>
+                                <div class="col-md-10">
+                                    <input type="text" name="Description" class="form-control" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Schema</label>
+                                <div class="col-sm-10">
+                                    <textarea name="" id="" cols="30" rows="10" class="form-control"></textarea>
+                                </div>
+                            </div>
+
+                            <button id="finish" class="btn btn-primary">
+                                <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Config
+                            </button>
+
+                            <button id="add" class="btn btn-success">
+                                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add another schema
+                            </button>
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h5 class="panel-title">
+                            Current Schemas
+                        </h5>
+                    </div>
+                    <div class="panel panel-body">
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <p>Have a config file already?
+                    <button id="import" class="btn btn-xs btn-warning">
+                        <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Import it here
+                    </button>
+                </p>
+            </div>
+
+        </div>
         
         <script src="components/jquery/dist/jquery.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.js"></script>
