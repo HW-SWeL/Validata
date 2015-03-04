@@ -48,7 +48,7 @@
 
                     <div id="validation-steps" class="panel-group">
 
-                        <div id="selectSchema" class="panel panel-info wizardStepPanel">
+                        <div id="selectSchema" class="panel panel-primary wizardStepPanel">
 
                             <div class="panel-heading">
                                 <h4 class="panel-title">Select Schema</h4>
@@ -83,10 +83,6 @@
                                             <span id="customSchemaDescription" class="help-block">Paste the content of your ShEx schema here. If you don't have a schema yet, try our <a href="/generator" target="_blank">ShEx Schema Generator</a> tool!</span>
                                         </div>
 
-                                        <div class="wizardNavigationButtons">
-                                            <button type="button" class="btn btn-primary wizardNextStepButton">Next Step</button>
-                                        </div>
-
                                     </form>
                                 </div>
                             </div>
@@ -104,7 +100,7 @@
                                     <form id="form-inputdata">
 
                                         <div class="alert alert-danger validationErrorAlert hidden" role="alert">
-                                            <h4>An error occurred while parsing the schema:</h4>
+                                            <h4>An error occurred while parsing the RDF data:</h4>
                                             <div class="sourceText"></div>
                                         </div>
                                         
@@ -132,17 +128,13 @@
                                             <button id="insertIssueSampleData" type="button" class="btn btn-default">Issue sample</button>
                                         </div>
                                         
-                                        <div class="wizardNavigationButtons">
-                                            <button type="button" class="btn btn-primary wizardPreviousStepButton">Previous Step</button>
-                                            <button type="button" class="btn btn-primary wizardNextStepButton">Next Step</button>
-                                        </div>
                                     </form>
                                 </div>
                             </div>
 
                         </div>
 
-                        <div id="configureOptions" class="panel panel-warning wizardStepPanel">
+                        <div id="configureOptions" class="panel panel-info wizardStepPanel">
                             <div class="panel-heading">
                                 <h4 class="panel-title">Configure Options</h4>
                             </div>
@@ -163,10 +155,7 @@
                                             <select id="startingNodesSelector" class="form-control" multiple="multiple"></select>
                                         </div>
 
-                                        <div class="wizardNavigationButtons">
-                                            <button type="button" class="btn btn-primary wizardPreviousStepButton">Previous Step</button>
-                                            <button type="button" class="btn btn-success wizardNextStepButton">Validate</button>
-                                        </div>
+                                        <button id="validateButton" type="button" class="btn btn-success">Validate</button>
                                     </form>
                                 </div>
                             </div>
@@ -189,10 +178,6 @@
                                         <div class="sourceText"></div>
                                     </div>
                                     
-                                    <div class="wizardNavigationButtons">
-                                        <button type="button" class="btn btn-primary wizardPreviousStepButton">Previous Step</button>
-                                        <button type="button" class="btn btn-warning wizardFirstStepButton">Back to Start</button>
-                                    </div>
                                 </div>
                             </div>
                         </div>

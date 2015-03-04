@@ -44,6 +44,8 @@ $(function documentReady()
             name: "Custom",
             description: "Enter your own custom schema to validate against"
     }) - 1;
+
+    schemaSelector.append('<option value=""></option>');
     
     $.each(ShExValidataConfig['schemas'], function(index, schema){
         if(schema['enabled'])
@@ -53,6 +55,8 @@ $(function documentReady()
     });
 
     var schemaSourceText = $('#schemaSourceText');
+    var customSchemaText = $('#customSchemaText');
+    var rdfDataText = $('#rdfDataText');
     var schemaDescription = $('#schemaDescription');
     var toggleSchemaSourceButton = $('#toggleSchemaSource');
     var wizardSidebar = $('.wizardSidebar');
@@ -87,20 +91,34 @@ $(function documentReady()
         {
             $('#customSchemaTextContainer').addClass('hidden');
             $('#toggleSchemaSourceContainer').removeClass('hidden');
+
+            beforeStepChange("selectSchema", "inputRDFData");
         }
-    }).change();
+    });
+
+    customSchemaText.on('change', function(){
+        beforeStepChange("selectSchema", "inputRDFData");
+    });
+    
+    rdfDataText.on('change', function(){
+        beforeStepChange("inputRDFData", "configureOptions");
+    });
+    
+    $('#validateButton').off('click').on('click', function(){
+        beforeStepChange("configureOptions", "validationResults");
+    });
     
     $('#insertOneTripleSampleData').click(function() 
     {
-        $('#rdfDataText').val("PREFIX foaf: <http://xmlns.com/foaf/>\n" +
+        rdfDataText.val("PREFIX foaf: <http://xmlns.com/foaf/>\n" +
         "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
         "<Somebody>\n" +
-        "    foaf:name \"Mr Smith\"^^rdf:langString.\n");
+        "    foaf:name \"Mr Smith\"^^rdf:langString.\n").change();
     });
     
     $('#insertIssueSampleData').click(function() 
     {
-        $('#rdfDataText').val("#BASE <http://base.example/#>\n" +
+        rdfDataText.val("#BASE <http://base.example/#>\n" +
         "PREFIX ex: <http://ex.example/#>\n" +
         "PREFIX foaf: <http://xmlns.com/foaf/>\n" +
         "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
@@ -125,7 +143,7 @@ $(function documentReady()
         "    foaf:familyName \"Thompson\" ;\n" +
         "    foaf:phone <tel:+456> ;\n" +
         "    foaf:mbox <mailto:joe@example.org>\n" +
-        ".\n");
+        ".\n").change();
     });
     
     function beforeStepChange(currentStepId, newStepId)
@@ -149,7 +167,7 @@ $(function documentReady()
             schemaText = ShExValidataConfig['schemas'][selectedSchemaIndex]['data'];
         }
         
-        var rdfDataText = $('#rdfDataText').val();
+        var rdfDataTextValue = rdfDataText.val();
 
         var startingNodesSelector = $('#startingNodesSelector');
         
@@ -195,7 +213,7 @@ $(function documentReady()
         else if( currentStepId == "inputRDFData")
         {
             
-            if(ShExUtil.stringIsBlank(rdfDataText))
+            if(ShExUtil.stringIsBlank(rdfDataTextValue))
             {
                 errorMessage = "RDF data cannot be empty!";
                 currentStepPanel.find('.validationErrorAlert').removeClass('hidden').find('.sourceText').text(errorMessage);
@@ -239,7 +257,7 @@ $(function documentReady()
                     startingNodes: []
                 };
                 
-                ShExValidator.validate("", rdfDataText, callbacks, options);
+                ShExValidator.validate("", rdfDataTextValue, callbacks, options);
             }
         }
         else if( newStepId == "validationResults")
@@ -284,8 +302,8 @@ $(function documentReady()
                     }
                 };
 
-                ShExLog.i( "About to call final validate() with schemaText, rdfDataText and options");
-                ShExLog.i( ShExValidator.validate(schemaText, rdfDataText, callbacks, options) );
+                ShExLog.i( "About to call final validate() with schemaText, rdfDataTextValue and options");
+                ShExLog.i( ShExValidator.validate(schemaText, rdfDataTextValue, callbacks, options) );
             }
             else
             {
@@ -310,44 +328,18 @@ $(function documentReady()
         var newStepCollapsingPanel = newStepPanel.find('.panel-collapse');
         var newStepSidebarEntry = wizardSidebar.find('.' + newStepId);
 
-        currentStepCollapsingPanel.removeClass('in');
+        currentStepPanel.removeClass('panel-primary').addClass('panel-info');
+        currentStepCollapsingPanel.addClass('in');
         currentStepSidebarEntry.removeClass('wizard-todo wizard-active');
         currentStepSidebarEntry.addClass('wizard-completed');
 
+        newStepPanel.removeClass('panel-info').addClass('panel-primary');
         newStepCollapsingPanel.addClass('in');
         newStepSidebarEntry.removeClass('wizard-todo wizard-completed');
         newStepSidebarEntry.addClass('wizard-active');
+
+        newStepCollapsingPanel[0].scrollIntoView();
     }
-    
-    $('.wizardNextStepButton').off('click').on('click', function ()
-    {
-        var currentStepPanel = $(this).closest('.wizardStepPanel');
-        var currentStepId = currentStepPanel.attr('id');
-        
-        var newStepId = currentStepPanel.next('.wizardStepPanel').attr('id');
-        
-        beforeStepChange(currentStepId, newStepId);
-    });
-    
-    $('.wizardPreviousStepButton').off('click').on('click', function ()
-    {
-        var currentStepPanel = $(this).closest('.wizardStepPanel');
-        var currentStepId = currentStepPanel.attr('id');
-
-        var newStepId = currentStepPanel.prev('.wizardStepPanel').attr('id');
-
-        beforeStepChange(currentStepId, newStepId);
-    });
-    
-    $('.wizardFirstStepButton').off('click').on('click', function ()
-    {
-        var currentStepPanel = $(this).closest('.wizardStepPanel');
-        var currentStepId = currentStepPanel.attr('id');
-
-        var newStepId = 'selectSchema';
-
-        beforeStepChange(currentStepId, newStepId);
-    });
     
     $('#rdfDataFile').on('change', function() {
         var $input = $(this);
@@ -357,7 +349,7 @@ $(function documentReady()
 
         var reader = new FileReader();
         reader.onload = function(event) {
-            $('#rdfDataText').val(event.target.result);
+            rdfDataText.val(event.target.result).change();
         };
         reader.onerror = function(event) {
             var errorMessage = "Selected file could not be uploaded. Error: " + event.target.error.code;
