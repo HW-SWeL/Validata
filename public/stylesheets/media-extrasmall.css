@@ -1,22 +1,111 @@
 
-body > .container-fluid {
-    padding-top: 15px;
-}
-
 .fullHeightTextarea {
     width: 100%;
-    height: 400px;
+    height: 300px;
 }
 
-div#validation-messages-accordion a.panel-title {
-    user-select: none;
-    -webkit-user-select: none;
-    
-    display: block;
-    height: 100%;
-    width: 100%;
+.sourceText {
+    max-height: 300px;
+    overflow: auto;
+    font-family: monospace;
+    white-space: pre;
+    padding: 5px;
+    background-color: rgb(235, 235, 228);
+    border: 1px solid rgb(169, 169, 169);
 }
 
-div#validation-messages-accordion a.panel-title:hover {
-    text-decoration: none;
+.wizardNavigationButtons {
+    margin-top: 1em;
+}
+
+ol.wizardSidebar {
+    counter-reset: wizard-counter;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+ol.wizardSidebar li {
+    position: relative;
+    margin: 0 0 0.5em 2em;
+    padding: 0.25em 0.75em;
+    list-style: none;
+}
+
+ol.wizardSidebar li:before {
+    content: counter(wizard-counter);
+    counter-increment: wizard-counter;
+    position: absolute;
+    left: -2em;
+    top: 50%;
+    margin-top: -1.3em;
+    height: 2em;
+    width: 2em;
+    line-height: 2em;
+    border: none;
+    background: #0088cc;
+    text-align: center;
+    font-weight: bold;
+    color: white;
+    border-radius: 2em;
+}
+
+ol.wizardSidebar li a {
+    color: #333333;
+}
+
+ol.wizardSidebar li:before {
+    background: #333333;
+}
+
+ol.wizardSidebar li.wizard-completed {
+    color: #999999;
+}
+
+ol.wizardSidebar li.wizard-completed a {
+    color: #999999;
+}
+
+ol.wizardSidebar li.wizard-completed:before {
+    background: #999999;
+}
+
+ol.wizardSidebar li.wizard-completed:after {
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 1.3333333333333333em;
+    width: 1.875em;
+    content: "\00a0\2713";
+    position: relative;
+    bottom: 0.1em;
+}
+
+ol.wizardSidebar li.wizard-active {
+    color: #0088cc;
+}
+
+ol.wizardSidebar li.wizard-active a {
+    color: #0088cc;
+}
+
+ol.wizardSidebar li.wizard-active:before {
+    background: #0088cc;
+}
+
+ol.wizardSidebar li:first-child {
+    margin-top: 0.75em;
+}
+
+.wizard-step {
+    margin-top: 2em;
+}
+
+.panel-heading {
+    height: 2.6em;
+    position: relative;
+    z-index: 1;
+}
+
+.panel-collapse {
+    padding-top: 2.6em;
+    margin-top: -2.6em;
 }

@@ -2,58 +2,58 @@ ShExLog = {
 
     v: function v(logMessage)
     {
-        if(arguments.callee.caller && arguments.callee.caller.name)
+        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        console.log("v", logMessage);
+        ShExLog.prettylog("v", logMessage);
     },
 
     d: function d(logMessage)
     {
-        if(arguments.callee.caller && arguments.callee.caller.name)
+        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        console.log("d", logMessage);
+        ShExLog.prettylog("d", logMessage);
     },
 
     i: function i(logMessage)
     {
-        if(arguments.callee.caller && arguments.callee.caller.name)
+        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        console.log("i", logMessage);
+        ShExLog.prettylog("i", logMessage);
     },
 
     w: function w(logMessage)
     {
-        if(arguments.callee.caller && arguments.callee.caller.name)
+        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        console.log("w", logMessage);
+        ShExLog.prettylog("w", logMessage);
     },
 
     e: function e(logMessage)
     {
-        if(arguments.callee.caller && arguments.callee.caller.name)
+        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        console.log("e", logMessage);
+        ShExLog.prettylog("e", logMessage);
     },
 
     exception: function exception(e)
     {
         var errorString = e.stack.toString();
-        console.log(e);
+        ShExLog.prettylog("e", errorString);
     },
 
     getInlineFunctionTrace: function getInlineFunctionTrace(inputArguments)
@@ -76,6 +76,46 @@ ShExLog = {
         }
 
         return inlineTraceString;
+    },
+    
+    prettylog: function prettylog(logLevel, logMessage)
+    {
+        var objectToLog = false;
+        if($.type(logMessage) != "string")
+        {
+            objectToLog = logMessage;
+            logMessage = "Object dump below:";
+        }
+    
+        if(logLevel == "v")
+        {
+            console.log("%c" + logMessage, "color: #999999");
+        }
+        else if(logLevel == "d")
+        {
+            console.log(logMessage);
+        }
+        else if(logLevel == "i")
+        {
+            console.log("%c" + logMessage, "color: #008800");
+        }
+        else if(logLevel == "w")
+        {
+            console.warn(logMessage);
+        }
+        else if(logLevel == "e")
+        {
+            console.error(logMessage);
+        }
+        else
+        {
+            console.log(logMessage);
+        }
+    
+        if(objectToLog !== false)
+        {
+            console.log(objectToLog);
+        }
     }
 
 };

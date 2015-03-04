@@ -2,197 +2,213 @@
 <html>
     <head lang="en">
         <meta charset="UTF-8">
-        <title></title>
 
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-
-        <link rel="icon" type="image/png" href="images/icon-16.png"/>
+        <meta name="viewport" content="width=device-width"/>
 
         <title>ShEx Validata</title>
+
+        <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
+
         <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css"/>
+        <link rel="stylesheet" href="components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css"/>
         <link rel="stylesheet" href="components/animate.css/animate.css"/>
 
         <link rel="stylesheet" href="stylesheets/vendor/material-design-icons.css"/>
-        <link rel="stylesheet" href="stylesheets/vendor/accordionwizard.css"/>
 
         <link rel="stylesheet" href="stylesheets/media-sizes.css"/>
     </head>
     <body>
 
-        <div class="row">
-            <div class="lead well" style="padding-top: 0.1em; padding-left: 2em; padding-right: 2em;">
-                <p>
-                    <h2>Validata: RDF Dataset Description Validator using Shape Expressions</h2>
-                    Validata is an intuitive, standalone web-based tool to help building RDF dataset descriptors by validating against preset schemas written in the Shape Expressions (ShEx) language.
-                    Behind the scenes, it is making use of the
-                    <a href="https://github.com/HeriotWattMEng2015/ShEx-validator">ShEx Validator</a> project for the actual validation task.
-                </p>
-            </div>
-        </div>
+        <div class="container-fluid">
 
-        <div class="row accordionwizard">
+            <div class="row">
 
-            <div class="col-md-3 col-lg-2" style="padding-left: 2em;">
-                <ol class="accordionwizard-sidebar">
-                    <li class="accordionwizard-todo"><a href="#inputdata">Select Input Data</a></li>
-                    <li class="accordionwizard-todo"><a href="#chooseschema">Choose a Schema</a></li>
-                    <li class="accordionwizard-todo"><a href="#validationoptions">Configure Options</a></li>
-                    <li class="accordionwizard-todo"><a href="#validate">Validate</a></li>
-                </ol>
+                <div class="lead well">
+                    <h2>Validata: RDF Validator using Shape Expressions</h2>
+
+                    <p>
+                        Validata is an intuitive, standalone web-based tool to help building valid RDF documents by validating against preset schemas written in the Shape Expressions (ShEx) language.
+                    </p>
+                </div>
+
             </div>
 
-            <div class="col-md-9 col-lg-10" style="padding-right: 2em;">
+            <div class="row">
 
-                <div id="validation-steps" class="panel-group">
+                <div class="col-md-3 col-lg-2">
+                    <ol class="wizardSidebar">
+                        <li class="wizard-active selectSchema">Select Schema</li>
+                        <li class="wizard-todo inputRDFData">Input RDF Data</li>
+                        <li class="wizard-todo configureOptions">Configure Options</li>
+                        <li class="wizard-todo validationResults">Validation Results</li>
+                    </ol>
+                </div>
 
-                    <div class="panel panel-default">
+                <div class="col-md-9 col-lg-10">
 
-                        <div class="panel-heading">
-                            <h4 class="panel-title">
-                                <a href="#inputdata" data-parent="#validation-steps" data-toggle="collapse">
-                                    Select input data to validate
-                                </a>
-                            </h4>
-                        </div>
+                    <div id="validation-steps" class="panel-group">
 
-                        <div id="inputdata" class="panel-collapse collapse in">
-                            <div class="panel-body">
-                                <form id="form-inputdata">
-                                    <p>
-                                        Select the dataset descripton data you wish to validate. It may be in any of the currently recommended RDF serialization formats: Turtle, TriG, N-Triples or N-Quads.
-                                    </p>
+                        <div id="selectSchema" class="panel panel-info wizardStepPanel">
 
-
-                                    <div class="advanced-option form-group">
-                                        <label for="schemaText">Input Data</label>
-                                        <textarea id="dataText" class="fullHeightTextarea"></textarea>
-                                    </div>
-                                </form>
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Select Schema</h4>
                             </div>
-                        </div>
 
-                    </div>
+                            <div class="panel-collapse collapse in">
+                                <div class="panel-body">
+                                    <form id="form-selectschema">
 
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h4 class="panel-title">
-                                <a href="#chooseschema" data-parent="#validation-steps" data-toggle="collapse">
-                                    Choose a Schema
-                                </a>
-                            </h4>
-                        </div>
-
-                        <div id="chooseschema" class="panel-collapse collapse in">
-                            <div class="panel-body">
-                                <form id="form-chooseschema">
-                                    <p>
-                                        Now, select which schema your input data should be validated against. Alternatively, ticking the "advanced options" checkbox will display a text field where you can paste in your own ShEx schema to validate against.
-                                    </p>
-
-                                    <div class="advanced-option form-group">
-                                        <label for="schemaText">Custom ShEx Schema</label>
-                                        <textarea id="schemaText" class="fullHeightTextarea"></textarea>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h4 class="panel-title">
-                                <a href="#validationoptions" data-parent="#validation-steps" data-toggle="collapse">
-                                    Configure validation options
-                                </a>
-                            </h4>
-                        </div>
-                        <div id="validationoptions" class="panel-collapse collapse in">
-                            <div class="panel-body">
-                                <form id="form-validationoptions">
-                                    <p>
-                                        There are a variety of options which can be selected to alter how the validation process works, such as what level of strictness to adhere to. Configure these here, or simply leave the default values selected.
-                                    </p>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h4 class="panel-title">
-                                <a href="#validate" data-parent="#validation-steps" data-toggle="collapse">
-                                    Validate
-                                </a>
-                            </h4>
-                        </div>
-                        <div id="validate" class="panel-collapse collapse in">
-                            <div class="panel-body">
-                                <form id="form-validate">
-                                    <p>
-                                        Finally, press the validate button and the results will be displayed below.
-                                    </p>
-                                    
-                                    <a class="btn btn-primary" id="validateButton">Validate</a>
-
-                                    <h4>Raw validator output:</h4>
-                                    <pre id="rawValidationResults"></pre>
-                                    
-                                    <div class="panel-group" id="validation-messages-accordion" role="tablist" aria-multiselectable="true">
-
-                                        <div class="panel panel-danger">
-                                            <div class="panel-heading" role="tab" id="headingOne">
-                                                <a class="panel-title" data-toggle="collapse" data-parent="#validation-messages-accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                                                    Errors
-                                                </a>
-                                            </div>
-                                            <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
-                                                <div class="panel-body">
-                                                    Example error message
-                                                </div>
-                                            </div>
+                                        <div class="alert alert-danger validationErrorAlert hidden" role="alert">
+                                            <h4>An error occurred while parsing the schema:</h4>
+                                            <div class="sourceText"></div>
                                         </div>
 
-                                        <div class="panel panel-warning">
-                                            <div class="panel-heading" role="tab" id="headingTwo">
-                                                <a class="panel-title collapsed" data-toggle="collapse" data-parent="#validation-messages-accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                                                    Warnings
-                                                </a>
-                                            </div>
-                                            <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
-                                                <div class="panel-body">
-                                                    Example warning message
-                                                </div>
-                                            </div>
+                                        <div class="form-group">
+                                            <label for="schemaSelector">Select which schema your RDF should be validated against:</label>
+                                            <select id="schemaSelector" class="form-control"></select>
+                                            <span id="schemaDescription" class="help-block"></span>
                                         </div>
 
-                                        <div class="panel panel-success">
-                                            <div class="panel-heading" role="tab" id="headingThree">
-                                                <a class="panel-title collapsed" data-toggle="collapse" data-parent="#validation-messages-accordion" href="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                                                    Pass
-                                                </a>
-                                            </div>
-                                            <div id="collapseThree" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingThree">
-                                                <div class="panel-body">
-                                                    Example validation success message
-                                                </div>
-                                            </div>
+                                        <div id="toggleSchemaSourceContainer">
+                                            <button id="toggleSchemaSource" type="button" class="btn btn-warning">Show ShEx Source</button>
+                                            <br />
+                                            <br />
                                         </div>
-                                    </div>
-                                    
-                                </form>
+
+                                        <div id="schemaSourceText" class="sourceText hidden"></div>
+
+                                        <div id="customSchemaTextContainer" class="form-group hidden">
+                                            <label for="customSchemaText">Custom ShEx Schema</label>
+                                            <textarea id="customSchemaText" class="fullHeightTextarea"></textarea>
+                                            <span id="customSchemaDescription" class="help-block">Paste the content of your ShEx schema here. If you don't have a schema yet, try our <a href="/generator" target="_blank">ShEx Schema Generator</a> tool!</span>
+                                        </div>
+
+                                        <div class="wizardNavigationButtons">
+                                            <button type="button" class="btn btn-primary wizardNextStepButton">Next Step</button>
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div id="inputRDFData" class="panel panel-info wizardStepPanel">
+
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Input RDF Data</h4>
+                            </div>
+
+                            <div class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <form id="form-inputdata">
+
+                                        <div class="alert alert-danger validationErrorAlert hidden" role="alert">
+                                            <h4>An error occurred while parsing the schema:</h4>
+                                            <div class="sourceText"></div>
+                                        </div>
+                                        
+                                        <div class="alert alert-success" role="alert">
+                                            The following serialization formats are supported:
+                                            <em>Turtle, TriG, N-Triples, N-Quads</em>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="rdfDataFile">Upload RDF Data File</label>
+                                            <input type="file" id="rdfDataFile">
+
+                                            <p class="help-block">Select a data file from your computer.</p>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="rdfDataText">Directly Input RDF Data</label>
+                                            <textarea id="rdfDataText" class="fullHeightTextarea"></textarea>
+                                        </div>
+
+                                        <div class="alert alert-info" role="alert">
+                                            <p>Alternatively, insert sample data to demonstrate validation functionality</p>
+                                            <br/>
+                                            <button id="insertOneTripleSampleData" type="button" class="btn btn-default">oneTriple sample</button>
+                                            <button id="insertIssueSampleData" type="button" class="btn btn-default">Issue sample</button>
+                                        </div>
+                                        
+                                        <div class="wizardNavigationButtons">
+                                            <button type="button" class="btn btn-primary wizardPreviousStepButton">Previous Step</button>
+                                            <button type="button" class="btn btn-primary wizardNextStepButton">Next Step</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div id="configureOptions" class="panel panel-warning wizardStepPanel">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Configure Options</h4>
+                            </div>
+                            
+                            <div class="panel-collapse collapse">
+                                <div class="panel-body">
+                                    <form id="form-validationoptions">
+
+                                        <div class="alert alert-danger validationErrorAlert hidden" role="alert">
+                                            <h4>An error occurred while setting the specified options:</h4>
+                                            <div class="sourceText"></div>
+                                        </div>
+                                        
+                                        <div class="alert alert-info" role="alert">
+                                            <p>A starting node (or set of nodes) must be specified for validation; the default selected value is simply the first node found in your data.</p>
+                                            <br />
+                                            <label for="startingNodesSelector">Starting Nodes:</label>
+                                            <select id="startingNodesSelector" class="form-control" multiple="multiple"></select>
+                                        </div>
+
+                                        <div class="wizardNavigationButtons">
+                                            <button type="button" class="btn btn-primary wizardPreviousStepButton">Previous Step</button>
+                                            <button type="button" class="btn btn-success wizardNextStepButton">Validate</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
+                        <div id="validationResults" class="panel panel-success wizardStepPanel">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Validation Results</h4>
+                            </div>
+                            
+                            <div class="panel-collapse collapse">
+                                <div class="panel-body">
+
+                                    <div class="alert alert-success validationSuccessAlert hidden" role="alert">
+                                        <h4>Validation Succeeded!</h4>
+                                    </div>
+                                    
+                                    <div class="alert alert-danger validationFailedAlert hidden" role="alert">
+                                        <h4>Validation Failed:</h4>
+                                        <div class="sourceText"></div>
+                                    </div>
+                                    
+                                    <div class="wizardNavigationButtons">
+                                        <button type="button" class="btn btn-primary wizardPreviousStepButton">Previous Step</button>
+                                        <button type="button" class="btn btn-warning wizardFirstStepButton">Back to Start</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </div>
 
         <script src="components/jquery/dist/jquery.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.js"></script>
-        <script src="javascripts/vendor/accordionwizard.js"></script>
+        <script src="components/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
 
         <script src="javascripts/ShExLog.js"></script>
+        <script src="javascripts/ShExUtil.js"></script>
+        <script src="javascripts/ShExValidataConfig.js"></script>
         <script src="javascripts/DocumentReady.js"></script>
         <script src="javascripts/ShExValidator.js"></script>
 
