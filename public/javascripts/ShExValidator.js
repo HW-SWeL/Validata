@@ -40,14 +40,16 @@ function parseWithN3(dataText) {
         var resolver = RDF.createIRIResolver();
         var db = RDF.Dataset();
 
-        parser.parse(dataText, function (error, triple, prefixes) {
+        parser.parse(dataText, function (error, N3triple, prefixes) {
             if (error) reject(error);
-            else if (triple) {
-                triple = RDF.Triple(
-                    parseNode(triple.subject),
-                    parseNode(triple.predicate),
-                    parseNode(triple.object)
+            else if (N3triple) {
+                var triple = RDF.Triple(
+                    parseNode(N3triple.subject),
+                    parseNode(N3triple.predicate),
+                    parseNode(N3triple.object)
                 );
+
+                triple.line = N3triple.line;
 
                 db.push(triple);
             }
@@ -10238,7 +10240,7 @@ function validate(schemaText, dataText, callbacks, options) {
 
 module.exports.validate = validate;
 
-},{"./dataParser.js":1,"./schemaParser.js":19,"./validator.js":20,"promise":13}],5:[function(require,module,exports){
+},{"./dataParser.js":1,"./schemaParser.js":19,"./validator.js":21,"promise":13}],5:[function(require,module,exports){
 // Replace local require by a lazy loader
 var globalRequire = require;
 require = function () {};
@@ -10794,7 +10796,8 @@ N3Parser.prototype = {
 
   // ### `_readPredicate` reads a triple's predicate.
   _readPredicate: function (token) {
-    switch (token.type) {
+    var type = token.type;
+    switch (type) {
     case 'IRI':
     case 'abbreviation':
       if (this._baseIRI === null || absoluteIRI.test(token.value))
@@ -10818,9 +10821,9 @@ N3Parser.prototype = {
     case '}':
       // Expected predicate didn't come, must have been trailing semicolon.
       if (this._predicate === null)
-        return this._error('Unexpected ' + token.type, token);
+        return this._error('Unexpected ' + type, token);
       this._subject = null;
-      return this._readBlankNodeTail(token);
+      return type === ']' ? this._readBlankNodeTail(token) : this._readPunctuation(token);
     case ';':
       // Extra semicolons can be safely ignored
       return this._readPredicate;
@@ -10893,14 +10896,15 @@ N3Parser.prototype = {
   // ### `_readBlankNodeTail` reads the end of a blank node.
   _readBlankNodeTail: function (token) {
     if (token.type !== ']')
-      return this._readPunctuation(token);
+      return this._readBlankNodePunctuation(token);
 
     // Store blank node triple.
     if (this._subject !== null)
       this._callback(null, { subject:   this._subject,
                              predicate: this._predicate,
                              object:    this._object,
-                             graph:     this._graph || '' });
+                             graph:     this._graph || '' ,
+                             line:      token.line});
 
     // Restore parent triple that contains the blank node.
     var triple = this._tripleStack.pop();
@@ -10991,7 +10995,8 @@ N3Parser.prototype = {
         this._callback(null, { subject:   parentTriple.subject,
                                predicate: parentTriple.predicate,
                                object:    parentTriple.object,
-                               graph:     this._graph || '' });
+                               graph:     this._graph  || '' ,
+                               line:      token.line});
       // Restore the parent triple's subject.
       this._subject = parentTriple.subject;
       // Was this list in the parent triple's subject?
@@ -11036,14 +11041,16 @@ N3Parser.prototype = {
       this._callback(null, { subject:   prevItemHead,
                              predicate: RDF_REST,
                              object:    itemHead,
-                             graph:     this._graph || '' });
+                             graph:     this._graph  || '' ,
+                             line:      token.line});
     }
     // Add the item's value.
     if (item !== null)
       this._callback(null, { subject:   itemHead,
                              predicate: RDF_FIRST,
                              object:    item,
-                             graph:     this._graph || '' });
+                             graph:     this._graph  || '' ,
+                             line:      token.line});
     return next;
   },
 
@@ -11098,7 +11105,32 @@ N3Parser.prototype = {
       this._callback(null, { subject:   subject,
                              predicate: this._predicate,
                              object:    this._object,
-                             graph:     graph || '' });
+                             graph:     graph  || '' ,
+                             line:      token.line});
+    return next;
+  },
+
+    // ### `_readBlankNodePunctuation` reads punctuation in a blank node
+  _readBlankNodePunctuation: function (token) {
+    var next;
+    switch (token.type) {
+    // Semicolon means the subject is shared; predicate and object are different.
+    case ';':
+      next = this._readPredicate;
+      break;
+    // Comma means both the subject and predicate are shared; the object is different.
+    case ',':
+      next = this._readObject;
+      break;
+    default:
+      return this._error('Expected punctuation to follow "' + this._object + '"', token);
+    }
+    // A triple has been completed now, so return it.
+    this._callback(null, { subject:   this._subject,
+                           predicate: this._predicate,
+                           object:    this._object,
+                           graph:     this._graph  || '' ,
+                           line:      token.line});
     return next;
   },
 
@@ -11660,7 +11692,7 @@ util.inherits(N3StreamParser, Transform);
 // Export the `N3StreamParser` class as a whole.
 module.exports = N3StreamParser;
 
-},{"./N3Parser.js":7,"stream":42,"util":45}],10:[function(require,module,exports){
+},{"./N3Parser.js":7,"stream":43,"util":46}],10:[function(require,module,exports){
 // **N3StreamWriter** serializes a triple stream into an N3 stream
 var Transform = require('stream').Transform,
     util = require('util'),
@@ -11692,10 +11724,14 @@ util.inherits(N3StreamWriter, Transform);
 // Export the `N3StreamWriter` class as a whole.
 module.exports = N3StreamWriter;
 
-},{"./N3Writer.js":12,"stream":42,"util":45}],11:[function(require,module,exports){
+},{"./N3Writer.js":12,"stream":43,"util":46}],11:[function(require,module,exports){
 // **N3Util** provides N3 utility functions
 
-var XsdString = 'http://www.w3.org/2001/XMLSchema#string';
+var Xsd = 'http://www.w3.org/2001/XMLSchema#';
+var XsdString  = Xsd + 'string';
+var XsdInteger = Xsd + 'integer';
+var XsdDecimal = Xsd + 'decimal';
+var XsdBoolean = Xsd + 'boolean';
 var RdfLangString = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString';
 
 var N3Util = {
@@ -11748,17 +11784,42 @@ var N3Util = {
 
   // Expands the prefixed name to a full IRI (also when it occurs as a literal's type)
   expandPrefixedName: function (prefixedName, prefixes) {
-    var match = /(?:^|"\^\^)([^:\/#"'\^_]*):[^\/]/.exec(prefixedName);
-    if (!match) return prefixedName;
-
-    var prefix = match[1], base = prefixes[prefix], index = match.index;
+    var match = /(?:^|"\^\^)([^:\/#"'\^_]*):[^\/]*$/.exec(prefixedName), prefix, base, index;
+    if (match)
+      prefix = match[1], base = prefixes[prefix], index = match.index;
     if (base === undefined)
-      throw new Error('Unknown prefix: ' + prefix);
+      return prefixedName;
 
     // The match index is non-zero when expanding a literal's type.
     return index === 0 ? base + prefixedName.substr(prefix.length + 1)
                        : prefixedName.substr(0, index + 3) +
                          base + prefixedName.substr(index + prefix.length + 4);
+  },
+
+  // Creates an IRI in N3.js representation
+  createIRI: function (iri) {
+    return iri && iri[0] === '"' ? N3Util.getLiteralValue(iri) : iri;
+  },
+
+  // Creates a literal in N3.js representation
+  createLiteral: function (value, modifier) {
+    if (!modifier) {
+      switch (typeof value) {
+      case 'boolean':
+        modifier = XsdBoolean;
+        break;
+      case 'number':
+        if (isFinite(value)) {
+          modifier = value % 1 === 0 ? XsdInteger : XsdDecimal;
+          break;
+        }
+      default:
+        return '"' + value + '"';
+      }
+    }
+    return '"' + value +
+           (/^[a-z]+(-[a-z0-9]+)*$/i.test(modifier) ? '"@'  + modifier.toLowerCase()
+                                                    : '"^^' + modifier);
   },
 };
 
@@ -11892,7 +11953,8 @@ N3Writer.prototype = {
       iri = iri.replace(escapeAll, characterReplacer);
     // Try to represent the IRI as prefixed name
     var prefixMatch = this._prefixRegex.exec(iri);
-    return prefixMatch ? this._prefixIRIs[prefixMatch[1]] + prefixMatch[2] : '<' + iri + '>';
+    return !prefixMatch ? '<' + iri + '>' :
+           (!prefixMatch[1] ? iri : this._prefixIRIs[prefixMatch[1]] + prefixMatch[2]);
   },
 
   // ### `_encodeLiteral` represents a literal
@@ -11969,13 +12031,13 @@ N3Writer.prototype = {
   // ### `addPrefixes` adds the prefixes to the output stream
   addPrefixes: function (prefixes, done) {
     // Add all useful prefixes
-    var hasPrefixes = false;
+    var prefixIRIs = this._prefixIRIs, hasPrefixes = false;
     for (var prefix in prefixes) {
       // Verify whether the prefix can be used and does not exist yet
       var iri = prefixes[prefix];
-      if (/[#\/]$/.test(iri) && this._prefixIRIs[iri] !== (prefix += ':')) {
+      if (/[#\/]$/.test(iri) && prefixIRIs[iri] !== (prefix += ':')) {
         hasPrefixes = true;
-        this._prefixIRIs[iri] = prefix;
+        prefixIRIs[iri] = prefix;
         // Finish a possible pending triple
         if (this._subject !== null) {
           this._write(this._graph ? '\n}\n' : '.\n');
@@ -11987,17 +12049,20 @@ N3Writer.prototype = {
     }
     // Recreate the prefix matcher
     if (hasPrefixes) {
-      var prefixIRIs = '';
-      for (var prefixIRI in this._prefixIRIs)
-        prefixIRIs += prefixIRIs ? '|' + prefixIRI : prefixIRI;
-      prefixIRIs = prefixIRIs.replace(/[\]\/\(\)\*\+\?\.\\\$]/g, '\\$&');
-      this._prefixRegex = new RegExp('^(' + prefixIRIs + ')([a-zA-Z][\\-_a-zA-Z0-9]*)$');
+      var IRIlist = '', prefixList = '';
+      for (var prefixIRI in prefixIRIs) {
+        IRIlist += IRIlist ? '|' + prefixIRI : prefixIRI;
+        prefixList += (prefixList ? '|' : '') + prefixIRIs[prefixIRI];
+      }
+      IRIlist = IRIlist.replace(/[\]\/\(\)\*\+\?\.\\\$]/g, '\\$&');
+      this._prefixRegex = new RegExp('^(?:' + prefixList + ')[^\/]*$|' +
+                                     '^(' + IRIlist + ')([a-zA-Z][\\-_a-zA-Z0-9]*)$');
     }
     // End a prefix block with a newline
     this._write(hasPrefixes ? '\n' : '', done);
   },
 
-  // ### `_prefixRegex` matches an IRI that begins with one of the added prefixes
+  // ### `_prefixRegex` matches a prefixed name or IRI that begins with one of the added prefixes
   _prefixRegex: /$0^/,
 
   // ### `end` signals the end of the output stream
@@ -12469,7 +12534,7 @@ module.exports = asap;
 
 
 }).call(this,require('_process'))
-},{"_process":30}],19:[function(require,module,exports){
+},{"_process":31}],19:[function(require,module,exports){
 var Promise = require('promise');
 
 var shexSchemaParser = require('./includes/shexParser.js');
@@ -12491,7 +12556,21 @@ exports.parseSchema = function parseSchema(schemaText) {
 
 },{"./includes/Erics_RDF.js":2,"./includes/shexParser.js":3,"promise":13}],20:[function(require,module,exports){
 var RDF = require('./includes/Erics_RDF.js');
+
+function formatError(fail) {
+    var rule = RDF.Triple(fail.rule.label, fail.rule.nameClass.term, fail.rule.valueClass.type);
+    return {
+        name: fail._,
+        triple : rule
+    }
+}
+
+module.exports = formatError;
+
+},{"./includes/Erics_RDF.js":2}],21:[function(require,module,exports){
+var RDF = require('./includes/Erics_RDF.js');
 var dataParser = require("./dataParser.js");
+var errorFormatter = require("./validationErrorFormatter.js");
 
 
 function validate(schema,
@@ -12528,13 +12607,7 @@ function validate(schema,
 }
 
 function cleanupValidation(valRes, resolver, startingNode) {
-    var errors = valRes.errors.map(function(fail) {
-        var rule = RDF.Triple(fail.rule.label, fail.rule.nameClass.term, fail.rule.valueClass.type);
-        return {
-            name: fail._,
-            triple : rule
-        }
-    });
+    var errors = valRes.errors.map(errorFormatter);
 
     var matches = valRes.matches.map(function (ruleMatch) {
         var match = RDF.Triple(ruleMatch.rule.label, ruleMatch.rule.nameClass.term, ruleMatch.rule.valueClass.type);
@@ -12554,7 +12627,7 @@ function cleanupValidation(valRes, resolver, startingNode) {
 
 module.exports.validate = validate;
 
-},{"./dataParser.js":1,"./includes/Erics_RDF.js":2}],21:[function(require,module,exports){
+},{"./dataParser.js":1,"./includes/Erics_RDF.js":2,"./validationErrorFormatter.js":20}],22:[function(require,module,exports){
 /* 
     Build ShExValidator.js client side bundle using browserify with the following commands:
     cd /home/shex/ShExValidata
@@ -12564,9 +12637,9 @@ module.exports.validate = validate;
 
 ShExValidator = require('ShEx-validator');
 
-},{"ShEx-validator":4}],22:[function(require,module,exports){
+},{"ShEx-validator":4}],23:[function(require,module,exports){
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -13878,7 +13951,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":24,"ieee754":25,"is-array":26}],24:[function(require,module,exports){
+},{"base64-js":25,"ieee754":26,"is-array":27}],25:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -14004,7 +14077,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -14090,7 +14163,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 
 /**
  * isArray
@@ -14125,7 +14198,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -14428,7 +14501,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -14453,12 +14526,12 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -14517,10 +14590,10 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":32}],32:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":33}],33:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -14613,7 +14686,7 @@ function forEach (xs, f) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_readable":34,"./_stream_writable":36,"_process":30,"core-util-is":37,"inherits":28}],33:[function(require,module,exports){
+},{"./_stream_readable":35,"./_stream_writable":37,"_process":31,"core-util-is":38,"inherits":29}],34:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -14661,7 +14734,7 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
 
-},{"./_stream_transform":35,"core-util-is":37,"inherits":28}],34:[function(require,module,exports){
+},{"./_stream_transform":36,"core-util-is":38,"inherits":29}],35:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -15616,7 +15689,7 @@ function indexOf (xs, x) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":32,"_process":30,"buffer":23,"core-util-is":37,"events":27,"inherits":28,"isarray":29,"stream":42,"string_decoder/":43,"util":22}],35:[function(require,module,exports){
+},{"./_stream_duplex":33,"_process":31,"buffer":24,"core-util-is":38,"events":28,"inherits":29,"isarray":30,"stream":43,"string_decoder/":44,"util":23}],36:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -15827,7 +15900,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
-},{"./_stream_duplex":32,"core-util-is":37,"inherits":28}],36:[function(require,module,exports){
+},{"./_stream_duplex":33,"core-util-is":38,"inherits":29}],37:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -16308,7 +16381,7 @@ function endWritable(stream, state, cb) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":32,"_process":30,"buffer":23,"core-util-is":37,"inherits":28,"stream":42}],37:[function(require,module,exports){
+},{"./_stream_duplex":33,"_process":31,"buffer":24,"core-util-is":38,"inherits":29,"stream":43}],38:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -16418,10 +16491,10 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":23}],38:[function(require,module,exports){
+},{"buffer":24}],39:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":33}],39:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":34}],40:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = require('stream');
 exports.Readable = exports;
@@ -16430,13 +16503,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":32,"./lib/_stream_passthrough.js":33,"./lib/_stream_readable.js":34,"./lib/_stream_transform.js":35,"./lib/_stream_writable.js":36,"stream":42}],40:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":33,"./lib/_stream_passthrough.js":34,"./lib/_stream_readable.js":35,"./lib/_stream_transform.js":36,"./lib/_stream_writable.js":37,"stream":43}],41:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":35}],41:[function(require,module,exports){
+},{"./lib/_stream_transform.js":36}],42:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":36}],42:[function(require,module,exports){
+},{"./lib/_stream_writable.js":37}],43:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -16565,7 +16638,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":27,"inherits":28,"readable-stream/duplex.js":31,"readable-stream/passthrough.js":38,"readable-stream/readable.js":39,"readable-stream/transform.js":40,"readable-stream/writable.js":41}],43:[function(require,module,exports){
+},{"events":28,"inherits":29,"readable-stream/duplex.js":32,"readable-stream/passthrough.js":39,"readable-stream/readable.js":40,"readable-stream/transform.js":41,"readable-stream/writable.js":42}],44:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -16788,14 +16861,14 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":23}],44:[function(require,module,exports){
+},{"buffer":24}],45:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -17385,4 +17458,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":44,"_process":30,"inherits":28}]},{},[21]);
+},{"./support/isBuffer":45,"_process":31,"inherits":29}]},{},[22]);
