@@ -5,10 +5,10 @@ echo "<pre>";
 chdir ('../');
 
 echo "\n\nwhoami, pwd\n";
-$username = `whoami 2>&1`;
-echo $username;
+echo `whoami 2>&1`;
 echo `pwd 2>&1`;
 
+$username = get_current_user();
 putenv("HOME=/home/$username");
 
 echo "\n\ngit fetch --all\n";
