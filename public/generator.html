@@ -52,47 +52,52 @@
                                     <div class="panel panel-default shex-shape">
                                         <div class="panel-heading panel-title shex-shape-name">SubjectName</div>
                                         <div class="panel-body shex-rule-group">
-                                            <div class="shex-rule-arc">
-                                                <div class="shex-class shex-class-name">
-                                                    <div class="shex-type">
-                                                        <div class="shex-prefix">foaf</div>
-                                                        <div class="shex-identifier">name</div>
+                                            <div class="shex-rule shex-rule-and">
+                                                <div class="shex-rule shex-rule-include">
+                                                    Other Shape Name
+                                                </div>
+                                                <div class="shex-rule shex-rule-arc" cardinatlity="2">
+                                                    <div class="shex-class shex-class-name">
+                                                        <div class="shex-type">
+                                                            <div class="shex-prefix">foaf</div>
+                                                            <div class="shex-identifier">name</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="shex-class shex-class-value">
+                                                        <div class="shex-reference">
+                                                            SubjectName
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div class="shex-class shex-class-value">
-                                                    <div class="shex-reference">
-                                                        SubjectName
+                                                <div class="shex-rule shex-rule-or">
+                                                    <div class="shex-rule-or-a">
+                                                        <div class="shex-rule shex-rule-and">
+                                                            <div class="shex-rule shex-rule-arc" cardinality="1" requirement="MUST">
+                                                                <div class="shex-name">foaf:name</div>
+                                                                <div class="shex-value">xsd:string</div>
+                                                            </div>
+                                                            <button class="shex-rule-add">Add rule...</button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="shex-rule-or-b">
+                                                        <div class="shex-rule shex-rule-and">
+                                                            <div class="shex-rule shex-rule-arc">
+                                                                <div class="shex-name">foaf:name</div>
+                                                                <div class="shex-value">xsd:string</div>
+                                                            </div>
+                                                            <div class="shex-rule shex-rule-arc">
+                                                                <div class="shex-name">foaf:name</div>
+                                                                <div class="shex-value">xsd:string</div>
+                                                            </div>
+                                                            <div class="shex-rule shex-rule-arc">
+                                                                <div class="shex-name">foaf:name</div>
+                                                                <div class="shex-value">xsd:string</div>
+                                                            </div>
+                                                            <button class="shex-rule-add">Add rule...</button>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div class="shex-rule-or">
-                                                <div class="shex-rule-or-a">
-                                                    <div class="shex-rule-group">
-                                                        <div class="shex-rule-arc" cardinality="1" requirement="MUST">
-                                                            <div class="shex-name">foaf:name</div>
-                                                            <div class="shex-value">xsd:string</div>
-                                                        </div>
-                                                        <button class="shex-rule-add">Add rule...</button>
-                                                    </div>
                                                 </div>
-                                                <div class="shex-rule-or-b">
-                                                    <div class="shex-rule-group">
-                                                        <div class="shex-rule-arc">
-                                                            <div class="shex-name">foaf:name</div>
-                                                            <div class="shex-value">xsd:string</div>
-                                                        </div>
-                                                        <div class="shex-rule-arc">
-                                                            <div class="shex-name">foaf:name</div>
-                                                            <div class="shex-value">xsd:string</div>
-                                                        </div>
-                                                        <div class="shex-rule-arc">
-                                                            <div class="shex-name">foaf:name</div>
-                                                            <div class="shex-value">xsd:string</div>
-                                                        </div>
-                                                        <button class="shex-rule-add">Add rule...</button>
-                                                    </div>
-                                                </div>
-                                            </div>
                                             <button class="shex-rule-add btn btn-success">Add rule...</button>
                                         </div>
                                     </div>
@@ -112,5 +117,47 @@
         <script src="javascripts/ShExLog.js"></script>
         <script src="javascripts/DocumentReady.js"></script>
         <script src="javascripts/ShExValidator.js"></script>
+        <script src="javascripts/ShExUtil.js"></script>
+
+        <script>
+            var callbacks = {
+                schemaParsed: function (responseObject) {
+                    ShExLog.i("beforeStepChange : schemaParsed");
+                    ShExLog.i(responseObject);
+
+                    ParsedSchema = responseObject;
+                }
+            };
+            var options = {
+                closedShapes: true,
+                startingNodes: []
+            };
+
+            ShExValidator.validate("PREFIX ex: <http://ex.example/#>\n"+
+            "PREFIX foaf: <http://xmlns.com/foaf/>\n"+
+            "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n"+
+            "\n"+
+            "start = <birthCertificateShape>\n"+
+            "\n"+
+            "<PersonShape> { # common structure for shapes below\n"+
+            "    foaf:name xsd:string\n"+
+            "}\n"+
+            "\n"+
+            "<birthCertificateShape> {\n"+
+            "    &<PersonShape>,\n"+
+            "    ex:biologicalParent @<FatherShape>,\n"+
+            "    ex:biologicalParent @<MotherShape>\n"+
+            "}\n"+
+            "\n"+
+            "<FatherShape> {\n"+
+            "    &<PersonShape>,\n"+
+            "    ex:gender (ex:Male)\n"+
+            "}\n"+
+            "\n"+
+            "<MotherShape> {\n"+
+            "    &<PersonShape>,\n"+
+            "    ex:gender (ex:Female)\n"+
+            "}\n", "", callbacks, options);
+        </script>
     </body>
 </html>
