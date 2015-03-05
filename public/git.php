@@ -5,8 +5,11 @@ echo "<pre>";
 chdir ('../');
 
 echo "\n\nwhoami, pwd\n";
-echo `whoami 2>&1`;
+$username = `whoami 2>&1`;
+echo $username;
 echo `pwd 2>&1`;
+
+putenv("HOME=/home/$username");
 
 echo "\n\ngit fetch --all\n";
 echo `git fetch --all 2>&1`;
