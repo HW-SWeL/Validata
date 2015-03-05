@@ -10,7 +10,7 @@ ShExValidataConfig = {
                     "<PersonShape> {\n" +
                     "    foaf:name rdf:langString\n" +
                     "}"
-        },        
+        },
         {
             enabled: true,
             name: "Issue Test",

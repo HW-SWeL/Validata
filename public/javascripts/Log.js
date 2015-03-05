@@ -1,4 +1,4 @@
-ShExLog = {
+Log = {
 
     v: function v(logMessage)
     {
@@ -7,7 +7,7 @@ ShExLog = {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        ShExLog.prettylog("v", logMessage);
+        Log.prettyConsoleLog("v", logMessage);
     },
 
     d: function d(logMessage)
@@ -17,7 +17,7 @@ ShExLog = {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        ShExLog.prettylog("d", logMessage);
+        Log.prettyConsoleLog("d", logMessage);
     },
 
     i: function i(logMessage)
@@ -27,7 +27,7 @@ ShExLog = {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        ShExLog.prettylog("i", logMessage);
+        Log.prettyConsoleLog("i", logMessage);
     },
 
     w: function w(logMessage)
@@ -37,7 +37,7 @@ ShExLog = {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        ShExLog.prettylog("w", logMessage);
+        Log.prettyConsoleLog("w", logMessage);
     },
 
     e: function e(logMessage)
@@ -47,13 +47,13 @@ ShExLog = {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
 
-        ShExLog.prettylog("e", logMessage);
+        Log.prettyConsoleLog("e", logMessage);
     },
 
     exception: function exception(e)
     {
         var errorString = e.stack.toString();
-        ShExLog.prettylog("e", errorString);
+        Log.prettyConsoleLog("e", errorString);
     },
 
     getInlineFunctionTrace: function getInlineFunctionTrace(inputArguments)
@@ -78,7 +78,7 @@ ShExLog = {
         return inlineTraceString;
     },
     
-    prettylog: function prettylog(logLevel, logMessage)
+    prettyConsoleLog: function prettyConsoleLog(logLevel, logMessage)
     {
         var objectToLog = false;
         if($.type(logMessage) != "string")

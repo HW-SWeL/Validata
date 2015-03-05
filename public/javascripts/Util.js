@@ -1,4 +1,4 @@
-ShExUtil = {
+Util = {
 
     waitForFinalEvent: function waitForFinalEvent()
     {
@@ -42,7 +42,7 @@ ShExUtil = {
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
@@ -50,31 +50,31 @@ ShExUtil = {
     {
         try
         {
-            return !(ShExUtil.isDefined(value) && ( ShExUtil.isNumber(value) || (ShExUtil.isString(value) && value.length > 0 && value != "null") ));
+            return !(Util.isDefined(value) && ( Util.isNumber(value) || (Util.isString(value) && value.length > 0 && value != "null") ));
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
     stringIsNotEmpty: function stringIsNotEmpty(value)
     {
-        return !ShExUtil.stringIsEmpty(value);
+        return !Util.stringIsEmpty(value);
     },
 
     stringIsBlank: function stringIsBlank(value)
     {
-        if (ShExUtil.stringIsEmpty(value))
+        if (Util.stringIsEmpty(value))
         {
             return true;
         }
 
-        if (ShExUtil.isString(value))
+        if (Util.isString(value))
         {
             value = value.replace(/\s+/g, '');
 
-            if (ShExUtil.stringIsEmpty(value))
+            if (Util.stringIsEmpty(value))
             {
                 return true;
             }
@@ -85,7 +85,7 @@ ShExUtil = {
 
     stringIsNotBlank: function stringIsNotBlank(value)
     {
-        return !ShExUtil.stringIsBlank(value);
+        return !Util.stringIsBlank(value);
     },
 
     isNumber: function isNumber(n)
@@ -96,7 +96,7 @@ ShExUtil = {
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
@@ -104,7 +104,7 @@ ShExUtil = {
     {
         try
         {
-            if (!ShExUtil.isNumber(n))
+            if (!Util.isNumber(n))
             {
                 return false;
             }
@@ -112,7 +112,7 @@ ShExUtil = {
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
@@ -124,7 +124,7 @@ ShExUtil = {
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
@@ -132,7 +132,7 @@ ShExUtil = {
     {
         try
         {
-            if (!ShExUtil.isNumber(n))
+            if (!Util.isNumber(n))
             {
                 return false;
             }
@@ -140,7 +140,7 @@ ShExUtil = {
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
@@ -148,7 +148,7 @@ ShExUtil = {
     {
         try
         {
-            if(!ShExUtil.isDefined(obj))
+            if(!Util.isDefined(obj))
             {
                 return false;
             }
@@ -157,13 +157,13 @@ ShExUtil = {
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
     intValue: function intValue(obj)
     {
-        if( ShExUtil.stringIsEmpty(obj) )
+        if( Util.stringIsEmpty(obj) )
         {
             return 0;
         }
@@ -175,7 +175,7 @@ ShExUtil = {
 
     floatValue: function floatValue(obj)
     {
-        if( ShExUtil.stringIsEmpty(obj) )
+        if( Util.stringIsEmpty(obj) )
         {
             return 0.000;
         }
@@ -187,7 +187,7 @@ ShExUtil = {
 
     stringValue: function stringValue(obj)
     {
-        if( ShExUtil.stringIsEmpty(obj) )
+        if( Util.stringIsEmpty(obj) )
         {
             return "";
         }
@@ -199,7 +199,7 @@ ShExUtil = {
 
     stringValueNoBlank: function stringValueNoBlank(obj, blankSpacer)
     {
-        if( ShExUtil.stringIsEmpty(obj) )
+        if( Util.stringIsEmpty(obj) )
         {
             return blankSpacer;
         }
@@ -213,13 +213,13 @@ ShExUtil = {
     {
         try
         {
-            ShExLog.v("ShExUtil." + ShExLog.getInlineFunctionTrace(arguments));
+            Log.v("Util." + Log.getInlineFunctionTrace(arguments));
 
             return (n.split('.')[1] || []).length;
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
@@ -227,9 +227,9 @@ ShExUtil = {
     {
         try
         {
-            ShExLog.v("ShExUtil." + ShExLog.getInlineFunctionTrace(arguments));
+            Log.v("Util." + Log.getInlineFunctionTrace(arguments));
 
-            if(!ShExUtil.isDefined(iterable))
+            if(!Util.isDefined(iterable))
             {
                 return 0;
             }
@@ -249,7 +249,7 @@ ShExUtil = {
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
@@ -257,20 +257,20 @@ ShExUtil = {
     {
         try
         {
-            ShExLog.v("ShExUtil." + ShExLog.getInlineFunctionTrace(arguments));
+            Log.v("Util." + Log.getInlineFunctionTrace(arguments));
 
             var ts = new Date().getTime() / 1000;
             return Math.floor(ts);
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
     getObjectValues: function getObjectValues(object)
     {
-        if (ShExUtil.isIterable(object))
+        if (Util.isIterable(object))
         {
             return $.map(object, function getObjectValuesMapCallback(v)
             {
@@ -285,7 +285,7 @@ ShExUtil = {
 
     sortArrayByNumericObjectProperty: function sortArrayByNumericObjectProperty(inputArray, sortKey, descendingOrder)
     {
-        if (ShExUtil.iterableLength(inputArray))
+        if (Util.iterableLength(inputArray))
         {
             inputArray.sort(function sortArrayByNumericObjectPropertySortFunction(a, b)
             {
@@ -322,7 +322,7 @@ ShExUtil = {
     {
         var foundChild = false;
 
-        if (ShExUtil.isIterable(inputIterable))
+        if (Util.isIterable(inputIterable))
         {
             $.each(inputIterable, function inputIterableIterator(index, childObject)
             {
@@ -341,7 +341,7 @@ ShExUtil = {
     {
         var foundChild = false;
 
-        if (ShExUtil.isIterable(inputIterable))
+        if (Util.isIterable(inputIterable))
         {
             $.each(inputIterable, function inputIterableIterator(index, childObject)
             {
@@ -360,7 +360,7 @@ ShExUtil = {
     {
         try
         {
-            ShExLog.v("ShExUtil." + ShExLog.getInlineFunctionTrace(arguments));
+            Log.v("Util." + Log.getInlineFunctionTrace(arguments));
 
             return element.clone()
                 .children()
@@ -370,12 +370,12 @@ ShExUtil = {
         }
         catch (e)
         {
-            ShExLog.exception(e);
+            Log.exception(e);
         }
     },
 
     trimToLength: function truncateString(inputString, inputLength) {
-        var outputString = $.trim( ShExUtil.stringValue(inputString) );
+        var outputString = $.trim( Util.stringValue(inputString) );
 
         if(outputString.length > inputLength)
         {
