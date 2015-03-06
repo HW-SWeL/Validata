@@ -1,121 +1,4 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-(function (__dirname){
-var Promise = require('promise');
-
-var fs = require('fs');
-var stream = require('stream');
-var exit = require('exit');
-
-var ShEx = require('./index.js');
-
-var parseArgs = require('minimist');
-var readFile = Promise.denodeify(require('fs').readFile);
-
-var exitCodes = {
-    success: 0,
-    dataParseError: 1,
-    schemaParseError: 2,
-    validationError: 3,
-    ioError: 4,
-    incorrectArguments: 5
-};
-
-var out = console.log;
-
-
-var error = console.log;
-
-function exitWithUsage() {
-    readFile(__dirname+'/README.md').done(function(f) {
-        var readme = f.toString();
-
-        var usageStartTag = "<!--- BEGIN USAGE -->";
-        var usageStart = readme.indexOf(usageStartTag) + usageStartTag.length;
-        var usageEnd = readme.indexOf("<!--- END USAGE -->");
-        var usageLen = usageEnd - usageStart;
-
-        var usage = readme.substr(usageStart, usageLen);
-        out(usage);
-
-        exit(exitCodes.incorrectArguments);
-    });
-}
-
-function processCommandLine(argv) {
-
-
-
-    var toString  = function(t) { return t.toString(); };
-    var ioError = function(e) { error(e); exit(exitCodes.ioError); };
-
-
-
-    argv = parseArgs(argv.slice(2), {
-        boolean: ["closedShape"],
-        alias: {
-            c: "closedShape",
-            h: "help",
-            v: "version"
-        },
-        unknown : function (unkownParam) {
-            if(unkownParam.substr(0, 1) == '-') {
-                error("Unknown paramater: " + unkownParam);
-                exitWithUsage();
-            }
-        }
-    });
-
-    var alen = argv._.length;
-
-    if(
-        argv.help ||
-        alen < 2 ||
-        (alen < 3 && !argv.findNodes)||
-        (alen > 2 && argv.findNodes)
-    ) exitWithUsage();
-
-    var schema = readFile(argv._[0]).then(toString, ioError);
-    var data = readFile(argv._[1]).then(toString, ioError);
-
-    var callbacks = {
-        schemaParsed: function (schema) {
-            out("Schema Parsed: " + schema.schema.ruleLabels.length + " rules.");
-        },
-        schemaParseError: function (errorMessage) {
-            error(errorMessage);
-            exit(exitCodes.schemaParseError);
-        },
-        dataParsed: function (data) {
-            out("Data Parsed: " + data.db.triples.length + " triples.");
-        },
-        dataParseError: function (errorMessage) {
-            error(errorMessage);
-            exit(exitCodes.dataParseError);
-        },
-        tripleValidated: function (validation) {
-            out("Validation Passed");
-        },
-        validationError: function (e) {
-            error(e.toString());
-            exit(exitCodes.validationError);
-        }
-    };
-
-    var options = {
-        closedShapes: argv.closedShape,
-        findNodes: argv.findNodes,
-        startingNodes: argv._.slice(2)
-    };
-
-    return Promise.all([schema, data]).done(function (a) {
-        ShEx.validate(a[0], a[1], callbacks, options);
-    });
-}
-
-module.exports = processCommandLine;
-
-}).call(this,"/node_modules/ShEx-validator")
-},{"./index.js":5,"exit":6,"fs":25,"minimist":7,"promise":16,"stream":46}],2:[function(require,module,exports){
 var Promise = require('promise');
 
 var RDF = require('./includes/Erics_RDF.js');
@@ -157,14 +40,16 @@ function parseWithN3(dataText) {
         var resolver = RDF.createIRIResolver();
         var db = RDF.Dataset();
 
-        parser.parse(dataText, function (error, triple, prefixes) {
+        parser.parse(dataText, function (error, N3triple, prefixes) {
             if (error) reject(error);
-            else if (triple) {
-                triple = RDF.Triple(
-                    parseNode(triple.subject),
-                    parseNode(triple.predicate),
-                    parseNode(triple.object)
+            else if (N3triple) {
+                var triple = RDF.Triple(
+                    parseNode(N3triple.subject),
+                    parseNode(N3triple.predicate),
+                    parseNode(N3triple.object)
                 );
+
+                triple.line = N3triple.line;
 
                 db.push(triple);
             }
@@ -176,7 +61,7 @@ function parseWithN3(dataText) {
     });
 }
 
-},{"./includes/Erics_RDF.js":3,"n3":8,"promise":16}],3:[function(require,module,exports){
+},{"./includes/Erics_RDF.js":2,"n3":5,"promise":13}],2:[function(require,module,exports){
 function pad (d, str) {
     if (str === undefined) str = '  ';
     var ret = '';
@@ -4244,7 +4129,7 @@ RDF.BNode.prototype.origText = origText;
 
 module.exports = RDF;
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 module.exports = ShExParser = (function() {
     /*
      * Generated by PEG.js 0.8.0.
@@ -10323,8 +10208,7 @@ module.exports = ShExParser = (function() {
     };
 })();
 
-},{}],5:[function(require,module,exports){
-(function (process){
+},{}],4:[function(require,module,exports){
 var Promise = require('promise');
 
 var dataParser = require("./dataParser.js");
@@ -10341,7 +10225,7 @@ function validate(schemaText, dataText, callbacks, options) {
 
     data.done(callbacks.dataParsed, callbacks.dataParseError);
 
-    Promise.all([schema, data]).done(function (a) {
+    return Promise.all([schema, data]).then(function (a) {
         validator.validate(
             a[0].schema,                       // Schema
             a[0].resolver,
@@ -10349,286 +10233,14 @@ function validate(schemaText, dataText, callbacks, options) {
             a[1].db,                       // db
             a[1].resolver,
             options.closedShapes,       // closed shapes
-            callbacks.tripleValidated,  // Success callback
-            callbacks.validationError  // Error callback
+            callbacks.validationResult  // validation result
         );
     });
 }
 
 module.exports.validate = validate;
 
-if (process) {
-    require("./commandLine.js")(process.argv);
-}
-
-}).call(this,require('_process'))
-},{"./commandLine.js":1,"./dataParser.js":2,"./schemaParser.js":22,"./validator.js":23,"_process":34,"promise":16}],6:[function(require,module,exports){
-(function (process){
-/*
- * exit
- * https://github.com/cowboy/node-exit
- *
- * Copyright (c) 2013 "Cowboy" Ben Alman
- * Licensed under the MIT license.
- */
-
-'use strict';
-
-module.exports = function exit(exitCode, streams) {
-  if (!streams) { streams = [process.stdout, process.stderr]; }
-  var drainCount = 0;
-  // Actually exit if all streams are drained.
-  function tryToExit() {
-    if (drainCount === streams.length) {
-      process.exit(exitCode);
-    }
-  }
-  streams.forEach(function(stream) {
-    // Count drained streams now, but monitor non-drained streams.
-    if (stream.bufferSize === 0) {
-      drainCount++;
-    } else {
-      stream.write('', 'utf-8', function() {
-        drainCount++;
-        tryToExit();
-      });
-    }
-    // Prevent further writing.
-    stream.write = function() {};
-  });
-  // If all streams were already drained, exit now.
-  tryToExit();
-  // In Windows, when run as a Node.js child process, a script utilizing
-  // this library might just exit with a 0 exit code, regardless. This code,
-  // despite the fact that it looks a bit crazy, appears to fix that.
-  process.on('exit', function() {
-    process.exit(exitCode);
-  });
-};
-
-}).call(this,require('_process'))
-},{"_process":34}],7:[function(require,module,exports){
-module.exports = function (args, opts) {
-    if (!opts) opts = {};
-    
-    var flags = { bools : {}, strings : {}, unknownFn: null };
-
-    if (typeof opts['unknown'] === 'function') {
-        flags.unknownFn = opts['unknown'];
-    }
-
-    if (typeof opts['boolean'] === 'boolean' && opts['boolean']) {
-      flags.allBools = true;
-    } else {
-      [].concat(opts['boolean']).filter(Boolean).forEach(function (key) {
-          flags.bools[key] = true;
-      });
-    }
-    
-    var aliases = {};
-    Object.keys(opts.alias || {}).forEach(function (key) {
-        aliases[key] = [].concat(opts.alias[key]);
-        aliases[key].forEach(function (x) {
-            aliases[x] = [key].concat(aliases[key].filter(function (y) {
-                return x !== y;
-            }));
-        });
-    });
-
-    [].concat(opts.string).filter(Boolean).forEach(function (key) {
-        flags.strings[key] = true;
-        if (aliases[key]) {
-            flags.strings[aliases[key]] = true;
-        }
-     });
-
-    var defaults = opts['default'] || {};
-    
-    var argv = { _ : [] };
-    Object.keys(flags.bools).forEach(function (key) {
-        setArg(key, defaults[key] === undefined ? false : defaults[key]);
-    });
-    
-    var notFlags = [];
-
-    if (args.indexOf('--') !== -1) {
-        notFlags = args.slice(args.indexOf('--')+1);
-        args = args.slice(0, args.indexOf('--'));
-    }
-
-    function argDefined(key, arg) {
-        return (flags.allBools && /^--[^=]+$/.test(arg)) ||
-            flags.strings[key] || flags.bools[key] || aliases[key];
-    }
-
-    function setArg (key, val, arg) {
-        if (arg && flags.unknownFn && !argDefined(key, arg)) {
-            if (flags.unknownFn(arg) === false) return;
-        }
-
-        var value = !flags.strings[key] && isNumber(val)
-            ? Number(val) : val
-        ;
-        setKey(argv, key.split('.'), value);
-        
-        (aliases[key] || []).forEach(function (x) {
-            setKey(argv, x.split('.'), value);
-        });
-    }
-    
-    for (var i = 0; i < args.length; i++) {
-        var arg = args[i];
-        
-        if (/^--.+=/.test(arg)) {
-            // Using [\s\S] instead of . because js doesn't support the
-            // 'dotall' regex modifier. See:
-            // http://stackoverflow.com/a/1068308/13216
-            var m = arg.match(/^--([^=]+)=([\s\S]*)$/);
-            setArg(m[1], m[2], arg);
-        }
-        else if (/^--no-.+/.test(arg)) {
-            var key = arg.match(/^--no-(.+)/)[1];
-            setArg(key, false, arg);
-        }
-        else if (/^--.+/.test(arg)) {
-            var key = arg.match(/^--(.+)/)[1];
-            var next = args[i + 1];
-            if (next !== undefined && !/^-/.test(next)
-            && !flags.bools[key]
-            && !flags.allBools
-            && (aliases[key] ? !flags.bools[aliases[key]] : true)) {
-                setArg(key, next, arg);
-                i++;
-            }
-            else if (/^(true|false)$/.test(next)) {
-                setArg(key, next === 'true', arg);
-                i++;
-            }
-            else {
-                setArg(key, flags.strings[key] ? '' : true, arg);
-            }
-        }
-        else if (/^-[^-]+/.test(arg)) {
-            var letters = arg.slice(1,-1).split('');
-            
-            var broken = false;
-            for (var j = 0; j < letters.length; j++) {
-                var next = arg.slice(j+2);
-                
-                if (next === '-') {
-                    setArg(letters[j], next, arg)
-                    continue;
-                }
-                
-                if (/[A-Za-z]/.test(letters[j])
-                && /-?\d+(\.\d*)?(e-?\d+)?$/.test(next)) {
-                    setArg(letters[j], next, arg);
-                    broken = true;
-                    break;
-                }
-                
-                if (letters[j+1] && letters[j+1].match(/\W/)) {
-                    setArg(letters[j], arg.slice(j+2), arg);
-                    broken = true;
-                    break;
-                }
-                else {
-                    setArg(letters[j], flags.strings[letters[j]] ? '' : true, arg);
-                }
-            }
-            
-            var key = arg.slice(-1)[0];
-            if (!broken && key !== '-') {
-                if (args[i+1] && !/^(-|--)[^-]/.test(args[i+1])
-                && !flags.bools[key]
-                && (aliases[key] ? !flags.bools[aliases[key]] : true)) {
-                    setArg(key, args[i+1], arg);
-                    i++;
-                }
-                else if (args[i+1] && /true|false/.test(args[i+1])) {
-                    setArg(key, args[i+1] === 'true', arg);
-                    i++;
-                }
-                else {
-                    setArg(key, flags.strings[key] ? '' : true, arg);
-                }
-            }
-        }
-        else {
-            if (!flags.unknownFn || flags.unknownFn(arg) !== false) {
-                argv._.push(
-                    flags.strings['_'] || !isNumber(arg) ? arg : Number(arg)
-                );
-            }
-            if (opts.stopEarly) {
-                argv._.push.apply(argv._, args.slice(i + 1));
-                break;
-            }
-        }
-    }
-    
-    Object.keys(defaults).forEach(function (key) {
-        if (!hasKey(argv, key.split('.'))) {
-            setKey(argv, key.split('.'), defaults[key]);
-            
-            (aliases[key] || []).forEach(function (x) {
-                setKey(argv, x.split('.'), defaults[key]);
-            });
-        }
-    });
-    
-    if (opts['--']) {
-        argv['--'] = new Array();
-        notFlags.forEach(function(key) {
-            argv['--'].push(key);
-        });
-    }
-    else {
-        notFlags.forEach(function(key) {
-            argv._.push(key);
-        });
-    }
-
-    return argv;
-};
-
-function hasKey (obj, keys) {
-    var o = obj;
-    keys.slice(0,-1).forEach(function (key) {
-        o = (o[key] || {});
-    });
-
-    var key = keys[keys.length - 1];
-    return key in o;
-}
-
-function setKey (obj, keys, value) {
-    var o = obj;
-    keys.slice(0,-1).forEach(function (key) {
-        if (o[key] === undefined) o[key] = {};
-        o = o[key];
-    });
-    
-    var key = keys[keys.length - 1];
-    if (o[key] === undefined || typeof o[key] === 'boolean') {
-        o[key] = value;
-    }
-    else if (Array.isArray(o[key])) {
-        o[key].push(value);
-    }
-    else {
-        o[key] = [ o[key], value ];
-    }
-}
-
-function isNumber (x) {
-    if (typeof x === 'number') return true;
-    if (/^0x[0-9a-f]+$/i.test(x)) return true;
-    return /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(e[-+]?\d+)?$/.test(x);
-}
-
-
-},{}],8:[function(require,module,exports){
+},{"./dataParser.js":1,"./schemaParser.js":19,"./validator.js":21,"promise":13}],5:[function(require,module,exports){
 // Replace local require by a lazy loader
 var globalRequire = require;
 require = function () {};
@@ -10656,7 +10268,7 @@ Object.keys(exports).forEach(function (submodule) {
   });
 });
 
-},{"./lib/N3Lexer":9,"./lib/N3Parser":10,"./lib/N3Store":11,"./lib/N3StreamParser":12,"./lib/N3StreamWriter":13,"./lib/N3Util":14,"./lib/N3Writer":15}],9:[function(require,module,exports){
+},{"./lib/N3Lexer":6,"./lib/N3Parser":7,"./lib/N3Store":8,"./lib/N3StreamParser":9,"./lib/N3StreamWriter":10,"./lib/N3Util":11,"./lib/N3Writer":12}],6:[function(require,module,exports){
 // **N3Lexer** tokenizes N3 documents.
 var fromCharCode = String.fromCharCode;
 var immediately = typeof setImmediate === 'function' ? setImmediate :
@@ -11040,7 +10652,7 @@ N3Lexer.prototype = {
 // Export the `N3Lexer` class as a whole.
 module.exports = N3Lexer;
 
-},{}],10:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 // **N3Parser** parses N3 documents.
 var N3Lexer = require('./N3Lexer');
 
@@ -11291,7 +10903,8 @@ N3Parser.prototype = {
       this._callback(null, { subject:   this._subject,
                              predicate: this._predicate,
                              object:    this._object,
-                             graph:     this._graph || '' });
+                             graph:     this._graph || '' ,
+                             line:      token.line});
 
     // Restore parent triple that contains the blank node.
     var triple = this._tripleStack.pop();
@@ -11382,7 +10995,8 @@ N3Parser.prototype = {
         this._callback(null, { subject:   parentTriple.subject,
                                predicate: parentTriple.predicate,
                                object:    parentTriple.object,
-                               graph:     this._graph || '' });
+                               graph:     this._graph  || '' ,
+                               line:      token.line});
       // Restore the parent triple's subject.
       this._subject = parentTriple.subject;
       // Was this list in the parent triple's subject?
@@ -11427,14 +11041,16 @@ N3Parser.prototype = {
       this._callback(null, { subject:   prevItemHead,
                              predicate: RDF_REST,
                              object:    itemHead,
-                             graph:     this._graph || '' });
+                             graph:     this._graph  || '' ,
+                             line:      token.line});
     }
     // Add the item's value.
     if (item !== null)
       this._callback(null, { subject:   itemHead,
                              predicate: RDF_FIRST,
                              object:    item,
-                             graph:     this._graph || '' });
+                             graph:     this._graph  || '' ,
+                             line:      token.line});
     return next;
   },
 
@@ -11489,7 +11105,8 @@ N3Parser.prototype = {
       this._callback(null, { subject:   subject,
                              predicate: this._predicate,
                              object:    this._object,
-                             graph:     graph || '' });
+                             graph:     graph  || '' ,
+                             line:      token.line});
     return next;
   },
 
@@ -11512,7 +11129,8 @@ N3Parser.prototype = {
     this._callback(null, { subject:   this._subject,
                            predicate: this._predicate,
                            object:    this._object,
-                           graph:     this._graph || '' });
+                           graph:     this._graph  || '' ,
+                           line:      token.line});
     return next;
   },
 
@@ -11676,7 +11294,7 @@ function noop() {}
 // Export the `N3Parser` class as a whole.
 module.exports = N3Parser;
 
-},{"./N3Lexer":9}],11:[function(require,module,exports){
+},{"./N3Lexer":6}],8:[function(require,module,exports){
 // **N3Store** objects store N3 triples by graph in memory.
 
 var expandPrefixedName = require('./N3Util').expandPrefixedName;
@@ -12038,7 +11656,7 @@ N3Store.prototype = {
 // Export the `N3Store` class as a whole.
 module.exports = N3Store;
 
-},{"./N3Util":14}],12:[function(require,module,exports){
+},{"./N3Util":11}],9:[function(require,module,exports){
 // **N3StreamParser** parses an N3 stream into a triple stream
 var Transform = require('stream').Transform,
     util = require('util'),
@@ -12074,7 +11692,7 @@ util.inherits(N3StreamParser, Transform);
 // Export the `N3StreamParser` class as a whole.
 module.exports = N3StreamParser;
 
-},{"./N3Parser.js":10,"stream":46,"util":49}],13:[function(require,module,exports){
+},{"./N3Parser.js":7,"stream":43,"util":46}],10:[function(require,module,exports){
 // **N3StreamWriter** serializes a triple stream into an N3 stream
 var Transform = require('stream').Transform,
     util = require('util'),
@@ -12106,7 +11724,7 @@ util.inherits(N3StreamWriter, Transform);
 // Export the `N3StreamWriter` class as a whole.
 module.exports = N3StreamWriter;
 
-},{"./N3Writer.js":15,"stream":46,"util":49}],14:[function(require,module,exports){
+},{"./N3Writer.js":12,"stream":43,"util":46}],11:[function(require,module,exports){
 // **N3Util** provides N3 utility functions
 
 var Xsd = 'http://www.w3.org/2001/XMLSchema#';
@@ -12224,7 +11842,7 @@ function ApplyToThis(f) {
 // Expose N3Util, attaching all functions to it
 module.exports = AddN3Util(AddN3Util);
 
-},{}],15:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 // **N3Writer** writes N3 documents.
 
 // Matches a literal as represented in memory by the N3 library
@@ -12495,14 +12113,14 @@ function characterReplacer(character) {
 // Export the `N3Writer` class as a whole.
 module.exports = N3Writer;
 
-},{}],16:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./lib/core.js')
 require('./lib/done.js')
 require('./lib/es6-extensions.js')
 require('./lib/node-extensions.js')
-},{"./lib/core.js":17,"./lib/done.js":18,"./lib/es6-extensions.js":19,"./lib/node-extensions.js":20}],17:[function(require,module,exports){
+},{"./lib/core.js":14,"./lib/done.js":15,"./lib/es6-extensions.js":16,"./lib/node-extensions.js":17}],14:[function(require,module,exports){
 'use strict';
 
 var asap = require('asap')
@@ -12609,7 +12227,7 @@ function doResolve(fn, onFulfilled, onRejected) {
   }
 }
 
-},{"asap":21}],18:[function(require,module,exports){
+},{"asap":18}],15:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js')
@@ -12624,7 +12242,7 @@ Promise.prototype.done = function (onFulfilled, onRejected) {
     })
   })
 }
-},{"./core.js":17,"asap":21}],19:[function(require,module,exports){
+},{"./core.js":14,"asap":18}],16:[function(require,module,exports){
 'use strict';
 
 //This file contains the ES6 extensions to the core Promises/A+ API
@@ -12734,7 +12352,7 @@ Promise.prototype['catch'] = function (onRejected) {
   return this.then(null, onRejected);
 }
 
-},{"./core.js":17,"asap":21}],20:[function(require,module,exports){
+},{"./core.js":14,"asap":18}],17:[function(require,module,exports){
 'use strict';
 
 //This file contains then/promise specific extensions that are only useful for node.js interop
@@ -12799,7 +12417,7 @@ Promise.prototype.nodeify = function (callback, ctx) {
   })
 }
 
-},{"./core.js":17,"asap":21}],21:[function(require,module,exports){
+},{"./core.js":14,"asap":18}],18:[function(require,module,exports){
 (function (process){
 
 // Use the fastest possible means to execute a task in a future turn
@@ -12916,7 +12534,7 @@ module.exports = asap;
 
 
 }).call(this,require('_process'))
-},{"_process":34}],22:[function(require,module,exports){
+},{"_process":31}],19:[function(require,module,exports){
 var Promise = require('promise');
 
 var shexSchemaParser = require('./includes/shexParser.js');
@@ -12936,14 +12554,33 @@ exports.parseSchema = function parseSchema(schemaText) {
     });
 };
 
-},{"./includes/Erics_RDF.js":3,"./includes/shexParser.js":4,"promise":16}],23:[function(require,module,exports){
-var shexSchemaParser = require('./includes/shexParser.js');
+},{"./includes/Erics_RDF.js":2,"./includes/shexParser.js":3,"promise":13}],20:[function(require,module,exports){
+var RDF = require('./includes/Erics_RDF.js');
+
+function formatError(fail) {
+    var rule = RDF.Triple(fail.rule.label, fail.rule.nameClass.term, fail.rule.valueClass.type);
+    return {
+        name: fail._,
+        triple : rule
+    }
+}
+
+module.exports = formatError;
+
+},{"./includes/Erics_RDF.js":2}],21:[function(require,module,exports){
 var RDF = require('./includes/Erics_RDF.js');
 var dataParser = require("./dataParser.js");
+var errorFormatter = require("./validationErrorFormatter.js");
 
 
-function validate(schema, schemaResolver, startingNodes, db, dbResolver, closedShapes, tripleValidatedCallback, validationErrorCallback) {
-    //BEGIN HACKINESS
+function validate(schema,
+                  schemaResolver,
+                  startingNodes,
+                  db,
+                  dbResolver,
+                  closedShapes,
+                  validationResult) {
+
 
     schema.alwaysInvoke = {};
 
@@ -12962,16 +12599,35 @@ function validate(schema, schemaResolver, startingNodes, db, dbResolver, closedS
             true
         );
 
-        if(validation.passed()) tripleValidatedCallback(validation);
-        else validationErrorCallback(validation);
+        var cleanedResults = cleanupValidation(validation, dbResolver, startingNode);
+
+        validationResult(cleanedResults);
 
     }
+}
 
+function cleanupValidation(valRes, resolver, startingNode) {
+    var errors = valRes.errors.map(errorFormatter);
+
+    var matches = valRes.matches.map(function (ruleMatch) {
+        var match = RDF.Triple(ruleMatch.rule.label, ruleMatch.rule.nameClass.term, ruleMatch.rule.valueClass.type);
+        return {
+            rule : match,
+            triple : ruleMatch.triple
+        }
+    });
+
+    return {
+        errors: errors,
+        matches: matches,
+        startingNode: startingNode,
+        passed: valRes.passed()
+    };
 }
 
 module.exports.validate = validate;
 
-},{"./dataParser.js":2,"./includes/Erics_RDF.js":3,"./includes/shexParser.js":4}],24:[function(require,module,exports){
+},{"./dataParser.js":1,"./includes/Erics_RDF.js":2,"./validationErrorFormatter.js":20}],22:[function(require,module,exports){
 /* 
     Build ShExValidator.js client side bundle using browserify with the following commands:
     cd /home/shex/ShExValidata
@@ -12981,11 +12637,9 @@ module.exports.validate = validate;
 
 ShExValidator = require('ShEx-validator');
 
-},{"ShEx-validator":5}],25:[function(require,module,exports){
+},{"ShEx-validator":4}],23:[function(require,module,exports){
 
-},{}],26:[function(require,module,exports){
-arguments[4][25][0].apply(exports,arguments)
-},{"dup":25}],27:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -14297,7 +13951,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":28,"ieee754":29,"is-array":30}],28:[function(require,module,exports){
+},{"base64-js":25,"ieee754":26,"is-array":27}],25:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -14423,7 +14077,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],29:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -14509,7 +14163,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],30:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 
 /**
  * isArray
@@ -14544,7 +14198,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],31:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -14847,7 +14501,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],32:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -14872,12 +14526,12 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],33:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],34:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -14936,10 +14590,10 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],35:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":36}],36:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":33}],33:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -15032,7 +14686,7 @@ function forEach (xs, f) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_readable":38,"./_stream_writable":40,"_process":34,"core-util-is":41,"inherits":32}],37:[function(require,module,exports){
+},{"./_stream_readable":35,"./_stream_writable":37,"_process":31,"core-util-is":38,"inherits":29}],34:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -15080,7 +14734,7 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
 
-},{"./_stream_transform":39,"core-util-is":41,"inherits":32}],38:[function(require,module,exports){
+},{"./_stream_transform":36,"core-util-is":38,"inherits":29}],35:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -16035,7 +15689,7 @@ function indexOf (xs, x) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":36,"_process":34,"buffer":27,"core-util-is":41,"events":31,"inherits":32,"isarray":33,"stream":46,"string_decoder/":47,"util":26}],39:[function(require,module,exports){
+},{"./_stream_duplex":33,"_process":31,"buffer":24,"core-util-is":38,"events":28,"inherits":29,"isarray":30,"stream":43,"string_decoder/":44,"util":23}],36:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -16246,7 +15900,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
-},{"./_stream_duplex":36,"core-util-is":41,"inherits":32}],40:[function(require,module,exports){
+},{"./_stream_duplex":33,"core-util-is":38,"inherits":29}],37:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -16727,7 +16381,7 @@ function endWritable(stream, state, cb) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":36,"_process":34,"buffer":27,"core-util-is":41,"inherits":32,"stream":46}],41:[function(require,module,exports){
+},{"./_stream_duplex":33,"_process":31,"buffer":24,"core-util-is":38,"inherits":29,"stream":43}],38:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -16837,10 +16491,10 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":27}],42:[function(require,module,exports){
+},{"buffer":24}],39:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":37}],43:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":34}],40:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = require('stream');
 exports.Readable = exports;
@@ -16849,13 +16503,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":36,"./lib/_stream_passthrough.js":37,"./lib/_stream_readable.js":38,"./lib/_stream_transform.js":39,"./lib/_stream_writable.js":40,"stream":46}],44:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":33,"./lib/_stream_passthrough.js":34,"./lib/_stream_readable.js":35,"./lib/_stream_transform.js":36,"./lib/_stream_writable.js":37,"stream":43}],41:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":39}],45:[function(require,module,exports){
+},{"./lib/_stream_transform.js":36}],42:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":40}],46:[function(require,module,exports){
+},{"./lib/_stream_writable.js":37}],43:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -16984,7 +16638,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":31,"inherits":32,"readable-stream/duplex.js":35,"readable-stream/passthrough.js":42,"readable-stream/readable.js":43,"readable-stream/transform.js":44,"readable-stream/writable.js":45}],47:[function(require,module,exports){
+},{"events":28,"inherits":29,"readable-stream/duplex.js":32,"readable-stream/passthrough.js":39,"readable-stream/readable.js":40,"readable-stream/transform.js":41,"readable-stream/writable.js":42}],44:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -17207,14 +16861,14 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":27}],48:[function(require,module,exports){
+},{"buffer":24}],45:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],49:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -17804,4 +17458,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":48,"_process":34,"inherits":32}]},{},[24]);
+},{"./support/isBuffer":45,"_process":31,"inherits":29}]},{},[22]);
