@@ -215,8 +215,9 @@ Validata = {
             }
             else
             {
-                var errorMessage = "";
 
+                UI.validationErrorsList.empty();
+                
                 if (Util.iterableLength( Validata.Validation.rawResponse['errors'] ))
                 {
                     $.each(Validata.Validation.rawResponse['errors'], function (index, errorObject)
