@@ -26,39 +26,39 @@ ShExValidataConfig = {
                     "start = <SummaryLevelShape>\n" +
                     "\n" +
                     "<SummaryLevelShape> {\n" +
-                    "	rdf:type (dctypes:Dataset),    ###void:Dataset should only be used for RDF distributions of the dataset\n" +
+                    "	rdf:type dctypes:Dataset,    ###void:Dataset should only be used for RDF distributions of the dataset\n" +
                     "	dct:title rdf:langString,    ###\n" +
                     "	dct:identifier xsd:string?,    ###\n" +
                     "	dct:alternative rdf:langString?,    ###\n" +
                     "	dct:description rdf:langString,    ###\n" +
-                    "	\n" +
-                    "	\n" +
+                    "\n" +
+                    "\n" +
                     "	###so w3c people messed up here. created is NEVER for sumamry, yet createdOn is a MAY?\n" +
                     "	###and one or the other need to be supplied? need to ask somebody about this\n" +
-                    "	\n" +
+                    "\n" +
                     "	!dct:created.,    ###One of dct:created or dct:issued MUST be provided.\n" +
                     "	pav:createdOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
-                    "	\n" +
+                    "\n" +
                     "	pav:authoredOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
                     "	pav:curatedOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
                     "	!dct:creator .,    ###\n" +
-                    "	\n" +
+                    "\n" +
                     "	(dct:contributor IRI? | dct:contributor xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:createdBy IRI? | pav:createdBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:authoredBy IRI? | pav:authoredBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:curatedBy IRI? | pav:curatedBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
-                    "	\n" +
+                    "\n" +
                     "	!dct:issued .,    ###One of dct:created or dct:issued MUST be provided.\n" +
                     "	dct:publisher IRI,    ###\n" +
-                    "	foaf:page IRI?,    ###SHOULD### \n" +
+                    "	foaf:page IRI?,    ###SHOULD###\n" +
                     "	dct:license IRI,    ###\n" +
                     "	dct:rights rdf:langString?,    ###\n" +
                     "	!dct:language .,    ###\n" +
-                    "	\n" +
+                    "\n" +
                     "	###another weird w3c thing. what is skos?\n" +
                     "	#dcat:theme skos:Concept?,    ###\n" +
-                    "	\n" +
-                    "	\n" +
+                    "\n" +
+                    "\n" +
                     "	dcat:keyword xsd:string?,    ###\n" +
                     "	!void:vocabulary .,    ###Only for RDF datasets\n" +
                     "	!dct:conformsTo .,    ###\n" +
@@ -81,11 +81,11 @@ ShExValidataConfig = {
                     "	!pav:retrievedFrom .,    ###For datasets used in whole without modification.\n" +
                     "	!prov:wasDerivedFrom .,    ###For datasets used in whole or in part with modification.\n" +
                     "	!pav:createdWith .,    ###Identifies the version of the tool/script used to generate the instance data in the specified format\n" +
-                    "	\n" +
-                    "	\n" +
+                    "\n" +
+                    "\n" +
                     "	#dctype not defined either...\n" +
                     "	#dct:accrualPeriodicity dctype:Frequency,    ###SHOULD### Frequency of change is a property of the abstract dataset. The version level MUST never change. A new version MUST be created.\n" +
-                    "	\n" +
+                    "\n" +
                     "	!dct:format .,    ###Indicates the specific format of the formatted dataset files.\n" +
                     "	!dcat:distribution .,    ###Versioned description should point to the description of all formatted dataset descriptions.Formatted descriptions should point to the files containing the data.\n" +
                     "	dcat:accessURL IRI? ,    ###To indicate a page/location to download files.\n" +
@@ -97,10 +97,10 @@ ShExValidataConfig = {
                     "	!void:distinctSubjects .,    ###Only for RDF datasets\n" +
                     "	!void:properties .,    ###Only for RDF datasets\n" +
                     "	!void:distinctObjects .,    ###Only for RDF datasets\n" +
-                    "	\n" +
+                    "\n" +
                     "	#why are there comments here?\n" +
                     "	#!###:distinctLiterals .,    ###Only for RDF datasets\n" +
-                    "	\n" +
+                    "\n" +
                     "	!sd:namedGraph .,    ###Only for RDF datasets\n" +
                     "	!void:propertyPartition .,    ###Only for RDF datasets\n" +
                     "	!void:classPartition .    ###Only for RDF datasets\n" +
@@ -116,22 +116,22 @@ ShExValidataConfig = {
                     "	pav:createdOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
                     "	pav:authoredOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
                     "	pav:curatedOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
-                    "	\n" +
+                    "\n" +
                     "	(dct:creator IRI? | dct:creator xsd:string?),    ###\n" +
                     "	(dct:contributor IRI? | dct:contributor xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:createdBy IRI? | pav:createdBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:authoredBy IRI? | pav:authoredBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:curatedBy IRI? | pav:curatedBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
-                    "	\n" +
+                    "\n" +
                     "	dct:issued xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.\n" +
                     "	dct:publisher IRI,    ###\n" +
                     "	foaf:page IRI?,    ###SHOULD###\n" +
                     "	dct:license IRI,    ###\n" +
                     "	dct:rights rdf:langString?,    ###\n" +
-                    "	\n" +
+                    "\n" +
                     "	# god damn it w3c, what does this even mean\n" +
-                    "	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD### \n" +
-                    "	\n" +
+                    "	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD###\n" +
+                    "\n" +
                     "	!void:vocabulary .,    ###Only for RDF datasets\n" +
                     "	dct:conformsTo IRI?,    ###\n" +
                     "	cito:citesAsAuthority IRI?,    ###\n" +
@@ -155,11 +155,11 @@ ShExValidataConfig = {
                     "	!pav:createdWith .,    ###Identifies the version of the tool/script used to generate the instance data in the specified format\n" +
                     "	!dct:accrualPeriodicity .,    ###Frequency of change is a property of the abstract dataset. The version level MUST never change. A new version MUST be created.\n" +
                     "	!dct:format .,    ###Indicates the specific format of the formatted dataset files.\n" +
-                    "	\n" +
+                    "\n" +
                     "	#more unclear table syntax by w3c\n" +
                     "	#dcat:distribution [ a dcat:Distribution; dcat:downloadURL <uri>],    ###SHOULD### Versioned description should point to the description of all formatted dataset descriptions.Formatted descriptions should point to the files containing the data.\n" +
-                    "	\n" +
-                    "	\n" +
+                    "\n" +
+                    "\n" +
                     "	dcat:accessURL IRI?,    ###To indicate a page/location to download files.\n" +
                     "	!dcat:downloadURL .,    ###For non-RDF resources we need a way of pointing to the download\n" +
                     "	!void:dataDump .,    ###Only used for formatted descriptions of RDF datasets. Must point to RDF file in some serialisation; file may be compressed. Must not point to the directory containing the files.\n" +
@@ -169,10 +169,10 @@ ShExValidataConfig = {
                     "	!void:distinctSubjects .,    ###Only for RDF datasets\n" +
                     "	!void:properties .,    ###Only for RDF datasets\n" +
                     "	!void:distinctObjects .,    ###Only for RDF datasets\n" +
-                    "	\n" +
+                    "\n" +
                     "	#more w3c chaos\n" +
                     "	#!###:distinctLiterals .,    ###Only for RDF datasets\n" +
-                    "	\n" +
+                    "\n" +
                     "	!sd:namedGraph .,    ###Only for RDF datasets\n" +
                     "	!void:propertyPartition .,    ###Only for RDF datasets\n" +
                     "	!void:classPartition .    ###Only for RDF datasets\n" +
@@ -188,23 +188,23 @@ ShExValidataConfig = {
                     "	pav:createdOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
                     "	pav:authoredOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
                     "	pav:curatedOn xsd:dateTime?,    ###Fine-grained assignation of the creation task\n" +
-                    "	\n" +
+                    "\n" +
                     "	(dct:creator IRI | dct:creator xsd:string),    ###\n" +
                     "	(dct:contributor IRI? | dct:contributor  xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:createdBy IRI? | pav:createdBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:authoredBy IRI? | pav:authoredBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
                     "	(pav:curatedBy IRI? | pav:curatedBy xsd:string?)?,    ###Fine-grained assignation of the creation task\n" +
-                    "	\n" +
+                    "\n" +
                     "	dct:issued xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.\n" +
                     "	dct:publisher IRI,    ###\n" +
-                    "	foaf:page IRI?,    ###SHOULD### \n" +
+                    "	foaf:page IRI?,    ###SHOULD###\n" +
                     "	dct:license IRI,    ###\n" +
                     "	dct:rights rdf:langString?,    ###\n" +
-                    "	\n" +
+                    "\n" +
                     "	#w3c\n" +
-                    "	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD### \n" +
-                    "	\n" +
-                    "	dct:conformsTo IRI?,    ###SHOULD### \n" +
+                    "	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD###\n" +
+                    "\n" +
+                    "	dct:conformsTo IRI?,    ###SHOULD###\n" +
                     "	cito:citesAsAuthority IRI?,    ###\n" +
                     "	dct:hasPart IRI?,    ###For non-RDF datasets\n" +
                     "	idot:preferredPrefix xsd:string?,    ###\n" +
@@ -212,8 +212,8 @@ ShExValidataConfig = {
                     "	idot:identifierPattern xsd:string?,    ###\n" +
                     "	void:uriRegexPattern xsd:string?,    ###\n" +
                     "	idot:accessPattern xsd:string?,    ###\n" +
-                    "	idot:exampleIdentifier xsd:string?,    ###SHOULD### \n" +
-                    "	void:exampleResource IRI?,    ###SHOULD### \n" +
+                    "	idot:exampleIdentifier xsd:string?,    ###SHOULD###\n" +
+                    "	void:exampleResource IRI?,    ###SHOULD###\n" +
                     "	pav:version xsd:string?,    ###SHOULD### Some datasets are versioned by date released\n" +
                     "	!pav:isVersionOf .,    ###A data provider MAY choose to also include a pav:hasCurrentVersion from the Summary Level dataset description to the most recent Version Level description. If the property is provided then the provider takes on the task of ensuring that it is uptodate.\n" +
                     "	pav:previousVersion IRI?,    ###SHOULD### Note that it is nonsensical to have an unversioned description point to a previous version of the dataset using the PAV property.\n" +
@@ -223,16 +223,16 @@ ShExValidataConfig = {
                     "	prov:wasDerivedFrom IRI?,    ###SHOULD### For datasets used in whole or in part with modification.\n" +
                     "	pav:createdWith IRI?,    ###Identifies the version of the tool/script used to generate the instance data in the specified format\n" +
                     "	!dct:accrualPeriodicity .,    ###Frequency of change is a property of the abstract dataset. The version level MUST never change. A new version MUST be created.\n" +
-                    "	\n" +
+                    "\n" +
                     "	#w3c\n" +
                     "	#dct:format [ iana | edam | biosharing | xsd:String ],    ###Indicates the specific format of the formatted dataset files.\n" +
-                    "	\n" +
+                    "\n" +
                     "	!dcat:distribution .,    ###Versioned description should point to the description of all formatted dataset descriptions.Formatted descriptions should point to the files containing the data.\n" +
                     "	dcat:accessURL IRI?,    ###To indicate a page/location to download files.\n" +
                     "	dcat:downloadURL IRI?,    ###SHOULD### For non-RDF resources we need a way of pointing to the download\n" +
                     "	dcat:landingPage IRI?    ###Link to the documentation page for an API through which the data can be accessed.\n" +
                     "\n" +
-                    "	\n" +
+                    "\n" +
                     "	#w3c\n" +
                     "	#void:propertyPartition [void:property <IRI>; void:triples \"###\"^^xsd:integer],    ###SHOULD### Only for RDF datasets\n" +
                     "	#void:classPartition [void:class <IRI>; void:entities \"###\"^^xsd:integer],    ###SHOULD### Only for RDF datasets\n" +
@@ -256,15 +256,15 @@ ShExValidataConfig = {
                     "	(pav:curatedBy IRI | pav:curatedBy xsd:string)?,    ###Fine-grained assignation of the creation task\n" +
                     "	dct:issued xsd:dateTime?,    ###SHOULD### One of dct:created or dct:issued MUST be provided.\n" +
                     "	dct:publisher IRI,    ###\n" +
-                    "	foaf:page IRI?,    ###SHOULD### \n" +
+                    "	foaf:page IRI?,    ###SHOULD###\n" +
                     "	dct:license IRI,    ###\n" +
                     "	dct:rights rdf:langString?,    ###\n" +
-                    "	\n" +
+                    "\n" +
                     "	#w3c\n" +
-                    "	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD### \n" +
-                    "	\n" +
+                    "	#dct:language http://lexvo.org/id/iso639-3/{tag},    ###SHOULD###\n" +
+                    "\n" +
                     "	void:vocabulary IRI?,    ###SHOULD### Only for RDF datasets\n" +
-                    "	dct:conformsTo IRI?,    ###SHOULD### \n" +
+                    "	dct:conformsTo IRI?,    ###SHOULD###\n" +
                     "	cito:citesAsAuthority IRI?,    ###\n" +
                     "	void:subset IRI?,    ###Only for RDF datasets\n" +
                     "	idot:preferredPrefix xsd:string?,    ###\n" +
@@ -272,8 +272,8 @@ ShExValidataConfig = {
                     "	idot:identifierPattern xsd:string?,    ###\n" +
                     "	void:uriRegexPattern xsd:string?,    ###\n" +
                     "	idot:accessPattern xsd:string?,    ###\n" +
-                    "	idot:exampleIdentifier xsd:string?,    ###SHOULD### \n" +
-                    "	void:exampleResource IRI?,    ###SHOULD### \n" +
+                    "	idot:exampleIdentifier xsd:string?,    ###SHOULD###\n" +
+                    "	void:exampleResource IRI?,    ###SHOULD###\n" +
                     "	void:inDataset IRI?,    ###SHOULD### Only for RDF datasets\n" +
                     "	pav:version xsd:string?,    ###SHOULD### Some datasets are versioned by date released\n" +
                     "	!pav:isVersionOf .,    ###A data provider MAY choose to also include a pav:hasCurrentVersion from the Summary Level dataset description to the most recent Version Level description. If the property is provided then the provider takes on the task of ensuring that it is uptodate.\n" +
@@ -284,10 +284,10 @@ ShExValidataConfig = {
                     "	prov:wasDerivedFrom IRI?,    ###SHOULD### For datasets used in whole or in part with modification.\n" +
                     "	pav:createdWith IRI?,    ###Identifies the version of the tool/script used to generate the instance data in the specified format\n" +
                     "	!dct:accrualPeriodicity .,    ###Frequency of change is a property of the abstract dataset. The version level MUST never change. A new version MUST be created.\n" +
-                    "	\n" +
+                    "\n" +
                     "	#w3c\n" +
                     "	#dct:format [ iana | edam | biosharing | xsd:String ],    ###Indicates the specific format of the formatted dataset files.\n" +
-                    "	\n" +
+                    "\n" +
                     "	!dcat:distribution .,    ###Versioned description should point to the description of all formatted dataset descriptions.Formatted descriptions should point to the files containing the data.\n" +
                     "	dcat:accessURL IRI?,    ###To indicate a page/location to download files.\n" +
                     "	dcat:downloadURL IRI?,    ###SHOULD### For non-RDF resources we need a way of pointing to the download\n" +
@@ -298,12 +298,12 @@ ShExValidataConfig = {
                     "	void:distinctSubjects xsd:integer?,    ###SHOULD### Only for RDF datasets\n" +
                     "	void:properties xsd:integer?,    ###SHOULD### Only for RDF datasets\n" +
                     "	void:distinctObjects xsd:integer?,    ###SHOULD### Only for RDF datasets\n" +
-                    "	\n" +
+                    "\n" +
                     "	#W3C\n" +
                     "	###:distinctLiterals xsd:integer?,    ###SHOULD### Only for RDF datasets\n" +
-                    "	\n" +
+                    "\n" +
                     "	sd:namedGraph sd:NamedGraph?    ###SHOULD### Only for RDF datasets\n" +
-                    "	\n" +
+                    "\n" +
                     "	#w3c\n" +
                     "	#void:propertyPartition [void:property <IRI>; void:triples \"###\"^^xsd:integer],    ###SHOULD### Only for RDF datasets\n" +
                     "	#void:classPartition [void:class <IRI>; void:entities \"###\"^^xsd:integer],    ###SHOULD### Only for RDF datasets\n" +
@@ -311,7 +311,7 @@ ShExValidataConfig = {
                     "}\n",
             dataDemos: [
                 {
-                    name: "Working ChEMBL demo",
+                    name: "2014 ChEMBL demo",
                     data:   "BASE <http://rdf.ebi.ac.uk/chembl/>\n" +
                             "\n" +
                             "PREFIX dcat: <http://www.w3.org/ns/dcat#>\n" +
