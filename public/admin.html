@@ -26,11 +26,11 @@
                 </div>
             </div>
 
-            <div class="col-md-9">
+            <div class="col-md-9 panel-group">
 
-                <div class="panel panel-primary">
+                <div class="panel panel-primary schemaPanel">
 
-                    <div class="panel-heading">
+                    <div class="panel-heading" data-toggle="collapse" data-target=".panel-body">
                         <h4 class="panel-title">
                             Upload a schema
                         </h4>
@@ -42,27 +42,26 @@
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Title</label>
                                 <div class="col-sm-10">
-                                    <input id="titleInput" type="text" name="Title" class="form-control" required/>
+                                    <input type="text" name="Title" class="form-control titleInput" required/>
                                 </div>
                             </div>
 
                             <div class="form-group">
                                 <label class="col-sm-2 control-label">Description</label>
                                 <div class="col-md-10">
-                                    <input type="text" id="descriptionInput" name="Description" class="form-control" required/>
+                                    <input type="text" name="Description" class="form-control descriptionInput" required/>
                                 </div>
                             </div>
 
                             <div class="form-group">
-                                <label for="schemaSourceFile" class="col-sm-2 control-label">Upload Schema File</label>
-                                <input type="file" id="schemaSourceFile">
-
+                                <label class="col-sm-2 control-label">Upload Schema File</label>
+                                <input type="file" class="schemaSourceFile">
                             </div>
 
                             <div class="form-group">
-                                <label for="schemaSourceText" class="col-sm-2 control-label">Directly Input Schema</label>
+                                <label class="col-sm-2 control-label">Directly Input Schema</label>
 
-                                <div id="schemaSourceText" class="editableSourceText" contenteditable="true"></div>
+                                <div class="editableSourceText schemaSourceText" contenteditable="true"></div>
                             </div>
 
                             <!--<div class="form-group">-->
@@ -72,7 +71,7 @@
                                 <!--</div>-->
                             <!--</div>-->
 
-                            <button id="addSchema" class="btn btn-success">
+                            <button class="btn btn-success addSchema">
                                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add another schema
                             </button>
                         </form>
@@ -101,7 +100,7 @@
         <script src="components/jquery/dist/jquery.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.js"></script>
 
-        <script src="javascripts/ShExLog.js"></script>
+        <script src="javascripts/Log.js"></script>
         <script src="javascripts/admin/UI.js"></script>
         <script src="javascripts/admin/DocumentReady.js"></script>
 

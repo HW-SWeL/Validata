@@ -1,22 +1,5 @@
 var pageInitialized = false;
 
-function addSchema(){
-    var schemaObject = {
-        title: titleInput.val(),
-        description: descInput.val(),
-        schema: schemaSourceText.text()
-    };
-
-
-
-
-
-    //move schema to json
-    // update schema list
-    // reset form
-    //animation
-}
-
 $(function documentReady()
 {
 

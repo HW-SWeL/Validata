@@ -8,11 +8,17 @@ UI = {
 
     selectCommonElements: function selectCommonElements()
     {
-        UI.schemaSourceFile = $('#schemaSourceFile');
-        UI.schemaSourceText = $('#schemaSourceText');
-        UI.titleInput = $('#titleInput');
-        UI.descInput = $('#descriptionInput');
-        UI.addSchemaButton = $('#addSchema');
+        UI.schemaSourceFile = $('.schemaSourceFile');
+        UI.schemaSourceText = $('.schemaSourceText');
+
+        UI.titleInput = $('.titleInput');
+        UI.descInput = $('.descriptionInput');
+        UI.addSchemaButton = $('.addSchema');
+        UI.downloadConfigButton = $('#finish');
+
+        UI.panelContainer = $('.panel-group');
+        UI.newSchemaPanel = $('.schemaPanel').clone(true);
+        UI.schemaArray = [];
     },
 
     setupEventHandlers: function setupEventHandlers()
@@ -38,6 +44,42 @@ UI = {
             };
 
             reader.readAsText(inputFile);
+        });
+
+        UI.addSchemaButton.on('click', function clickAddSchemaButton(e){
+            e.preventDefault();
+            var schemaObject = {
+                title: UI.titleInput.val(),
+                description: UI.descInput.val(),
+                creationDate: new Date(),
+                schema: UI.schemaSourceText.text()
+            };
+
+            console.log(schemaObject);
+
+            // disable schema button until all inputs not empty && schema valid
+            // update current panel title
+            // remove or edit add schema button
+            // add a remove schema button
+            // collapse current panel
+
+            // create new empty schema panel
+            UI.panelContainer.append(UI.newSchemaPanel);
+            //UI.newSchemaPanel.appendTo('body');
+
+
+            //move schema to schema array
+            UI.schemaArray.push(schemaObject);
+
+            // reset form
+            // animation
+
+
+        });
+
+        UI.downloadConfigButton.on('click', function clickDownloadConfigButton(){
+            // create json object from schema array
+            // facilitate download of schemas
         });
     }
 };
