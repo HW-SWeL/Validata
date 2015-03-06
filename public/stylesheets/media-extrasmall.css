@@ -24,7 +24,7 @@
     position: fixed;
     left: 250px;
     width: 0;
-    height: calc(100% - 120px);
+    height: calc(100% - 140px);
     margin-left: -250px;
     overflow-y: auto;
     overflow-x: hidden;
