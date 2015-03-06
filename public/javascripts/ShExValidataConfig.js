@@ -26,7 +26,7 @@ ShExValidataConfig = {
                     "start = <SummaryLevelShape>\n" +
                     "\n" +
                     "<SummaryLevelShape> {\n" +
-                    "	rdf:type dctypes:Dataset,    ###void:Dataset should only be used for RDF distributions of the dataset\n" +
+                    "	rdf:type (dctypes:Dataset),    ###void:Dataset should only be used for RDF distributions of the dataset\n" +
                     "	dct:title rdf:langString,    ###\n" +
                     "	dct:identifier xsd:string?,    ###\n" +
                     "	dct:alternative rdf:langString?,    ###\n" +

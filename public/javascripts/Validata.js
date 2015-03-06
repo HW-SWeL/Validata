@@ -177,14 +177,13 @@ Validata = {
 
         Validata.Validation.rawResponse = resultObject;
         
-        
-        if( ! Validata.Validation.rawResponse['passed'] || Validata.Validation.rawResponse.errors.length > 0 )
+        if( Validata.Validation.rawResponse['passed'] || Validata.Validation.rawResponse.errors.length == 0 )
         {
-            Validata.Validation.passed = false;
+            Validata.Validation.passed = true;
         }
         else
         {
-            Validata.Validation.passed = true;
+            Validata.Validation.passed = false;
         }
 
         Validata.triggerValidationMessageUpdate();
