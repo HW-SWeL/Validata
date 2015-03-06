@@ -1,4 +1,8 @@
 
-body {
-    padding-top: 90px;
+/*
+    Wide Modal - used for showing larger content to the user, e.g. ShEx source code
+*/
+
+.modal.modal-wide .modal-dialog {
+    width: 80%;
 }
