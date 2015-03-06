@@ -1,7 +1,6 @@
 var pageInitialized = false;
-$(function documentReady()
+$(function globalDocumentReady()
 {
-
     // This works around crosswalk occasionally firing the onPageLoadStarted and onPageLoadStopped events after a login(?!) and therefore the document ready event gets fired when the document is already ready
     if (pageInitialized)
     {
@@ -18,16 +17,16 @@ $(function documentReady()
         }
     };
 
-    if( ! Util.isDefined(ShExValidataConfig) )
+    if( Util.isDefined(ShExValidataConfig) )
+    {
+        UI.documentReady();
+    }
+    else
     {
         $('body').html('<div class="alert alert-danger" role="alert">' +
             '<h4>ShExValidataConfig could not be loaded</h4>' +
             '<h5>Please ensure ShExValidataConfig.js exists and is readable in the javascripts directory.</h5>' +
             '</div>');
-    }
-    else
-    {
-        Validata.initializePageOnDocumentReady();
     }
 
 });

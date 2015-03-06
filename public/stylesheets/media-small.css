@@ -1,6 +1,10 @@
 
-body {
-    padding-top: 110px;
+/* 
+    Basic page structure - 250px wide fixed left sidebar which disappears on extrasmall screens
+*/
+
+#topNavbar {
+    height: 120px;
 }
 
 #wrapper {
@@ -20,20 +24,9 @@ body {
 }
 
 #page-content-wrapper {
-    padding: 20px;
     position: relative;
 }
 
 #wrapper.toggled #page-content-wrapper {
-    position: relative;
     margin-right: 0;
 }
-
-#validationInfo {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 50%;
-    width: 100%;
-}
-

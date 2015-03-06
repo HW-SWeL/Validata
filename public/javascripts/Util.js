@@ -7,7 +7,7 @@ Util = {
         {
             if (!uniqueId)
             {
-                uniqueId = "Don't call this twice without a uniqueId";
+                uniqueId = "Do not call this twice without a uniqueId";
             }
             if (timers[uniqueId])
             {
@@ -268,6 +268,21 @@ Util = {
         }
     },
 
+    entityMap: {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': '&quot;',
+        "'": '&#39;',
+        "/": '&#x2F;'
+    },
+
+    escapeHtml: function escapeHtml(string) {
+        return String(string).replace(/[&<>"'\/]/g, function (s) {
+            return Util.entityMap[s];
+        });
+    },
+    
     getObjectValues: function getObjectValues(object)
     {
         if (Util.isIterable(object))

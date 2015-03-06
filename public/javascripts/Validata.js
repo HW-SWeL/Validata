@@ -1,384 +1,382 @@
 Validata = {
 
     Schema: {
+        enabled: false,
+        default: false,
+        name: "",
+        description: "",
+        creationDate: 0,
+        data: "",
+        dataDemos: [],
         parsed: false,
-        content: ""
+        errors: [],
+        rawResponse: {}
     },
-        
+
     Data: {
+        data: "",
         parsed: false,
-        content: ""
+        errors: [],
+        rawResponse: {}
     },
 
     Validation: {
-        passed: false
+        passed: false,
+        options: {
+            closedShapes: true,
+            startingNodes: []
+        },
+        callbacks: {},
+        errors: [],
+        rawResponse: {}
     },
 
-    initializePageOnDocumentReady: function initializePageOnDocumentReady()
+    initialize: function initialize()
     {
-        Validata.wizardSteps = $('#wizardSteps');
-        Validata.wizardStepsSidebar = $('#wizardStepsSidebar');
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
 
-        Validata.wizardStepPanelSchema = $('#wizardStepPanelSchema');
-        Validata.wizardStepPanelData = $('#wizardStepPanelData');
-        Validata.wizardStepPanelOptions = $('#wizardStepPanelOptions');
-        Validata.wizardStepPanelResults = $('#wizardStepPanelResults');
-
-        Validata.schemaSelector = $('#schemaSelector');
-        Validata.schemaSourceText = $('#schemaSourceText');
-        Validata.schemaDescription = $('#schemaDescription');
-        Validata.toggleSchemaSourceButton = $('#toggleSchemaSource');
-        Validata.customSchemaText = $('#customSchemaText');
-        
-        Validata.rdfDataText = $('#rdfDataText');
-        Validata.rdfDataTextValue = "";
-
-        Validata.selectedSchemaIndex = 0;
-        
-        Validata.customSchemaIndex = ShExValidataConfig['schemas'].push({
+        // If option is set, add entry for a "Custom" schema which has an empty string as data
+        if (ShExValidataConfig.options.allowCustomSchema)
+        {
+            ShExValidataConfig.schemas.push({
                 enabled: true,
-                name: "Custom",
-                description: "Enter your own custom schema to validate against"
-            }) - 1;
+                name: "Custom Schema",
+                description: "Click the Show Source button and enter your own custom ShEx schema",
+                creationDate: Util.getUnixtime(),
+                uploadDate: Util.getUnixtime(),
+                data: ""
+            });
+        }
 
-        Validata.schemaSelector.append('<option value=""></option>');
-
-
-        Validata.toggleSchemaSourceButton.off('click').on('click', function ()
+        // If we have defined schemas in config , add all enabled schemas to select dropdown
+        if (Util.iterableLength(ShExValidataConfig.schemas))
         {
-            if (Validata.toggleSchemaSourceButton.text() == "Show ShEx Source")
+            // Remove the selected attribute from the placeholder option
+            UI.schemaSelector.find('option').removeAttr('selected');
+
+            // Add all enabled schemas, with selected if default set
+            $.each(ShExValidataConfig.schemas, function configSchemasIterator(index, schema)
             {
-                $('#schemaSourceText').removeClass('hidden');
-                Validata.toggleSchemaSourceButton.text("Hide ShEx Source");
-            }
-            else
-            {
-                $('#schemaSourceText').addClass('hidden');
-                Validata.toggleSchemaSourceButton.text("Show ShEx Source");
-            }
-        });
+                if (schema['enabled'] && Util.stringIsNotBlank(schema['name']))
+                {
+                    var selected = "";
 
-        Validata.schemaSelector.on('change', function ()
-        {
-            Validata.selectedSchemaIndex = Validata.schemaSelector.val();
-            Validata.schemaDescription.text(Util.stringValueNoBlank(ShExValidataConfig['schemas'][Validata.selectedSchemaIndex]['description'], "No description available for this schema"));
-            Validata.schemaSourceText.text(Util.stringValueNoBlank(ShExValidataConfig['schemas'][Validata.selectedSchemaIndex]['data'], "No source code for this schema"));
+                    if (schema['default'])
+                    {
+                        selected = 'selected="selected"';
+                    }
 
-            if (Validata.selectedSchemaIndex == Validata.customSchemaIndex)
-            {
-                $('#customSchemaTextContainer').removeClass('hidden');
-                $('#toggleSchemaSourceContainer').addClass('hidden');
-                Validata.schemaSourceText.addClass('hidden');
-                Validata.toggleSchemaSourceButton.text("Show ShEx Source");
-            }
-            else
-            {
-                $('#customSchemaTextContainer').addClass('hidden');
-                $('#toggleSchemaSourceContainer').removeClass('hidden');
-            }
-        });
-        
-        $.each(ShExValidataConfig['schemas'], function (index, schema)
-        {
-            if (schema['enabled'])
-            {
-                Validata.schemaSelector.append('<option value="' + index + '">' + schema['name'] + '</option>');
-            }
-        });
-        
-        $('.wizardStepPanel').on('click', function ()
-        {
-            Validata.activateWizardStep( $(this).attr('id') );
-            Validata.validate();
-        }).find('input, textarea').on('change', function ()
-        {
-            Validata.validate();
-        });
-        
-        $('#insertOneTripleSampleData').click(function ()
-        {
-            Validata.rdfDataText.val("PREFIX foaf: <http://xmlns.com/foaf/>\n" +
-            "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
-            "<Somebody>\n" +
-            "    foaf:name \"Mr Smith\"^^rdf:langString.\n").change();
-        });
+                    UI.schemaSelector.append('<option value="' + index + '" ' + selected + '>' + schema['name'] + '</option>');
+                }
+            });
 
-        $('#insertIssueSampleData').click(function ()
-        {
-            Validata.rdfDataText.val("#BASE <http://base.example/#>\n" +
-            "PREFIX ex: <http://ex.example/#>\n" +
-            "PREFIX foaf: <http://xmlns.com/foaf/>\n" +
-            "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-            "\n" +
-            "<Issue1>\n" +
-            "    ex:state        ex:unassigned ;\n" +
-            "    ex:reportedBy   <User2> ;\n" +
-            "    ex:reportedOn   \"2013-01-23T10:18:00\"^^xsd:dateTime ;\n" +
-            "    ex:reproducedBy <Thompson.J> ;\n" +
-            "    ex:reproducedOn \"2013-01-23T11:00:00\"^^xsd:dateTime ;\n" +
-            "#    ex:related      <Issue2>, <Issue3>\n" +
-            ".\n" +
-            "\n" +
-            "<User2>\n" +
-            "    foaf:givenName \"Bob\" ;\n" +
-            "    foaf:familyName \"Smith\" ;\n" +
-            "    foaf:mbox <mailto:bob@example.org>\n" +
-            ".\n" +
-            "\n" +
-            "<Thompson.J>\n" +
-            "    foaf:givenName \"Joe\", \"Joseph\" ;\n" +
-            "    foaf:familyName \"Thompson\" ;\n" +
-            "    foaf:phone <tel:+456> ;\n" +
-            "    foaf:mbox <mailto:joe@example.org>\n" +
-            ".\n").change();
-        });
+            // Trigger the change event to populate schema details table
+            UI.schemaSelector.change();
+        }
 
-
-        $('#rdfDataFile').on('change', function ()
-        {
-            var $input = $(this);
-            var inputFiles = this.files;
-            if (inputFiles == undefined || inputFiles.length == 0)
-            {
-                return;
-            }
-            var inputFile = inputFiles[0];
-
-            var reader = new FileReader();
-            reader.onload = function (event)
-            {
-                Validata.rdfDataText.val(event.target.result).change();
-            };
-            reader.onerror = function (event)
-            {
-                var errorMessage = "Selected file could not be uploaded. Error: " + event.target.error.code;
-                $('#inputRDFData').find('.validationErrorAlert').removeClass('hidden').find('.sourceText').text(errorMessage);
-            };
-            reader.readAsText(inputFile);
-        });
-
-    },
-
-    activateWizardStep: function activateWizardStep(newStepId)
-    {
-        Log.d("Activating new wizard step: " + newStepId);
-        
-        // Make any active panel inactive and make sidebar icon inactive
-        Validata.wizardSteps.find('.wizardStepPanel.panel-primary').removeClass('panel-primary').addClass('panel-info');
-        Validata.wizardStepsSidebar.find('.wizard-active').removeClass('wizard-active');
-
-        // Make new active panel active and make sidebar icon active
-        $('#' + newStepId).removeClass('panel-info').addClass('panel-primary');
-        Validata.wizardStepsSidebar.find('.' + newStepId).addClass('wizard-active');
+        Validata.Validation.callbacks = {
+            schemaParsed: Validata.schemaParsedCallback,
+            schemaParseError: Validata.schemaParseErrorCallback,
+            dataParsed: Validata.dataParsedCallback,
+            dataParseError: Validata.dataParseErrorCallback,
+            validationResult: Validata.validationResultCallback
+        }
     },
 
     validate: function validate()
     {
-        var errorMessage = "";
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
 
-        var callbacks = {
-            schemaParsed: function (responseObject)
-            {
-                Validata.Schema.parsed = true;
-                Validata.Schema.content = responseObject;
-
-                Validata.wizardStepPanelSchema.find('.validationErrorAlert').addClass('hidden');
-
-                Validata.updateQuickSummaryPanel();
-            },
-
-            schemaParseError: function (responseObject)
-            {
-                Validata.Schema.parsed = false;
-                Validata.Schema.content = responseObject;
-
-                Validata.wizardStepPanelSchema.find('.validationErrorAlert').removeClass('hidden').find('.sourceText').text(responseObject);
-
-                Validata.updateQuickSummaryPanel();
-            },
-
-            dataParsed: function (responseObject)
-            {
-                Validata.Data.parsed = true;
-                Validata.Data.content = responseObject;
-
-                Validata.wizardStepPanelData.find('.validationErrorAlert').addClass('hidden');
-
-                startingNodesSelector.multiselect('destroy');
-                startingNodesSelector.empty();
-
-                var selected = 'selected';
-                $.each(Validata.Data.content['db']['SPO'], function (nodeKey, nodeObject)
-                {
-                    var nodeKeyText = nodeKey.replace(/[<>]/g, '');
-                    startingNodesSelector.append('<option value="' + nodeKeyText + '" ' + selected + '>' + nodeKeyText + '</option>');
-                    selected = '';
-                });
-
-                startingNodesSelector.multiselect();
-
-                Validata.updateQuickSummaryPanel();
-            },
-
-            dataParseError: function (responseObject)
-            {
-                Validata.Data.parsed = false;
-                Validata.Data.content = responseObject;
-
-                Validata.wizardStepPanelData.find('.validationErrorAlert').removeClass('hidden').find('.sourceText').text(responseObject);
-
-                Validata.updateQuickSummaryPanel();
-            },
-
-            validationResult: function (resultObject)
-            {
-                $('#rawValidationResults').text(JSON.stringify(resultObject));
-
-                if (resultObject['passed'])
-                {
-                    $('.validationFailedAlert').addClass('hidden');
-                    $('.validationSuccessAlert').removeClass('hidden');
-                    
-                    Validata.Validation.passed = true;
-                }
-                else
-                {
-                    Validata.Validation.passed = false;
-                    
-                    var errorMessage = "";
-
-                    if (Util.iterableLength(resultObject['errors']))
-                    {
-                        $.each(resultObject['errors'], function (index, errorObject)
-                        {
-                            errorMessage += errorObject['name'] + " @ " + errorObject['triple'].toString() + "\n\n";
-                        });
-                    }
-
-                    $('.validationFailedAlert').removeClass('hidden').find('.sourceText').text(errorMessage);
-                    $('.validationSuccessAlert').addClass('hidden');
-                }
-
-                Validata.updateQuickSummaryPanel();
-            }
-        };
-
-        Validata.selectedSchemaIndex = Validata.schemaSelector.val();
-        Validata.selectedSchema = ShExValidataConfig['schemas'][Validata.selectedSchemaIndex];
-
-        Validata.schemaText = $('#customSchemaText').val();
-        if (Util.isDefined(ShExValidataConfig['schemas'][Validata.selectedSchemaIndex]) && Util.isDefined(ShExValidataConfig['schemas'][Validata.selectedSchemaIndex]['data']))
-        {
-            Validata.schemaText = ShExValidataConfig['schemas'][Validata.selectedSchemaIndex]['data'];
-        }
-
-        var startingNodesSelector = $('#startingNodesSelector');
-
-        var options = {
-            closedShapes: true,
-            startingNodes: startingNodesSelector.val()
-        };
-
-        Validata.rdfDataTextValue = Validata.rdfDataText.val();
-
-
-        if (Util.stringIsBlank(Validata.schemaText))
-        {
-            errorMessage = "Schema cannot be empty!";
-            Validata.wizardStepPanelSchema.find('.validationErrorAlert').removeClass('hidden').find('.sourceText').text(errorMessage);
-        }
+        Log.i("Validating with schema:");
+        Log.i(Validata.Schema.data);
+        Log.i("Validating with data:");
+        Log.i(Validata.Data.data);
+        Log.i("Validating with options:");
+        Log.i(Validata.Validation.options);
         
-        if (Util.stringIsBlank(Validata.rdfDataTextValue))
-        {
-            errorMessage = "RDF data cannot be empty!";
-            Validata.wizardStepPanelData.find('.validationErrorAlert').removeClass('hidden').find('.sourceText').text(errorMessage);
-        }
+        ShExValidator.validate(Validata.Schema.data, Validata.Data.data, Validata.Validation.callbacks, Validata.Validation.options);
+    },
 
-        if (Util.iterableLength(options['startingNodes']))
+    schemaParsedCallback: function schemaParsedCallback(responseObject)
+    {
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+
+        Validata.Schema.rawResponse = responseObject;
+        Validata.Schema.parsed = true;
+
+        Validata.triggerValidationMessageUpdate();
+    },
+
+    schemaParseErrorCallback: function schemaParseErrorCallback(responseObject)
+    {
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+
+        Validata.Schema.rawResponse = responseObject;
+        Validata.Schema.parsed = false;
+
+        Validata.triggerValidationMessageUpdate();
+    },
+
+    dataParsedCallback: function dataParsedCallback(responseObject)
+    {
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+
+        Validata.Data.rawResponse = responseObject;
+        Validata.Data.parsed = true;
+        
+        // Recreate the options selector(s) from the newly parsed data and stored selected options, every time we validate
+        // This could be mildly annoying for a user but is necessary to ensure the select has options which still exist in the data
+        UI.dataStartNodesSelector.multiselect('destroy');
+        UI.dataStartNodesSelector.empty();
+
+        var nodeIndex = 0;
+        $.each(Validata.Data.rawResponse['db']['SPO'], function (nodeKey, nodeObject)
         {
-            Validata.wizardStepPanelOptions.find('.validationErrorAlert').addClass('hidden');
+            var selected = '';
+            var nodeKeyText = nodeKey.replace(/[<>]/g, '');
+            
+            if( ( $.inArray(nodeKeyText, Validata.Validation.options.startingNodes) > -1 )
+                || 
+                ( Util.iterableLength(Validata.Validation.options.startingNodes) == 0 && nodeIndex == 0 )
+            )
+            {
+                selected = 'selected'
+            }
+            
+            UI.dataStartNodesSelector.append('<option value="' + nodeKeyText + '" ' + selected + '>' + nodeKeyText + '</option>');
+            nodeIndex++;
+        });
+
+        UI.dataStartNodesSelector.multiselect();
+
+        var startingNodesLengthBeforeParse = Util.iterableLength( Validata.Validation.options.startingNodes );
+        
+        Validata.Validation.options.startingNodes = UI.dataStartNodesSelector.val();
+        
+        if( Util.stringIsNotBlank(Validata.Data.data) && startingNodesLengthBeforeParse == 0 )
+        {
+            Validata.validate();
         }
         else
         {
-            errorMessage = "At least one starting node must be selected!";
-            Validata.wizardStepPanelOptions.find('.validationErrorAlert').removeClass('hidden').find('.sourceText').text(errorMessage);
+            Validata.triggerValidationMessageUpdate();
         }
+    },
+
+    dataParseErrorCallback: function dataParseErrorCallback(responseObject)
+    {
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+
+        Validata.Data.rawResponse = responseObject;
+        Validata.Data.parsed = false;
         
-        ShExValidator.validate(Validata.schemaText, Validata.rdfDataTextValue, callbacks, options);
-        
+        Validata.triggerValidationMessageUpdate();
+    },
+
+    validationResultCallback: function validationResultCallback(resultObject)
+    {
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+
+        Validata.Validation.rawResponse = resultObject;
+        Validata.Validation.passed = !!Validata.Validation.rawResponse['passed'];
+
+        Validata.triggerValidationMessageUpdate();
+    },
+
+    triggerValidationMessageUpdate: function triggerValidationMessageUpdate()
+    {
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+
+        Util.waitForFinalEvent(function waitForFinalEventCallback()
+        {
+            Validata.updateValidationMessages();
+        }, 1000, "updateValidationMessages");
     },
     
-    updateQuickSummaryPanel: function updateQuickSummaryPanel()
+    updateValidationMessages: function updateValidationMessages()
     {
-        Log.d("Updating summary panel");
-        
-        var statusClasses = 'quickSummaryStatusIncomplete quickSummaryStatusInvalid quickSummaryStatusValid';
-        
-        if( Util.iterableLength( Validata.Schema ) )
-        {
-            if( Util.iterableLength( Validata.Schema.content ) )
-            {
+        Log.v("Validation." + Log.getInlineFunctionTrace(arguments));
 
-                if( Validata.Schema.parsed )
-                {
-                    $('#schemaSummary').removeClass(statusClasses).addClass('quickSummaryStatusValid');
-                }
-                else
-                {
-                    $('#schemaSummary').removeClass(statusClasses).addClass('quickSummaryStatusInvalid');
-                }
-                
-            }
-            else
-            {
-                $('#schemaSummary').removeClass(statusClasses).addClass('quickSummaryStatusIncomplete');
-            }
-        }
-        else
-        {
-            $('#schemaSummary').removeClass(statusClasses).addClass('quickSummaryStatusIncomplete');
-        }
+        var quickSummaryStatusClassesToRemove = 'quickSummaryStatusIncomplete quickSummaryStatusInvalid quickSummaryStatusValid';
         
-        if( Util.iterableLength( Validata.Data ) )
-        {
-            if( Util.iterableLength( Validata.Data.content ) )
-            {
+        var schemaErrorAlertVisible = false;
+        var dataErrorAlertVisible = false;
+        var validationSuccessAlertVisible = false;
+        var validationErrorAlertVisible = false;
 
-                if( Validata.Data.parsed )
-                {
-                    $('#dataSummary').removeClass(statusClasses).addClass('quickSummaryStatusValid');
-                }
-                else
-                {
-                    $('#dataSummary').removeClass(statusClasses).addClass('quickSummaryStatusInvalid');
-                }
-                
-            }
-            else
-            {
-                $('#dataSummary').removeClass(statusClasses).addClass('quickSummaryStatusIncomplete');
-            }
-        }
-        else
-        {
-            $('#dataSummary').removeClass(statusClasses).addClass('quickSummaryStatusIncomplete');
-        }
-        
         if( Util.iterableLength( Validata.Validation ) )
         {
             if( Validata.Validation.passed )
             {
-                $('#validationSummary').removeClass(statusClasses).addClass('quickSummaryStatusValid');
+                validationSuccessAlertVisible = true;
+                validationErrorAlertVisible = false;
+                
+                UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusValid');
             }
             else
             {
-                $('#validationSummary').removeClass(statusClasses).addClass('quickSummaryStatusInvalid');
+
+                UI.validationErrorsList.empty();
+                
+                if (Util.iterableLength( Validata.Validation.rawResponse['errors'] ))
+                {
+                    $.each(Validata.Validation.rawResponse['errors'], function (index, errorObject)
+                    {
+                        $('<li class="list-group-item">' + errorObject['name'] + ' @ ' + Util.escapeHtml(errorObject['triple'].toString()) + '</li>').appendTo(UI.validationErrorsList);
+                    });
+                }
+
+                validationSuccessAlertVisible = false;
+                validationErrorAlertVisible = true;
+                
+                UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
             }
         }
         else
         {
-            $('#validationSummary').removeClass(statusClasses).addClass('quickSummaryStatusIncomplete');
+            validationSuccessAlertVisible = false;
+            validationErrorAlertVisible = false;
+            
+            UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
         }
+
+
+        if( Util.iterableLength( Validata.Schema ) )
+        {
+            if( Util.stringIsNotBlank( Validata.Schema.data ) )
+            {
+
+                if( Validata.Schema.parsed )
+                {
+                    schemaErrorAlertVisible = false;
+                    
+                    UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusValid');
+                }
+                else
+                {
+                    UI.schemaErrorAlert.find('.sourceText').text( Validata.Schema.rawResponse );
+
+                    schemaErrorAlertVisible = true;
+                    
+                    UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
+                }
+
+            }
+            else
+            {
+                schemaErrorAlertVisible = false;
+
+                validationSuccessAlertVisible = false;
+                validationErrorAlertVisible = false;
+                
+                UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+                UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+            }
+        }
+        else
+        {
+            UI.schemaErrorAlert.fadeOut('fast');
+            
+            validationSuccessAlertVisible = false;
+            validationErrorAlertVisible = false;
+            
+            UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+            UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+        }
+
+
+        if( Util.iterableLength( Validata.Data ) )
+        {
+            if( Util.stringIsNotBlank( Validata.Data.data ) )
+            {
+
+                if( Validata.Data.parsed )
+                {
+                    dataErrorAlertVisible = false;
+                    
+                    UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusValid');
+                }
+                else
+                {
+                    UI.dataErrorAlert.find('.sourceText').text( Validata.Data.rawResponse );
+
+                    dataErrorAlertVisible = true;
+                    
+                    UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
+                }
+
+            }
+            else
+            {
+                dataErrorAlertVisible = false;
+                
+                validationSuccessAlertVisible = false;
+                validationErrorAlertVisible = false;
+                
+                UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+                UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+            }
+        }
+        else
+        {
+            dataErrorAlertVisible = false;
+
+            validationSuccessAlertVisible = false;
+            validationErrorAlertVisible = false;
+            
+            UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+            UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+        }
+        
+        
+        if( validationSuccessAlertVisible )
+        {
+            UI.validationSuccessAlert.fadeIn('fast');
+        }
+        else
+        {
+            UI.validationSuccessAlert.fadeOut('fast');
+        }
+        
+        if( validationErrorAlertVisible )
+        {
+            UI.validationErrorAlert.fadeIn('fast');
+        }
+        else
+        {
+            UI.validationErrorAlert.fadeOut('fast');
+            UI.validationErrorsList.empty();
+        }
+        
+        if( schemaErrorAlertVisible )
+        {
+            UI.schemaErrorAlert.fadeIn('fast');
+        }
+        else
+        {
+            UI.schemaErrorAlert.fadeOut('fast').find('.sourceText').empty();
+        }
+        
+        if( dataErrorAlertVisible )
+        {
+            UI.dataErrorAlert.fadeIn('fast');
+        }
+        else
+        {
+            UI.dataErrorAlert.fadeOut('fast').find('.sourceText').empty();
+        }
+        
+        if ( Util.stringIsNotBlank( Validata.Data.data ) && ! Util.iterableLength( Validata.Validation.options.startingNodes ) )
+        {
+            UI.optionsErrorAlert.fadeIn('slow')
+                .find('.sourceText')
+                .text("At least one starting node must be selected!");
+        }
+        else
+        {
+            UI.optionsErrorAlert.fadeOut('fast');
+        }
+        
     }
 
 };
