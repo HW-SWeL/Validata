@@ -87,6 +87,8 @@ Validata = {
     {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
 
+        Validata.Validation.options.startingNodes = UI.dataStartNodesSelector.val();
+        
         Log.i("Validating with schema:");
         Log.i(Validata.Schema.data);
         Log.i("Validating with data:");
