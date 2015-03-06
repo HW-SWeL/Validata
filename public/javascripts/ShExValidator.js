@@ -12558,7 +12558,12 @@ exports.parseSchema = function parseSchema(schemaText) {
 var RDF = require('./includes/Erics_RDF.js');
 
 function formatError(fail) {
-    var rule = RDF.Triple(fail.rule.label, fail.rule.nameClass.term, fail.rule.valueClass.type);
+    var rule;
+    if(fail.rule.valueClass._ === "ValueSet")
+        rule = RDF.Triple(fail.rule.label, fail.rule.nameClass.term, fail.rule.valueClass.values[0].term);
+    else
+        rule = RDF.Triple(fail.rule.label, fail.rule.nameClass.term, fail.rule.valueClass.type);
+
     return {
         name: fail._,
         triple : rule
@@ -12609,17 +12614,9 @@ function validate(schema,
 function cleanupValidation(valRes, resolver, startingNode) {
     var errors = valRes.errors.map(errorFormatter);
 
-    var matches = valRes.matches.map(function (ruleMatch) {
-        var match = RDF.Triple(ruleMatch.rule.label, ruleMatch.rule.nameClass.term, ruleMatch.rule.valueClass.type);
-        return {
-            rule : match,
-            triple : ruleMatch.triple
-        }
-    });
-
     return {
         errors: errors,
-        matches: matches,
+        matches: valRes.matches,
         startingNode: startingNode,
         passed: valRes.passed()
     };

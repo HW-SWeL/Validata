@@ -89,10 +89,6 @@ Validata = {
 
         Validata.Validation.options.startingNodes = UI.dataStartNodesSelector.val();
         
-        Log.i("Validating with schema:");
-        Log.i(Validata.Schema.data);
-        Log.i("Validating with data:");
-        Log.i(Validata.Data.data);
         Log.i("Validating with options:");
         Log.i(Validata.Validation.options);
         
@@ -180,7 +176,16 @@ Validata = {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
 
         Validata.Validation.rawResponse = resultObject;
-        Validata.Validation.passed = !!Validata.Validation.rawResponse['passed'];
+        
+        
+        if( ! Validata.Validation.rawResponse['passed'] || Validata.Validation.rawResponse.errors.length > 0 )
+        {
+            Validata.Validation.passed = false;
+        }
+        else
+        {
+            Validata.Validation.passed = true;
+        }
 
         Validata.triggerValidationMessageUpdate();
     },
