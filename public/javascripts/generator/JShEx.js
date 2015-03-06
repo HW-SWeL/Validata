@@ -27,7 +27,11 @@ JShEx.prototype.parseShEx = function(responseObject){
     this.prefixes = responseObject.resolver.Prefixes;
     for (var shape in this.origSchema.ruleMap) {
         if(this.origSchema.ruleMap.hasOwnProperty(shape)){
-            this.shapes[shape] = {_:"shape", id:shape.substring(1,shape.length-1), rule:this.parseRule(this.origSchema.ruleMap[shape])};
+            this.shapes[shape] = {
+                _:"shape",
+                id:shape.substring(1,shape.length-1),
+                rule:this.parseRule(this.origSchema.ruleMap[shape])
+            };
         }
     }
     return this;
@@ -487,21 +491,22 @@ JShEx.prototype.exportIndentLines = function(lines){
 
 
 
-JShEx.prototype.upsertPrefix = function(prefix,value){};
+JShEx.prototype.createPrefix = function(prefix,value){};
+JShEx.prototype.updatePrefix = function(prefix,value){};
 JShEx.prototype.removePrefix = function(prefix,value){};
 
-JShEx.prototype.addShape = function(shapeId){};
-JShEx.prototype.renameShape = function(shapeId,newShapeId){};
+JShEx.prototype.createShape = function(shapeId){};
+JShEx.prototype.updateShape = function(shapeId,newShapeId){};
 JShEx.prototype.removeShape = function(shapeId){};
 
 JShEx.prototype.setStart = function(shapeId){};
 
-JShEx.prototype.addRule = function(node,opt){};
-JShEx.prototype.addAndRule = function(node,opt){};
-JShEx.prototype.addOrRule = function(node,opt){};
-JShEx.prototype.addUnaryRule = function(node,opt){};
-JShEx.prototype.addAtomicRule = function(node,opt){};
-JShEx.prototype.addIncludeRule = function(node,opt){};
+JShEx.prototype.createRule = function(node,opt){};
+JShEx.prototype.createAndRule = function(node,opt){};
+JShEx.prototype.createOrRule = function(node,opt){};
+JShEx.prototype.createUnaryRule = function(node,opt){};
+JShEx.prototype.createAtomicRule = function(node,opt){};
+JShEx.prototype.createIncludeRule = function(node,opt){};
 JShEx.prototype.removeRule = function(node,opt){};
 
 JShEx.prototype.setRuleCardinality = function(node,opt){
@@ -514,6 +519,12 @@ JShEx.prototype.setRuleConformance = function(node,opt){
 
 JShEx.prototype.getSuggestedValues = function(node,opt){
     // Handle OrRule differently, because it needs to be wrapped in a unary
+};
+
+JShEx.prototype.setNameTerm = function(node,opt){
+};
+
+JShEx.prototype.setValueTerm = function(node,opt){
 };
 
 JShEx.prototype.editValueSet = function(node,opt){

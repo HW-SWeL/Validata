@@ -159,21 +159,33 @@ div.quickSummarySectionIcon {
 }
 
 .quickSummarySection.quickSummaryStatusIncomplete div.quickSummarySectionIcon {
-    background-position: 0 -264px;
+    /*background-position: 0 -264px;
+    background-repeat: no-repeat;
+    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-content.svg);*/
+
+    background-position: 0 -24px;
+    background-repeat: no-repeat;
+    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
+}
+
+.quickSummarySection.quickSummaryStatusInvalid div.quickSummarySectionIcon {
+    /*background-position: 0 0;
+    background-repeat: no-repeat;
+    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-alert.svg);*/
+
+    background-position: 0 -648px;
     background-repeat: no-repeat;
     background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-content.svg);
 }
 
-.quickSummarySection.quickSummaryStatusInvalid div.quickSummarySectionIcon {
+.quickSummarySection.quickSummaryStatusValid div.quickSummarySectionIcon {
+    /*background-position: 0 -3480px;
+    background-repeat: no-repeat;
+    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-action.svg);*/
+    
     background-position: 0 0;
     background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-alert.svg);
-}
-
-.quickSummarySection.quickSummaryStatusValid div.quickSummarySectionIcon {
-    background-position: 0 -3480px;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-action.svg);
+    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
 }
 
 
@@ -224,17 +236,6 @@ div.quickSummarySectionIcon {
     display: none;
 }
 
-div#demoPanelButtonGroup button.demoButton:nth-child(even) {
-    color: #fff;
-    background-color: #75afbf;
-    border-color: #73c3d9;
-}
-
-div#demoPanelButtonGroup button.demoButton:nth-child(odd) {
-    color: #fff;
-    background-color: #76a676;
-    border-color: #6fad6f;
-}
 
 div#demoPanelButtonGroup button.demoButton {
     padding-left: 28px;
