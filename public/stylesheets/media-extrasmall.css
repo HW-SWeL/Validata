@@ -253,3 +253,8 @@ div.demoButtonIcon {
     background-image: url('../components/material-design-icons/sprites/css-sprite/sprite-av-white.png');
     background-position: -113px -142px;
 }
+
+#schemaDescription {
+  word-wrap: break-word;
+  word-break: break-all;
+}
