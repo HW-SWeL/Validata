@@ -399,6 +399,292 @@ ShExValidataConfig = {
         {
             enabled: true,
             default: false,
+            name: "HCLS - Alasdair's Version",
+            description: "Incomplete HCLS schema from Alasdair's personal development branch, scraped from https://github.com/AlasdairGray/HCLSValidator/ on 23/02/2015",
+            creationDate: "1393632000",
+            data:   "PREFIX dcat: <http://www.w3.org/ns/dcat#>\n" +
+                    "PREFIX dct: <http://purl.org/dc/terms/>\n" +
+                    "PREFIX dctypes: <http://purl.org/dc/dcmitype/>\n" +
+                    "PREFIX foaf: <http://foaf.example/#>\n" +
+                    "PREFIX freq: <http://purl.org/cld/freq/>\n" +
+                    "PREFIX idot: <http://identifiers.org/idot/>\n" +
+                    "PREFIX lexvo: <http://lexvo.org/id/iso639-3/>\n" +
+                    "PREFIX pav: <http://purl.org/pav/>\n" +
+                    "PREFIX prov: <http://www.w3.org/ns/prov#>\n" +
+                    "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+                    "PREFIX schemaorg: <http://schema.org/>\n" +
+                    "PREFIX sd: <http://www.w3.org/ns/sparql-service-description#>\n" +
+                    "PREFIX void: <http://rdfs.org/ns/void#>\n" +
+                    "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+                    "\n" +
+                    "start = <SummaryLevelShape>\n" +
+                    "\n" +
+                    "<SummaryLevelShape> {\n" +
+                    "    rdf:type (dctypes:Dataset),\n" +
+                    "    dct:title rdf:langString,  ### should be rdf:langString\n" +
+                    "    dct:description rdf:langString, ### should be rdf:langString\n" +
+                    "###negate dct:created .,\n" +
+                    "###negate pav:createdOn .,\n" +
+                    "###negate pav:authoredOn .,\n" +
+                    "###negate pav:curatedOn .,\n" +
+                    "###negate dct:creator .,\n" +
+                    "###negate dct:contributor .,\n" +
+                    "###negate pav:createdBy .,\n" +
+                    "###negate pav:authoredBy .,\n" +
+                    "###negate pav:curatedBy .,\n" +
+                    "###negate dct:issued .,\n" +
+                    "    dct:publisher IRI,\n" +
+                    "    (foaf:page IRI)?,\n" +
+                    "    (schemaorg:logo IRI)?,\n" +
+                    "    dct:license IRI\n" +
+                    "###negate dct:language .,\n" +
+                    "###negate void:vocabulary .,\n" +
+                    "###negate dct:conformsTo .,\n" +
+                    "###negate void:subset .,\n" +
+                    "###negate idot:identifierPattern .,\n" +
+                    "###negate void:uriRegexPattern .,\n" +
+                    "###negate idot:exampleIdentifier .,\n" +
+                    "###negate void:exampleResource .,\n" +
+                    "###negate void:inDataset .,\n" +
+                    "###negate pav:version .,\n" +
+                    "###negate dct:isVersionOf .,\n" +
+                    "###negate pav:previousVersion .,\n" +
+                    "###negate dct:source .,\n" +
+                    "###negate pav:retrievedFrom .,\n" +
+                    "###negate prov:wasDerivedFrom .,\n" +
+                    "###negate pav:createdWith .,\n" +
+                    "    ###dct:accrualPeriodicity freq:~?,\n" +
+                    "###negate dct:format .,\n" +
+                    "###negate dcat:distribution .,\n" +
+                    "###negate dcat:downloadURL .,\n" +
+                    "###negate void:dataDump .,\n" +
+                    "###negate dcat:landingPage .,\n" +
+                    "###negate void:triples .,\n" +
+                    "###negate void:entities .,\n" +
+                    "###negate void:distinctSubjects .,\n" +
+                    "###negate void:properties .,\n" +
+                    "###negate void:distinctObjects .,\n" +
+                    "###negate sd:namedGraph .,\n" +
+                    "###negate void:propertyPartition .,\n" +
+                    "###negate void:classPartition .,\n" +
+                    "###negate void:subset .\n" +
+                    "}\n" +
+                    "\n" +
+                    "<VersionLevelShape> {\n" +
+                    "    rdf:type (dctypes:Dataset),\n" +
+                    "    dct:title rdf:langString,  ### should be rdf:langString\n" +
+                    "    dct:description rdf:langString, ### should be rdf:langString\n" +
+                    "    # Ensure that at least one of created or issued dates is provided\n" +
+                    "    (dct:created xsd:dateTime, dct:issued xsd:dateTime? |\n" +
+                    "        dct:created xsd:dateTime?, dct:issued xsd:dateTime),\n" +
+                    "    #This form does not work! dct:creator (IRI xsd:string)?,\n" +
+                    "    (dct:creator IRI* |\n" +
+                    "    	dct:creator xsd:string*),\n" +
+                    "    dct:publisher IRI,\n" +
+                    "    (foaf:page IRI)?,\n" +
+                    "    (schemaorg:logo IRI)?,\n" +
+                    "    dct:license IRI,\n" +
+                    "    ###(dct:language lexvo:~*)?,\n" +
+                    "###negate void:vocabulary .,\n" +
+                    "###negate void:subset .,\n" +
+                    "###negate idot:identifierPattern .,\n" +
+                    "###negate void:uriRegexPattern .,\n" +
+                    "###negate idot:exampleIdentifier .,\n" +
+                    "###negate void:exampleResource .,\n" +
+                    "###negate void:inDataset .,\n" +
+                    "    pav:version xsd:string,\n" +
+                    "    dct:isVersionOf @<EntryLevelShape>,\n" +
+                    "    pav:previousVersion @<VersionLevelShape>?,\n" +
+                    "###negate pav:hasCurrentVersion .,\n" +
+                    "	dct:source IRI,\n" +
+                    "    pav:retrievedFrom @<DistributionLevelShape>*,\n" +
+                    "    ###Need to decide what level of entry derived from should point to\n" +
+                    "    prov:wasDerivedFrom @<VersionLevelShape>*,\n" +
+                    "###negate pav:createdWith .,\n" +
+                    "###negate dct:accrualPeriodicty .,\n" +
+                    "###negate dct:format .,\n" +
+                    "    (dcat:distribution @<RDFDistributionLevelShape>* | dcat:distribution @<DistributionLevelShape>*)?\n" +
+                    "###negate dcat:downloadURL .,\n" +
+                    "###negate void:dataDump .,\n" +
+                    "###negate void:triples .,\n" +
+                    "###negate void:entities .,\n" +
+                    "###negate void:distinctSubjects .,\n" +
+                    "###negate void:properties .,\n" +
+                    "###negate void:distinctObjects .,\n" +
+                    "###negate sd:namedGraph .,\n" +
+                    "###negate void:propertyPartition .,\n" +
+                    "###negate void:classPartition .,\n" +
+                    "###negate void:subset .\n" +
+                    "}\n" +
+                    "\n" +
+                    "<DistributionLevelShape> {\n" +
+                    "    rdf:type (dctypes:Dataset),\n" +
+                    "    dct:title rdf:langString,  ### should be rdf:langString\n" +
+                    "    dct:description rdf:langString, ### should be rdf:langString\n" +
+                    "    # Ensure that at least one of created or issued dates is provided\n" +
+                    "    (dct:created xsd:dateTime, dct:issued xsd:dateTime? |\n" +
+                    "        dct:created xsd:dateTime?, dct:issued xsd:dateTime),\n" +
+                    "    (dct:creator IRI* |\n" +
+                    "    	dct:creator xsd:string*),\n" +
+                    "    dct:publisher IRI,\n" +
+                    "    (foaf:page IRI)?,\n" +
+                    "    (schemaorg:logo IRI)?,\n" +
+                    "    dct:license IRI,\n" +
+                    "    ###(dct:language lexvo:~)*,\n" +
+                    "    dct:conformsTo IRI,\n" +
+                    "###negate dct:hasPart .,\n" +
+                    "	(idot:exampleIdentifier xsd:string)?,\n" +
+                    "	(void:exampleResource IRI)?,\n" +
+                    "    pav:version xsd:string?,\n" +
+                    "###negate dct:isVersionOf .,\n" +
+                    "    pav:previousVersion @<DistributionLevelShape>?,\n" +
+                    "###negate pav:hasCurrentVersion .,\n" +
+                    "	dct:source IRI?,\n" +
+                    "	pav:retrievedFrom IRI?,\n" +
+                    "	prov:wasDerivedFrom IRI?,\n" +
+                    "###negate dct:accrualPeriodicity .,\n" +
+                    "    (dct:format IRI? | dct:format xsd:string?),\n" +
+                    "###negate dcat:distribution .,\n" +
+                    "    dcat:downloadURL IRI?\n" +
+                    "###negate void:triples .,\n" +
+                    "###negate void:entities .,\n" +
+                    "###negate void:distinctSubjects .,\n" +
+                    "###negate void:properties .,\n" +
+                    "###negate void:distinctObjects .,\n" +
+                    "###negate sd:namedGraph .,\n" +
+                    "###negate void:propertyPartition .,\n" +
+                    "###negate void:classPartition .,\n" +
+                    "###negate void:subset .\n" +
+                    "}\n" +
+                    "\n" +
+                    "<RDFDistributionLevelShape> {\n" +
+                    "    rdf:type (void:Dataset),\n" +
+                    "    dct:title rdf:langString,  ### should be rdf:langString\n" +
+                    "    dct:description rdf:langString, ### should be rdf:langString\n" +
+                    "    # Ensure that at least one of created or issued dates is provided\n" +
+                    "    (dct:created xsd:dateTime, dct:issued xsd:dateTime? |\n" +
+                    "        dct:created xsd:dateTime?, dct:issued xsd:dateTime),\n" +
+                    "    (dct:creator IRI* |\n" +
+                    "    	dct:creator xsd:string*),\n" +
+                    "    dct:publisher IRI,\n" +
+                    "    (foaf:page IRI)?,\n" +
+                    "    (schemaorg:logo IRI)?,\n" +
+                    "    dct:license IRI,\n" +
+                    "    ###(dct:language lexvo:~)*,\n" +
+                    "    void:vocabulary IRI*,\n" +
+                    "    dct:conformsTo IRI,\n" +
+                    "###negate dct:hasPart .,\n" +
+                    "	(idot:exampleIdentifier xsd:string)?,\n" +
+                    "	(void:exampleResource IRI)?,\n" +
+                    "	void:inDataset IRI,\n" +
+                    "    pav:version xsd:string,\n" +
+                    "###negate dct:isVersionOf .,\n" +
+                    "    pav:previousVersion @<RDFDistributionLevelShape>?,\n" +
+                    "###negate pav:hasCurrentVersion .,\n" +
+                    "	dct:source IRI?,\n" +
+                    "	pav:retrievedFrom IRI?,\n" +
+                    "	prov:wasDerivedFrom IRI?,\n" +
+                    "###negate dct:accrualPeriodicity .,\n" +
+                    "    dct:format (\"text/turtle\" \"application/rdf+xml\" \"text/plain\" \"text/rdf+n3\"),\n" +
+                    "###negate dcat:distribution .,\n" +
+                    "    void:dataDump IRI*,\n" +
+                    "    void:triples xsd:integer?,\n" +
+                    "    void:entities xsd:integer?,\n" +
+                    "    void:distinctSubjects xsd:integer?,\n" +
+                    "    void:properties xsd:integer?,\n" +
+                    "    void:distinctObjects xsd:integer?,\n" +
+                    "    sd:namedGraph sd:NamedGraph?\n" +
+                    "}\n",
+            dataDemos: [
+                {
+                    name: "Working ChEMBL demo",
+                    data:   "BASE <http://rdf.ebi.ac.uk/chembl/>\n" +
+                            "\n" +
+                            "PREFIX dcat: <http://www.w3.org/ns/dcat#>\n" +
+                            "PREFIX dct: <http://purl.org/dc/terms/>\n" +
+                            "PREFIX dctypes: <http://purl.org/dc/dcmitype/>\n" +
+                            "PREFIX foaf: <http://foaf.example/#>\n" +
+                            "PREFIX freq: <http://purl.org/cld/freq/>\n" +
+                            "PREFIX lexvo: <http://lexvo.org/id/iso639-3/>\n" +
+                            "PREFIX pav: <http://purl.org/pav/>\n" +
+                            "PREFIX prov: <http://www.w3.org/ns/prov#>\n" +
+                            "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n" +
+                            "PREFIX sd: <http://www.w3.org/ns/sparql-service-description#>\n" +
+                            "PREFIX void: <http://rdfs.org/ns/void#>\n" +
+                            "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
+                            "\n" +
+                            "<chembl>\n" +
+                            "    rdf:type dctypes:Dataset ;\n" +
+                            "    dct:title \"ChEMBL\"@en ;\n" +
+                            "    dct:description \"ChEMBL is a database of bioactive drug-like small molecules, it contains 2-D structures, calculated properties (e.g. logP, Molecular Weight, Lipinski Parameters, etc.) and abstracted bioactivities (e.g. binding constants, pharmacology and ADMET data). The data is abstracted and curated from the primary scientific literature, and cover a significant fraction of the SAR and discovery of modern drugs. We attempt to normalise the bioactivities into a uniform set of end-points and units where possible, and also to tag the links between a molecular target and a published assay with a set of varying confidence levels. Additional data on clinical progress of compounds is being integrated into ChEMBL at the current time.\"@en ;\n" +
+                            "    dct:publisher <http://www.ebi.ac.uk/> ;\n" +
+                            "    foaf:page <https://www.ebi.ac.uk/chembl> ;\n" +
+                            "    dct:license <http://creativecommons.org/licenses/by-sa/3.0/>;\n" +
+                            "    dct:accrualPeriodicity freq:quarterly\n" +
+                            ".\n" +
+                            "\n" +
+                            "<chembl16>\n" +
+                            "    rdf:type dctypes:Dataset ;\n" +
+                            "    dct:title \"ChEMBL\"@en ;\n" +
+                            "    dct:description \"ChEMBL is a database of bioactive drug-like small molecules, it contains 2-D structures, calculated properties (e.g. logP, Molecular Weight, Lipinski Parameters, etc.) and abstracted bioactivities (e.g. binding constants, pharmacology and ADMET data). The data is abstracted and curated from the primary scientific literature, and cover a significant fraction of the SAR and discovery of modern drugs. We attempt to normalise the bioactivities into a uniform set of end-points and units where possible, and also to tag the links between a molecular target and a published assay with a set of varying confidence levels. Additional data on clinical progress of compounds is being integrated into ChEMBL at the current time.\"@en ;\n" +
+                            "    dct:created \"2013-08-29T00:00:00\"^^xsd:dateTime ;\n" +
+                            "    foaf:page <https://www.ebi.ac.uk/chembl> ;\n" +
+                            "    dct:publisher <http://www.ebi.ac.uk/> ;\n" +
+                            "    dct:license <http://creativecommons.org/licenses/by-sa/3.0/> ;\n" +
+                            "    dct:language lexvo:en;\n" +
+                            "    pav:version \"16\";\n" +
+                            "    pav:previousVersion <chembl15>;\n" +
+                            "    pav:isVersionOf <chembl>;\n" +
+                            "    prov:derivedFrom <example>;\n" +
+                            "    dcat:distribution <chembl16rdf>, <chembl16db> ;\n" +
+                            ".\n" +
+                            "\n" +
+                            "<chembl16rdf>\n" +
+                            "	a void:Dataset ;\n" +
+                            "	dct:title \"ChEMBL RDF\"@en ;\n" +
+                            "	dct:description \"The RDF distribution of the ChEMBL 16 dataset.\"@en ;\n" +
+                            "	dct:created \"2013-05-07T00:00:00.000+01:00\"^^xsd:dateTime ;\n" +
+                            "	dct:creator <http://orcid.org/0000-0002-8011-0300> ;\n" +
+                            "	dct:publisher <http://www.ebi.ac.uk/>;\n" +
+                            "    foaf:page <https://www.ebi.ac.uk/chembl> ;\n" +
+                            "	dct:license <http://creativecommons.org/licenses/by-sa/3.0/> ;\n" +
+                            "	pav:version \"16.0\";\n" +
+                            "	void:vocabulary <http://purl.org/ontology/bibo/> , <http://www.bioassayontology.org/bao#> , <http://purl.org/obo/owl/CHEBI#> , <http://rdf.ebi.ac.uk/resource/chembl/> , <http://semanticscience.org/resource/> , <http://purl.org/spar/cito/> , <http://purl.org/dc/terms/> , <http://www.w3.org/2002/07/owl#> , <http://purl.obolibrary.org/obo/> , <http://www.w3.org/1999/02/22-rdf-syntax-ns#> , <http://www.w3.org/2000/01/rdf-schema#> , <http://www.w3.org/2004/02/skos/core#> , <http://www.w3.org/2001/XMLSchema#> ;\n" +
+                            "    void:exampleResource <http://rdf.ebi.ac.uk/resource/chembl/molecule/CHEMBL941/> ;\n" +
+                            "    void:sparqlEndpoint <http://rdf.ebi.ac.uk/dataset/chembl/sparql> ;\n" +
+                            "    dct:format \"text/turtle\";\n" +
+                            "    void:dataDump <ftp://ftp.ebi.ac.uk/pub/databases/chembl/ChEMBL-RDF/16/chembl_16_molecule.ttl.gz> ;\n" +
+                            "    void:triples \"82003819\"^^xsd:integer\n" +
+                            ".\n" +
+                            "\n" +
+                            "<chembl16db>\n" +
+                            "	a dctypes:Dataset;\n" +
+                            "	dct:title \"ChEMBL RDF\"@en ;\n" +
+                            "	dct:description \"The RDF distribution of the ChEMBL 16 dataset.\"@en ;\n" +
+                            "	dct:created \"2013-05-07T00:00:00.000+01:00\"^^xsd:dateTime ;\n" +
+                            "	dct:publisher <http://www.ebi.ac.uk/>;\n" +
+                            "    foaf:page <https://www.ebi.ac.uk/chembl> ;\n" +
+                            "	dct:license <http://creativecommons.org/licenses/by-sa/3.0/> ;\n" +
+                            ".\n" +
+                            "\n" +
+                            "<chembl15>\n" +
+                            "    rdf:type dctypes:Dataset ;\n" +
+                            "    dct:title \"ChEMBL\"@en ;\n" +
+                            "    dct:description \"ChEMBL is a database of bioactive drug-like small molecules, it contains 2-D structures, calculated properties (e.g. logP, Molecular Weight, Lipinski Parameters, etc.) and abstracted bioactivities (e.g. binding constants, pharmacology and ADMET data). The data is abstracted and curated from the primary scientific literature, and cover a significant fraction of the SAR and discovery of modern drugs. We attempt to normalise the bioactivities into a uniform set of end-points and units where possible, and also to tag the links between a molecular target and a published assay with a set of varying confidence levels. Additional data on clinical progress of compounds is being integrated into ChEMBL at the current time.\"@en ;\n" +
+                            "    dct:created \"2013-05-07T00:00:00\"^^xsd:dateTime ;\n" +
+                            "    dct:publisher <http://www.ebi.ac.uk/> ;\n" +
+                            "    dct:license <http://creativecommons.org/licenses/by-sa/3.0/> ;\n" +
+                            "    dct:language lexvo:en, lexvo:fr;\n" +
+                            "    pav:version \"15\";\n" +
+                            "    pav:isVersionOf <chembl>;\n" +
+                            "    prov:derivedFrom <example>\n" +
+                            ".\n"
+                }
+            ]
+        },
+        {
+            enabled: true,
+            default: false,
             name: "oneTriple Test",
             description: "Very basic ShEx example with only one triple",
             creationDate: "1425143400",
