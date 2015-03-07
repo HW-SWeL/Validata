@@ -239,7 +239,7 @@ UI = {
         {
             $.each(Validata.Schema.dataDemos, function schemaDataDemosIterator(index, dataDemoObject)
             {
-                $('<button type="button" class="btn demoButton"><div class="demoButtonIcon"></div>' + dataDemoObject['name'] + '</button>').on('click', function dataDemoButtonClick() {
+                $('<button type="button" class="btn btn-block btn-success demoButton"><div class="demoButtonIcon"></div>' + dataDemoObject['name'] + '</button>').on('click', function dataDemoButtonClick() {
                     Log.v("UI." + Log.getInlineFunctionTrace(arguments));
                     
                     UI.activateWizardStep("Data", true);
