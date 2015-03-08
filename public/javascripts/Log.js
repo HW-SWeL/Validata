@@ -56,7 +56,7 @@ Log = {
         Log.prettyConsoleLog("e", errorString);
     },
 
-    getInlineFunctionTrace: function getInlineFunctionTrace(inputArguments)
+    getInlineFunctionTrace: function getInlineFunctionTrace(inputArguments, inputCallee)
     {
         var inlineTraceString = '';
 
@@ -65,9 +65,9 @@ Log = {
             inlineTraceString += inputArguments.callee.name;
         }
 
-        if(inputArguments.callee.caller && inputArguments.callee.caller.name)
+        if(inputCallee)
         {
-            inlineTraceString += " called by " + inputArguments.callee.caller.name;
+            inlineTraceString += " called by " + inputCallee.name;
         }
 
         if(inputArguments.length)

@@ -213,7 +213,7 @@ Util = {
     {
         try
         {
-            Log.v("Util." + Log.getInlineFunctionTrace(arguments));
+            Log.v("Util." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
             return (n.split('.')[1] || []).length;
         }
@@ -227,7 +227,7 @@ Util = {
     {
         try
         {
-            Log.v("Util." + Log.getInlineFunctionTrace(arguments));
+            Log.v("Util." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
             if(!Util.isDefined(iterable))
             {
@@ -257,7 +257,7 @@ Util = {
     {
         try
         {
-            Log.v("Util." + Log.getInlineFunctionTrace(arguments));
+            Log.v("Util." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
             var ts = new Date().getTime() / 1000;
             return Math.floor(ts);
@@ -375,7 +375,7 @@ Util = {
     {
         try
         {
-            Log.v("Util." + Log.getInlineFunctionTrace(arguments));
+            Log.v("Util." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
             return element.clone()
                 .children()
