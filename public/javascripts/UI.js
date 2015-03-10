@@ -2,7 +2,7 @@ UI = {
     
     documentReady: function documentReady()
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
         
         UI.selectCommonElements();
         UI.setupEventHandlers();
@@ -12,7 +12,7 @@ UI = {
 
     selectCommonElements: function selectCommonElements()
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
         
         UI.wizardSidebarStepsList = $('#wizardSidebarStepsList');
         UI.wizardSidebarSteps = UI.wizardSidebarStepsList.find('li.wizardSidebarStep');
@@ -63,11 +63,12 @@ UI = {
 
     setupEventHandlers: function setupEventHandlers()
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         // When the Schema Source modal pops up, set it's height based on the window size
         UI.schemaSourceModal.on("show.bs.modal", function modalShow() {
             $(this).find(".modal-body").css("max-height", ( $(window).height() - 200 ) );
+            
         });
 
         // Clicking anywhere inside a step panel triggers the staggered update
@@ -95,22 +96,40 @@ UI = {
             UI.triggerStaggeredContentChange();
         });
 
-        // Changing the value of any input or editable source text field inside a step panel triggers the staggered update
-        UI.wizardStepPanels.find('select, input, div.editableSourceText').on('change', function wizardStepPanelsInputChange()
+        // Pressing any key inside or changing the value of any input or editable source text field inside a step panel triggers the staggered update
+        UI.wizardStepPanels
+            .find('select, input, div.editableSourceText')
+            .add( UI.schemaSourceText )
+            .on('change keyup', function wizardStepPanelsInputChange()
         {
             UI.triggerStaggeredContentChange();
         });
-
-        // Pressing any key inside any input or editable source text field inside a step panel triggers the staggered update
-        UI.wizardStepPanels.find('select, input, div.editableSourceText').on('keyup', function wizardStepPanelsInputKeyup()
+        
+        // Pasting content into either of the two editable content divs should strip any formatting from the pasted content so it only contains plain text
+        $('div.editableSourceText').on('paste', function editableSourceTextPaste(e) 
         {
+            Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+
+            setTimeout(function () {
+                console.log(e);
+
+                UI.schemaSourceText.text( UI.schemaSourceText.text() );
+                UI.dataSourceText.text( UI.dataSourceText.text() );
+            }, 100);
+        });
+        
+        // Modifying the content in the schema source text box should update the content stored in the data object and trigger a re-validation
+        UI.schemaSourceText.on('change', function schemaSourceTextChange()
+        {
+            Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+
             UI.triggerStaggeredContentChange();
         });
-
+        
         // Selecting a file using the file chooser should cause the content of that file to be loaded into the data source div as text
         UI.dataSourceFile.on('change', function dataSourceFileChange()
         {
-            Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+            Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
             var inputFiles = this.files;
             
@@ -140,7 +159,7 @@ UI = {
 
     triggerStaggeredContentChange: function triggerStaggeredContentChange()
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Util.waitForFinalEvent(function waitForFinalEventCallback()
         {
@@ -150,15 +169,16 @@ UI = {
 
     staggeredContentChange: function staggeredContentChange()
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         UI.updateEnteredData();
+        UI.updateEnteredSchema();
         Validata.validate();
     },
-        
+    
     activateWizardStep: function activateWizardStep(newStepName, scrollToPanel)
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         // Only change classes if the new step is not already the active step
         if( UI["wizardStepPanel" + newStepName].hasClass('panel-info') )
@@ -183,7 +203,7 @@ UI = {
 
     updateEnteredData: function updateEnteredData()
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Data = {
             data: UI.dataSourceText.text(),
@@ -193,9 +213,16 @@ UI = {
         }
     },
     
+    updateEnteredSchema: function updateEnteredSchema()
+    {
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+
+        Validata.Schema.data = UI.schemaSourceText.text();
+    },
+    
     updateSelectedSchema: function updateSelectedSchema()
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         var selectedSchemaIndex = UI.schemaSelector.val();
         
@@ -239,8 +266,8 @@ UI = {
         {
             $.each(Validata.Schema.dataDemos, function schemaDataDemosIterator(index, dataDemoObject)
             {
-                $('<button type="button" class="btn demoButton"><div class="demoButtonIcon"></div>' + dataDemoObject['name'] + '</button>').on('click', function dataDemoButtonClick() {
-                    Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+                $('<button type="button" class="btn btn-block btn-success demoButton"><div class="demoButtonIcon"></div>' + dataDemoObject['name'] + '</button>').on('click', function dataDemoButtonClick() {
+                    Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
                     
                     UI.activateWizardStep("Data", true);
                     UI.dataSourceText.text(dataDemoObject['data']).change();

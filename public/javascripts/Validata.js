@@ -33,7 +33,7 @@ Validata = {
 
     initialize: function initialize()
     {
-        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         // If option is set, add entry for a "Custom" schema which has an empty string as data
         if (ShExValidataConfig.options.allowCustomSchema)
@@ -85,14 +85,10 @@ Validata = {
 
     validate: function validate()
     {
-        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Validation.options.startingNodes = UI.dataStartNodesSelector.val();
         
-        Log.i("Validating with schema:");
-        Log.i(Validata.Schema.data);
-        Log.i("Validating with data:");
-        Log.i(Validata.Data.data);
         Log.i("Validating with options:");
         Log.i(Validata.Validation.options);
         
@@ -101,7 +97,7 @@ Validata = {
 
     schemaParsedCallback: function schemaParsedCallback(responseObject)
     {
-        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Schema.rawResponse = responseObject;
         Validata.Schema.parsed = true;
@@ -111,7 +107,7 @@ Validata = {
 
     schemaParseErrorCallback: function schemaParseErrorCallback(responseObject)
     {
-        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Schema.rawResponse = responseObject;
         Validata.Schema.parsed = false;
@@ -121,7 +117,7 @@ Validata = {
 
     dataParsedCallback: function dataParsedCallback(responseObject)
     {
-        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Data.rawResponse = responseObject;
         Validata.Data.parsed = true;
@@ -167,7 +163,7 @@ Validata = {
 
     dataParseErrorCallback: function dataParseErrorCallback(responseObject)
     {
-        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Data.rawResponse = responseObject;
         Validata.Data.parsed = false;
@@ -177,17 +173,25 @@ Validata = {
 
     validationResultCallback: function validationResultCallback(resultObject)
     {
-        Log.v("Validata." + Log.getInlineFunctionTrace(arguments));
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Validation.rawResponse = resultObject;
-        Validata.Validation.passed = !!Validata.Validation.rawResponse['passed'];
+        
+        if( Validata.Validation.rawResponse['passed'] || Validata.Validation.rawResponse.errors.length == 0 )
+        {
+            Validata.Validation.passed = true;
+        }
+        else
+        {
+            Validata.Validation.passed = false;
+        }
 
         Validata.triggerValidationMessageUpdate();
     },
 
     triggerValidationMessageUpdate: function triggerValidationMessageUpdate()
     {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments));
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Util.waitForFinalEvent(function waitForFinalEventCallback()
         {
@@ -197,7 +201,7 @@ Validata = {
     
     updateValidationMessages: function updateValidationMessages()
     {
-        Log.v("Validation." + Log.getInlineFunctionTrace(arguments));
+        Log.v("Validation." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         var quickSummaryStatusClassesToRemove = 'quickSummaryStatusIncomplete quickSummaryStatusInvalid quickSummaryStatusValid';
         
