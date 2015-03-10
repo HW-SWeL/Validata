@@ -17,8 +17,37 @@ UI = {
         UI.downloadConfigButton = $('#finish');
 
         UI.panelContainer = $('.panel-group');
-        UI.newSchemaPanel = $('.schemaPanel').clone(true);
+        UI.schemaPanel = $('.schemaPanel');
         UI.schemaArray = [];
+    },
+
+    resetSchemaForm: function resetSchemaForm(){
+        UI.titleInput.val('');
+        UI.descInput.val('');
+        UI.schemaSourceFile.val('');
+        UI.schemaSourceText.text('');
+    },
+
+    createNewPanel: function createNewPanel(schemaObject){
+        // update current panel title
+        var schemaPanel = UI.schemaPanel.clone();
+        schemaPanel.find('.panel-title').text(schemaObject.title);
+        // remove or edit add schema button
+        schemaPanel.find('button.addSchema').remove();
+
+        // add a remove schema button
+
+        // add to view
+        UI.panelContainer.append(schemaPanel);
+
+        // add collapsibility
+        var panelHeading = schemaPanel.find('.panel-heading');
+        panelHeading.attr('data-toggle','collapse');
+        panelHeading.attr('data-target','.panel-body');
+
+        // collapse current panel
+        panelHeading.trigger('click');
+
     },
 
     setupEventHandlers: function setupEventHandlers()
@@ -47,8 +76,19 @@ UI = {
         });
 
         UI.addSchemaButton.on('click', function clickAddSchemaButton(e){
+            //var schemaPanel = UI.panelContainer.find('.schemaPanel').clone(true);
             e.preventDefault();
+
+            //var parent = $(e.target).parent(),
+            //    titleInput = parent.find('.titleInput'),
+            //    descInput = parent.find('.descriptionInput'),
+            //    schemaInput = parent.find('.schemaSourceText');
+
+
             var schemaObject = {
+                //title: titleInput.val(),
+                //description: descInput.val(),
+                //schema: schemaInput.text()
                 title: UI.titleInput.val(),
                 description: UI.descInput.val(),
                 creationDate: new Date(),
@@ -58,28 +98,25 @@ UI = {
             console.log(schemaObject);
 
             // disable schema button until all inputs not empty && schema valid
-            // update current panel title
-            // remove or edit add schema button
-            // add a remove schema button
-            // collapse current panel
 
             // create new empty schema panel
-            UI.panelContainer.append(UI.newSchemaPanel);
-            //UI.newSchemaPanel.appendTo('body');
 
+            UI.createNewPanel(schemaObject);
 
             //move schema to schema array
             UI.schemaArray.push(schemaObject);
 
             // reset form
+            UI.resetSchemaForm();
             // animation
 
 
         });
 
-        UI.downloadConfigButton.on('click', function clickDownloadConfigButton(){
+        UI.downloadConfigButton.on('click', function clickDownloadConfigButton(e){
             // create json object from schema array
-            // facilitate download of schemas
+            var file = { schemas: UI.schemaArray };
+            this.href = 'data:plain/text,' + JSON.stringify(file);
         });
     }
 };
