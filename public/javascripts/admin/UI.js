@@ -8,45 +8,54 @@ UI = {
 
     selectCommonElements: function selectCommonElements()
     {
-        UI.schemaSourceFile = $('.schemaSourceFile');
-        UI.schemaSourceText = $('.schemaSourceText');
+        UI.mainPanel = $('#home');
+        UI.panelContainer = $('.panel-group');
+        UI.tabList = $('#tabList');
+        UI.schemaPanel = $('.schemaPanel');
 
-        UI.titleInput = $('.titleInput');
-        UI.descInput = $('.descriptionInput');
-        UI.addSchemaButton = $('.addSchema');
+        UI.schemaSourceFile = UI.mainPanel.find('.schemaSourceFile');
+        UI.schemaSourceText = UI.mainPanel.find('.schemaSourceText');
+        UI.titleInput = UI.mainPanel.find('.titleInput');
+        UI.descInput = UI.mainPanel.find('.descriptionInput');
+
+        UI.addSchemaButton = UI.mainPanel.find('.addSchema');
         UI.downloadConfigButton = $('#finish');
 
-        UI.panelContainer = $('.panel-group');
-        UI.schemaPanel = $('.schemaPanel');
         UI.schemaArray = [];
     },
 
     resetSchemaForm: function resetSchemaForm(){
-        UI.titleInput.val('');
-        UI.descInput.val('');
-        UI.schemaSourceFile.val('');
-        UI.schemaSourceText.text('');
+        UI.mainPanel.find('form')[0].reset();
     },
 
     createNewPanel: function createNewPanel(schemaObject){
-        // update current panel title
-        var schemaPanel = UI.schemaPanel.clone();
-        schemaPanel.find('.panel-title').text(schemaObject.title);
+        var schemaPanel = UI.schemaPanel.parent().clone();
+
         // remove or edit add schema button
         schemaPanel.find('button.addSchema').remove();
 
-        // add a remove schema button
+        // workaround for textarea cloning bug: http://bugs.jquery.com/ticket/3016
+        schemaPanel.find('.schemaSourceText').val(schemaObject.schema);
 
-        // add to view
-        UI.panelContainer.append(schemaPanel);
+        // add a 'remove schema' button
 
-        // add collapsibility
-        var panelHeading = schemaPanel.find('.panel-heading');
-        panelHeading.attr('data-toggle','collapse');
-        panelHeading.attr('data-target','.panel-body');
+        // get index for next tab
+        var nextTab = $('#tabList li').size() + 1;
+        var nextTabID = 'tab' + nextTab;
+        var navTabID = 'nav_tab' + nextTab;
 
-        // collapse current panel
-        panelHeading.trigger('click');
+        // create the tab navigation
+        $('<li><a id="' + navTabID + '" href="#'+ nextTabID +'" data-toggle="tab">' + schemaObject.title +'</a></li>').appendTo('#tabList');
+
+        // create the tab content
+        var newTabContent = $('<div class="tab-pane" id="'+ nextTabID +'">' + '</div>').appendTo('.tab-content');
+        newTabContent.append(schemaPanel);
+
+        // animate new tab
+        $('#' + navTabID).addClass('animated bounce')
+            .one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function(){
+                $(this).removeClass('animated bounce')
+        });
 
     },
 
@@ -76,14 +85,7 @@ UI = {
         });
 
         UI.addSchemaButton.on('click', function clickAddSchemaButton(e){
-            //var schemaPanel = UI.panelContainer.find('.schemaPanel').clone(true);
             e.preventDefault();
-
-            //var parent = $(e.target).parent(),
-            //    titleInput = parent.find('.titleInput'),
-            //    descInput = parent.find('.descriptionInput'),
-            //    schemaInput = parent.find('.schemaSourceText');
-
 
             var schemaObject = {
                 //title: titleInput.val(),
@@ -92,24 +94,21 @@ UI = {
                 title: UI.titleInput.val(),
                 description: UI.descInput.val(),
                 creationDate: new Date(),
-                schema: UI.schemaSourceText.text()
+                schema: UI.schemaSourceText.val()
             };
-
-            console.log(schemaObject);
 
             // disable schema button until all inputs not empty && schema valid
 
-            // create new empty schema panel
-
+            // create new schema panel
             UI.createNewPanel(schemaObject);
 
-            //move schema to schema array
+            // move schema to schema array
             UI.schemaArray.push(schemaObject);
 
             // reset form
             UI.resetSchemaForm();
-            // animation
 
+            // animation
 
         });
 
