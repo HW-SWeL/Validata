@@ -28,6 +28,22 @@ UI = {
 
     resetSchemaForm: function resetSchemaForm(){
         UI.mainPanel.find('form')[0].reset();
+        UI.addSchemaButton.addClass('disabled');
+    },
+
+    formValid: function formValid(){
+        return UI.titleInput.val() && UI.descInput.val()
+            && UI.schemaSourceText.val() && Validata.schemaValid;
+    },
+
+    checkSubmitButton: function checkSubmitButton(){
+        if(UI.formValid()){
+            UI.addSchemaButton.removeClass('disabled');
+            Util.animateOnce(UI.addSchemaButton, 'tada');
+        }
+        else{
+            UI.addSchemaButton.addClass('disabled');
+        }
     },
 
     createNewPanel: function createNewPanel(schemaObject){
@@ -54,10 +70,7 @@ UI = {
         newTabContent.append(schemaPanel);
 
         // animate new tab
-        $('#' + navTabID).addClass('animated bounce')
-            .one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function(){
-                $(this).removeClass('animated bounce')
-        });
+        Util.animateOnce($('#' + navTabID), 'bounce');
 
     },
 
@@ -83,36 +96,42 @@ UI = {
             };
 
             reader.readAsText(inputFile);
+
         });
 
         UI.addSchemaButton.on('click', function clickAddSchemaButton(e){
             e.preventDefault();
 
-            var schemaObject = {
-                title: UI.titleInput.val(),
-                description: UI.descInput.val(),
-                creationDate: new Date(),
-                schema: UI.schemaSourceText.val()
-            };
+            // check if form valid
+            if(UI.formValid()){
+                var schemaObject = {
+                    title: UI.titleInput.val(),
+                    description: UI.descInput.val(),
+                    creationDate: new Date(),
+                    schema: UI.schemaSourceText.val()
+                };
 
-            // disable schema button until all inputs not empty && schema valid
+                // disable schema button until all inputs not empty && schema valid
 
-            // create new schema panel
-            UI.createNewPanel(schemaObject);
+                // create new schema panel
+                UI.createNewPanel(schemaObject);
 
-            // move schema to schema array
-            UI.schemaArray.push(schemaObject);
+                // move schema to schema array
+                UI.schemaArray.push(schemaObject);
 
-            // reset form
-            UI.resetSchemaForm();
+                // reset form
+                UI.resetSchemaForm();
+            }
 
         });
 
         UI.schemaSourceText.on('change keyup', function validateSchema(){
-            Util.delay(function(){
+
+            Util.waitForFinalEvent(function waitForFinalEventCallback()
+            {
                 ShExValidator.validate(UI.schemaSourceText.val(), "", Validata.callbacks, {});
-            //ShExValidator.validate(UI.schemaSourceText.val(), "", Validata.callbacks, {});
-            }, 1000);
+                UI.checkSubmitButton();
+            }, 500, "schemaValidator");
 
         }),
 
