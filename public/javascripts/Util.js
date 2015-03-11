@@ -16,6 +16,14 @@ Util = {
             timers[uniqueId] = setTimeout(callback, ms);
         };
     }(),
+
+    delay: (function() {
+        var timer = 0;
+        return function(callback, ms) {
+            clearTimeout(timer);
+            timer = setTimeout(callback, ms);
+        };
+    })(),
     
     // This will return true for a non-empty string, number or boolean value
     // It will return false for undefined itself

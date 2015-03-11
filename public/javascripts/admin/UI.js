@@ -18,6 +18,8 @@ UI = {
         UI.titleInput = UI.mainPanel.find('.titleInput');
         UI.descInput = UI.mainPanel.find('.descriptionInput');
 
+        UI.schemaErrorAlert = UI.mainPanel.find('.schemaErrorAlert');
+        UI.schemaSuccessAlert = UI.mainPanel.find('.schemaSuccessAlert');
         UI.addSchemaButton = UI.mainPanel.find('.addSchema');
         UI.downloadConfigButton = $('#finish');
 
@@ -59,10 +61,10 @@ UI = {
 
     },
 
-    setupEventHandlers: function setupEventHandlers()
-    {
+    setupEventHandlers: function setupEventHandlers() {
         // Selecting a file using the file chooser should cause the content of that file to be loaded into the data source div as text
         UI.schemaSourceFile.on('change', function schemaSourceFileChange() {
+            Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
             var inputFiles = this.files;
 
             if (inputFiles == undefined || inputFiles.length == 0) {
@@ -73,12 +75,11 @@ UI = {
             var reader = new FileReader();
 
             reader.onload = function (event) {
-                UI.schemaSourceText.text(event.target.result).change();
+                UI.schemaSourceText.val(event.target.result).change();
             };
 
             reader.onerror = function (event) {
                 var errorMessage = "Selected file could not be uploaded. Error: " + event.target.error.code;
-                UI.schemaSourceText.text(errorMessage).change();
             };
 
             reader.readAsText(inputFile);
@@ -88,9 +89,6 @@ UI = {
             e.preventDefault();
 
             var schemaObject = {
-                //title: titleInput.val(),
-                //description: descInput.val(),
-                //schema: schemaInput.text()
                 title: UI.titleInput.val(),
                 description: UI.descInput.val(),
                 creationDate: new Date(),
@@ -108,14 +106,21 @@ UI = {
             // reset form
             UI.resetSchemaForm();
 
-            // animation
-
         });
+
+        UI.schemaSourceText.on('change keyup', function validateSchema(){
+            Util.delay(function(){
+                ShExValidator.validate(UI.schemaSourceText.val(), "", Validata.callbacks, {});
+            //ShExValidator.validate(UI.schemaSourceText.val(), "", Validata.callbacks, {});
+            }, 1000);
+
+        }),
 
         UI.downloadConfigButton.on('click', function clickDownloadConfigButton(e){
             // create json object from schema array
             var file = { schemas: UI.schemaArray };
-            this.href = 'data:plain/text,' + JSON.stringify(file);
+            var data = "text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(file, null, "\n"));
+            UI.downloadConfigButton.attr("href", "data:"+data);
         });
     }
 };
