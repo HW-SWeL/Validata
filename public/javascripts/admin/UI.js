@@ -125,12 +125,11 @@ UI = {
 
         });
 
-        UI.schemaSourceText.on('change keyup', function validateSchema(){
+        UI.schemaSourceText.on('change keyup paste', function validateSchema(){
 
             Util.waitForFinalEvent(function waitForFinalEventCallback()
             {
                 ShExValidator.validate(UI.schemaSourceText.val(), "", Validata.callbacks, {});
-                UI.checkSubmitButton();
             }, 500, "schemaValidator");
 
         }),

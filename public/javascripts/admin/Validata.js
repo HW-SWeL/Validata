@@ -40,9 +40,10 @@ Validata = {
         }
         else
         {
+            UI.checkSubmitButton();
             UI.schemaErrorAlert.fadeOut('slow').find('.sourceText').empty();
             if(UI.schemaSourceText.val()){
-                UI.schemaSuccessAlert.fadeIn('slow').delay(1000).fadeOut('slow');
+                UI.schemaSuccessAlert.fadeIn('slow').delay(800).fadeOut('slow');
             }
         }
 
