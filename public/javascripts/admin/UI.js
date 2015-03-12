@@ -137,6 +137,9 @@ UI = {
 
                 // reset form
                 UI.resetSchemaForm();
+
+                // enable download button
+                UI.downloadConfigButton.removeClass('disabled');
             }
 
         });
