@@ -16,6 +16,14 @@ Util = {
             timers[uniqueId] = setTimeout(callback, ms);
         };
     }(),
+
+    animateOnce: function(elem, animClass){
+        elem.addClass('animated ' + animClass)
+            .one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function(){
+                $(this).removeClass('animated ' + animClass)
+        });
+    },
+
     
     // This will return true for a non-empty string, number or boolean value
     // It will return false for undefined itself
