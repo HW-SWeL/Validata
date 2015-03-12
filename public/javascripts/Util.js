@@ -17,14 +17,6 @@ Util = {
         };
     }(),
 
-    delay: (function() {
-        var timer = 0;
-        return function(callback, ms) {
-            clearTimeout(timer);
-            timer = setTimeout(callback, ms);
-        };
-    })(),
-
     animateOnce: function(elem, animClass){
         elem.addClass('animated ' + animClass)
             .one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function(){

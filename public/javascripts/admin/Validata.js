@@ -24,7 +24,7 @@ Validata = {
         Util.waitForFinalEvent(function waitForFinalEventCallback()
         {
             Validata.updateValidationMessages(responseObject);
-        }, 500, "updateValidationMessages");
+        }, 1000, "updateValidationMessages");
     },
 
     updateValidationMessages: function updateValidationMessages(responseObject)
