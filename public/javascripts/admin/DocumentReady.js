@@ -1,4 +1,5 @@
 var pageInitialized = false;
+
 $(function documentReady()
 {
 
@@ -7,6 +8,9 @@ $(function documentReady()
         return;
     }
     pageInitialized = true;
+
+
+    UI.documentReady();
 
     window.onerror = function onerror(message, file, line, col, e)
     {

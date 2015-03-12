@@ -28,80 +28,119 @@
 
             <div class="col-md-9">
 
-                <div class="panel panel-primary">
+                <div role="tabpanel">
 
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            Upload a schema
-                        </h4>
-                    </div>
+                    <!-- Nav tabs -->
+                    <ul id="tabList" class="nav nav-pills" role="tablist">
+                        <li role="presentation" class="active"><a href="#home" role="tab" data-toggle="tab">Add a schema</a></li>
+                    </ul>
 
-                    <div class="panel-body">
-                        <form class="form-horizontal">
+                    <!-- Tab panes -->
+                    <div class="tab-content">
+                        <div role="tabpanel" class="tab-pane active" id="home">
+                            <div class="well schemaPanel">
 
-                            <div class="form-group">
-                                <label class="col-sm-2 control-label">Title</label>
-                                <div class="col-sm-10">
-                                    <input type="text" name="Title" class="form-control"/>
-                                </div>
+                                <form class="form-horizontal">
+
+                                    <div class="form-group">
+                                        <label class="col-sm-1 control-label">Title</label>
+                                        <div class="col-sm-10">
+                                            <input type="text" class="form-control titleInput" required />
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="col-sm-1 control-label">Description</label>
+                                        <div class="col-sm-10">
+                                            <input type="text" class="form-control descriptionInput" required />
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="col-sm-offset-1 col-sm-10">
+                                            <div class="checkbox">
+                                                <label>
+                                                    <input type="checkbox" class="enabledInput" checked> Enabled?
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="col-sm-offset-1 col-sm-10">
+                                            <div class="checkbox">
+                                                <label>
+                                                    <input type="checkbox" class="defaultInput"> Default?
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="col-sm-1 control-label">Upload Schema File</label>
+                                        <div class="col-sm-10">
+                                            <input type="file" class="schemaSourceFile">
+                                        </div>
+                                    </div>
+
+                                    <div class="schemaErrorAlert hiddenFadeIn col-sm-12">
+                                        <div class="alert alert-danger col-sm-offset-1 col-sm-10" role="alert">
+                                            <h4>An error occurred while parsing the schema:</h4>
+
+                                            <div class="sourceText"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="schemaSuccessAlert hiddenFadeIn col-sm-12">
+                                        <div class="alert alert-success col-sm-offset-1 col-sm-10" role="alert">
+                                            <h5>Schema Parsed Successfully</h5>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="col-sm-1 control-label">Schema</label>
+                                        <div class="col-sm-10">
+                                            <textarea cols="30" rows="10" class="form-control schemaSourceText" required></textarea>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success addSchema disabled">
+                                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add to config
+                                    </button>
+
+                                </form>
+
                             </div>
 
-                            <div class="form-group">
-                                <label class="col-sm-2 control-label">Description</label>
-                                <div class="col-md-10">
-                                    <input type="text" name="Description" class="form-control" />
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="col-sm-2 control-label">Schema</label>
-                                <div class="col-sm-10">
-                                    <textarea name="" id="" cols="30" rows="10" class="form-control"></textarea>
-                                </div>
-                            </div>
-
-                            <button id="finish" class="btn btn-primary">
-                                <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Config
-                            </button>
-
-                            <button id="add" class="btn btn-success">
-                                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add another schema
-                            </button>
-                        </form>
+                        </div>
 
                     </div>
 
                 </div>
 
-            </div>
-
-            <div class="col-md-3">
-                <div class="panel panel-primary">
-                    <div class="panel-heading">
-                        <h5 class="panel-title">
-                            Current Schemas
-                        </h5>
-                    </div>
-                    <div class="panel panel-body">
-
-                    </div>
+                <div class="col-md-12">
+                    <a href="" id="finish" class="btn btn-primary disabled" download="ShExValidataConfig.json">
+                        <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Config
+                    </a>
                 </div>
-            </div>
 
-            <div class="col-md-12">
                 <p>Have a config file already?
                     <button id="import" class="btn btn-xs btn-warning">
                         <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Import it here
                     </button>
                 </p>
-            </div>
 
+            </div>
         </div>
         
         <script src="components/jquery/dist/jquery.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.js"></script>
 
-        <script src="javascripts/ShExLog.js"></script>
+        <script src="javascripts/ShExValidator.js"></script>
+        <script src="javascripts/Log.js"></script>
+        <script src="javascripts/Util.js"></script>
+        <script src="javascripts/admin/UI.js"></script>
+        <script src="javascripts/admin/Validata.js"></script>
         <script src="javascripts/admin/DocumentReady.js"></script>
 
     </body>
