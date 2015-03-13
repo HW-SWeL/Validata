@@ -191,6 +191,9 @@ UI = {
                 // update with form values
                 var schemaObject = UI.getCurrentTabFields(tab);
 
+                // reset tab nav title
+                UI.tabList.find('a').eq(index).text(schemaObject.title);
+
                 // reset default values if necessary
                 UI.resetDefaultInput(schemaObject.default);
 
