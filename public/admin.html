@@ -26,7 +26,7 @@
                 </div>
             </div>
 
-            <div class="col-md-9">
+            <div class="col-md-9 row">
 
                 <div role="tabpanel">
 
@@ -119,18 +119,21 @@
                 </div>
 
                 <div class="col-md-12">
-                    <a href="" id="finish" class="btn btn-primary disabled" download="ShExValidataConfig.json">
+                    <a href="" id="download" class="btn btn-primary disabled" download="ShExValidataConfig.json">
                         <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Config
                     </a>
                 </div>
 
-                <p>Have a config file already?
-                    <button id="import" class="btn btn-xs btn-warning">
-                        <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Import it here
-                    </button>
-                </p>
-
             </div>
+
+            <div class="col-md-3 alert-warning pull-right">
+                <p>Have a config file already?  Import it here
+                    <div>
+                        <input id="import" type="file" >
+                    </div>
+                </p>
+            </div>
+
         </div>
         
         <script src="components/jquery/dist/jquery.js"></script>

@@ -5,6 +5,7 @@ UI = {
         UI.initialiseElements();
         UI.refreshCurrentTab();
         UI.setupEventHandlers();
+        UI.resetSchemaForm();
     },
 
     initialiseElements: function initialiseElements()
@@ -15,7 +16,8 @@ UI = {
         UI.schemaTab = $('.schemaTab');
         UI.addSchemaButton = UI.mainTab.find('.addSchema');
 
-        UI.downloadConfigButton = $('#finish');
+        UI.downloadConfigButton = $('#download');
+        UI.importConfigSelector = $('#import');
         UI.schemaArray = [];
     },
 
@@ -37,6 +39,7 @@ UI = {
     resetSchemaForm: function resetSchemaForm(){
         UI.mainTab.find('form')[0].reset();
         UI.addSchemaButton.addClass('disabled');
+        UI.importConfigSelector.val('');
     },
 
     formValid: function formValid(){
@@ -78,7 +81,11 @@ UI = {
             .addClass('saveSchema disabled')
             .html('<span class="glyphicon glyphicon-floppy-save"></span> Save');
 
-        // workaround for textarea cloning bug: http://bugs.jquery.com/ticket/3016
+        // populate form fields
+        schemaTab.find('.titleInput').val(schemaObject.title);
+        schemaTab.find('.descriptionInput').val(schemaObject.description);
+        schemaTab.find('.enabledInput').prop('checked', schemaObject.enabled);
+        schemaTab.find('.defaultInput').prop('checked', schemaObject.default);
         schemaTab.find('.schemaSourceText').val(schemaObject.schema);
 
         // add a 'remove schema' button
@@ -97,7 +104,6 @@ UI = {
 
         // animate new tab
         Util.animateOnce($('#' + navTabID), 'bounce');
-
     },
 
     getCurrentTabFields: function getCurrentTabFields(tab){
@@ -114,9 +120,7 @@ UI = {
     setupEventHandlers: function setupEventHandlers() {
 
         // refresh current tab pointer when switching tabs
-        UI.tabList.on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
-            UI.refreshCurrentTab();
-        }),
+        UI.tabList.on('shown.bs.tab', 'a[data-toggle="tab"]', UI.refreshCurrentTab),
 
         // Selecting a file using the file chooser should cause the content of that file to be loaded into the data source div as text
         UI.schemaSourceFile.on('change', function schemaSourceFileChange() {
@@ -136,10 +140,10 @@ UI = {
 
             reader.onerror = function (event) {
                 var errorMessage = "Selected file could not be uploaded. Error: " + event.target.error.code;
+                alert(errorMessage);
             };
 
             reader.readAsText(inputFile);
-
         });
 
         UI.addSchemaButton.on('click', function clickAddSchemaButton(e){
@@ -199,7 +203,7 @@ UI = {
 
         }),
 
-        UI.downloadConfigButton.on('click', function clickDownloadConfigButton(e){
+        UI.downloadConfigButton.on('click', function clickDownloadConfigButton(){
             // create json object from schema array
             var file = {
                 schemas: UI.schemaArray,
@@ -210,6 +214,34 @@ UI = {
             };
             var data = "text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(file, null, "\n"));
             UI.downloadConfigButton.attr("href", "data:"+data);
+        }),
+
+        UI.importConfigSelector.on('change', function clickImportConfigSelector(){
+
+            var inputFiles = this.files;
+
+            if (inputFiles == undefined || inputFiles.length == 0) {
+                return;
+            }
+            var inputFile = inputFiles[0];
+
+            var reader = new FileReader();
+
+            reader.onload = function (event) {
+                UI.schemaArray = JSON.parse(event.target.result).schemas;
+
+                // populate new tab nav and content
+                $(UI.schemaArray).each(function(){
+                   UI.createNewTab(this);
+                });
+            };
+
+            reader.onerror = function (event) {
+                var errorMessage = "Selected file could not be uploaded. Error: " + event.target.error.code;
+                alert(errorMessage);
+            };
+
+            reader.readAsText(inputFile);
         });
     }
 };
