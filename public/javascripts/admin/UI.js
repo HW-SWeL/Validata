@@ -2,31 +2,36 @@ UI = {
 
     documentReady: function documentReady()
     {
-        UI.selectCommonElements();
+        UI.initialiseElements();
+        UI.refreshCurrentTab();
         UI.setupEventHandlers();
     },
 
-    selectCommonElements: function selectCommonElements()
+    initialiseElements: function initialiseElements()
     {
         UI.mainTab = $('#home');
         UI.tabList = $('#tabList');
         UI.tabContent = $('.tab-content');
         UI.schemaTab = $('.schemaTab');
-
-        UI.schemaSourceFile = UI.mainTab.find('.schemaSourceFile');
-        UI.schemaSourceText = UI.mainTab.find('.schemaSourceText');
-        UI.titleInput = UI.mainTab.find('.titleInput');
-        UI.descInput = UI.mainTab.find('.descriptionInput');
-        UI.enabledInput = UI.mainTab.find('.enabledInput');
-        UI.defaultInput = UI.mainTab.find('.defaultInput');
-
-        UI.schemaErrorAlert = UI.mainTab.find('.schemaErrorAlert');
-        UI.schemaSuccessAlert = UI.mainTab.find('.schemaSuccessAlert');
         UI.addSchemaButton = UI.mainTab.find('.addSchema');
-        UI.saveSchemaButton = $('.saveSchema');
-        UI.downloadConfigButton = $('#finish');
 
+        UI.downloadConfigButton = $('#finish');
         UI.schemaArray = [];
+    },
+
+    refreshCurrentTab: function refreshCurrentTab(){
+        UI.currentTab = $('div.tab-pane.active');
+        UI.schemaSourceFile = UI.currentTab.find('.schemaSourceFile');
+        UI.schemaSourceText = UI.currentTab.find('.schemaSourceText');
+        UI.titleInput = UI.currentTab.find('.titleInput');
+        UI.descInput = UI.currentTab.find('.descriptionInput');
+        UI.enabledInput = UI.currentTab.find('.enabledInput');
+        UI.defaultInput = UI.currentTab.find('.defaultInput');
+        UI.saveSchemaButton = UI.currentTab.find('.saveSchema');
+
+        UI.schemaErrorAlert = UI.currentTab.find('.schemaErrorAlert');
+        UI.schemaSuccessAlert = UI.currentTab.find('.schemaSuccessAlert');
+        UI.submitButton = UI.currentTab.find('button.btn-success');
     },
 
     resetSchemaForm: function resetSchemaForm(){
@@ -41,11 +46,11 @@ UI = {
 
     checkSubmitButton: function checkSubmitButton(){
         if(UI.formValid()){
-            UI.addSchemaButton.removeClass('disabled');
-            Util.animateOnce(UI.addSchemaButton, 'tada');
+            UI.submitButton.removeClass('disabled');
+            Util.animateOnce(UI.submitButton, 'tada');
         }
         else{
-            UI.addSchemaButton.addClass('disabled');
+            UI.submitButton.addClass('disabled');
         }
     },
 
@@ -68,8 +73,9 @@ UI = {
 
         // create save button
         schemaTab.find('button.addSchema')
+            .off()
             .removeClass('addSchema')
-            .addClass('saveSchema')
+            .addClass('saveSchema disabled')
             .html('<span class="glyphicon glyphicon-floppy-save"></span> Save');
 
         // workaround for textarea cloning bug: http://bugs.jquery.com/ticket/3016
@@ -94,7 +100,23 @@ UI = {
 
     },
 
+    getCurrentTabFields: function getCurrentTabFields(tab){
+        return {
+            title: tab.find('.titleInput').val(),
+            description: tab.find('.descriptionInput').val(),
+            enabled: tab.find('.enabledInput').prop('checked'),
+            default: tab.find('.defaultInput').prop('checked'),
+            creationDate: Util.getUnixtime(),
+            schema: tab.find('.schemaSourceText').val()
+        };
+    },
+
     setupEventHandlers: function setupEventHandlers() {
+
+        // refresh current tab pointer when switching tabs
+        UI.tabList.on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
+            UI.refreshCurrentTab();
+        }),
 
         // Selecting a file using the file chooser should cause the content of that file to be loaded into the data source div as text
         UI.schemaSourceFile.on('change', function schemaSourceFileChange() {
@@ -125,14 +147,7 @@ UI = {
 
             // check if form valid
             if(UI.formValid()){
-                var schemaObject = {
-                    title: UI.titleInput.val(),
-                    description: UI.descInput.val(),
-                    enabled: UI.enabledInput.prop('checked'),
-                    default: UI.defaultInput.prop('checked'),
-                    creationDate: Util.getUnixtime(),
-                    schema: UI.schemaSourceText.val()
-                };
+                var schemaObject = UI.getCurrentTabFields(UI.mainTab);
 
                 // reset default values if necessary
                 UI.resetDefaultInput(schemaObject.default);
@@ -164,22 +179,23 @@ UI = {
         UI.tabContent.on('click','.saveSchema', function clickSaveSchemaButton(e){
             e.preventDefault();
 
-            var tab = UI.getTabPane(this);
-            var index = tab.data('index');
-            // update with form values
-            var schemaObject = {
-                title: tab.find('.titleInput').val(),
-                description: tab.find('.descriptionInput').val(),
-                enabled: tab.find('.enabledInput').prop('checked'),
-                default: tab.find('.defaultInput').prop('checked'),
-                creationDate: Util.getUnixtime(),
-                schema: tab.find('.schemaSourceText').val()
-            };
+            if(UI.formValid()) {
 
-            // save to schemaArray
-            UI.schemaArray[index] = schemaObject;
+                var tab = UI.getTabPane(this);
+                var index = tab.data('index');
 
-            console.log('saved object');
+                // update with form values
+                var schemaObject = UI.getCurrentTabFields(tab);
+
+                // reset default values if necessary
+                UI.resetDefaultInput(schemaObject.default);
+
+                // save to schemaArray
+                UI.schemaArray[index] = schemaObject;
+
+                // signal that changes were saved
+                UI.saveSchemaButton.addClass('disabled');
+            }
 
         }),
 
