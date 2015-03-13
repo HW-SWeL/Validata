@@ -99,7 +99,7 @@ UI = {
         $('<li><a id="' + navTabID + '" href="#'+ nextTabID +'" data-toggle="tab">' + schemaObject.title +'</a></li>').appendTo('#tabList');
 
         // create the tab content
-        var newTabContent = $('<div class="tab-pane" id="'+ nextTabID +'" data-index="' + nextTab + '" >' + '</div>').appendTo('.tab-content');
+        var newTabContent = $('<div class="tab-pane fade" id="'+ nextTabID +'" data-index="' + nextTab + '" >' + '</div>').appendTo('.tab-content');
         newTabContent.append(schemaTab);
 
         // animate new tab
