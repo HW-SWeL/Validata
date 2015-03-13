@@ -21,14 +21,62 @@
 
         <nav id="topNavbar" class="navbar navbar-default">
             <div class="container-fluid">
+
+                <div class="modal modal-wide fade" id="contributorsModal" tabindex="-1" role="dialog" aria-labelledby="contributorsModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span></button>
+                                <h3 class="modal-title" id="contributorsModalLabel">Contributors</h3>
+                            </div>
+                            <div class="modal-body">
+                                <h4>Validata Core Team</h4>
+                                <p>
+                                    <a href="http://www.andrewbeveridge.co.uk">Andrew Beveridge</a>
+                                </p>
+                                <p>
+                                    <a href="https://www.linkedin.com/profile/view?id=35338396">Jacob Baungard Hansen</a>
+                                </p>
+                                <p>
+                                    <a href="https://github.com/Doix">Johnny Val</a>
+                                </p>
+                                <p>
+                                    <a href="https://www.linkedin.com/profile/view?id=353351072">Leif Gehrmann</a>
+                                </p>
+                                <p>
+                                    <a href="https://www.linkedin.com/profile/view?id=229423071">Roisin Farmer</a>
+                                </p>
+                                <p>
+                                    <a href="https://www.linkedin.com/profile/view?id=212871327">Sunil Khutan</a>
+                                </p>
+                                <p>
+                                    <a href="https://www.linkedin.com/in/tomasrobertson">Tomas Robertson</a>
+                                </p>
+                                
+                                <br />
+                                <h4>Contributing Authors</h4>
+                                <p>
+                                    <a href="http://www.w3.org/People/Eric/">Eric Prud'Hommeaux</a><br />
+                                </p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <h2>Validata: RDF Validator using Shape Expressions</h2>
 
                 <p>
                     Validata is an intuitive, standalone web-based tool to help building valid RDF documents by validating against preset schemas written in the Shape Expressions (ShEx) language.
                 </p>
                 <p>
-                    The following data serialization formats are supported: <em>Turtle, TriG, N-Triples, N-Quads</em>
+                    The following data serialization formats are supported: <em>Turtle, TriG, N-Triples, N-Quads</em>.
+                    All work is licensed under the permissive <a href="http://opensource.org/licenses/MIT">MIT license</a> by <a href="#" data-toggle="modal" data-target="#contributorsModal">various authors</a>.
                 </p>
+                
             </div>
         </nav>
 

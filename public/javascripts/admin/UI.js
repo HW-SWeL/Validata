@@ -17,6 +17,8 @@ UI = {
         UI.schemaSourceText = UI.mainPanel.find('.schemaSourceText');
         UI.titleInput = UI.mainPanel.find('.titleInput');
         UI.descInput = UI.mainPanel.find('.descriptionInput');
+        UI.enabledInput = UI.mainPanel.find('.enabledInput');
+        UI.defaultInput = UI.mainPanel.find('.defaultInput');
 
         UI.schemaErrorAlert = UI.mainPanel.find('.schemaErrorAlert');
         UI.schemaSuccessAlert = UI.mainPanel.find('.schemaSuccessAlert');
@@ -43,6 +45,16 @@ UI = {
         }
         else{
             UI.addSchemaButton.addClass('disabled');
+        }
+    },
+
+    resetDefaultInput: function resetDefaultInput(defaultChecked){
+        if(defaultChecked){
+            $(UI.schemaArray).each(function(){
+                this.default = false;
+            });
+            $('.defaultInput').prop('checked', false);
+            UI.defaultInput.prop('checked', true);
         }
     },
 
@@ -75,6 +87,7 @@ UI = {
     },
 
     setupEventHandlers: function setupEventHandlers() {
+
         // Selecting a file using the file chooser should cause the content of that file to be loaded into the data source div as text
         UI.schemaSourceFile.on('change', function schemaSourceFileChange() {
             Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -107,11 +120,14 @@ UI = {
                 var schemaObject = {
                     title: UI.titleInput.val(),
                     description: UI.descInput.val(),
-                    creationDate: new Date(),
+                    enabled: UI.enabledInput.prop('checked'),
+                    default: UI.defaultInput.prop('checked'),
+                    creationDate: Util.getUnixtime(),
                     schema: UI.schemaSourceText.val()
                 };
 
-                // disable schema button until all inputs not empty && schema valid
+                // reset default values if necessary
+                UI.resetDefaultInput(schemaObject.default);
 
                 // create new schema panel
                 UI.createNewPanel(schemaObject);
@@ -121,6 +137,9 @@ UI = {
 
                 // reset form
                 UI.resetSchemaForm();
+
+                // enable download button
+                UI.downloadConfigButton.removeClass('disabled');
             }
 
         });
@@ -136,7 +155,13 @@ UI = {
 
         UI.downloadConfigButton.on('click', function clickDownloadConfigButton(e){
             // create json object from schema array
-            var file = { schemas: UI.schemaArray };
+            var file = {
+                schemas: UI.schemaArray,
+                options: {
+                    showSourceButton: true,
+                    allowCustomSchema: false
+                }
+            };
             var data = "text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(file, null, "\n"));
             UI.downloadConfigButton.attr("href", "data:"+data);
         });
