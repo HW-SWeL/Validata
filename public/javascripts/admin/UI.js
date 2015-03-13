@@ -8,28 +8,29 @@ UI = {
 
     selectCommonElements: function selectCommonElements()
     {
-        UI.mainPanel = $('#home');
-        UI.panelContainer = $('.panel-group');
+        UI.mainTab = $('#home');
         UI.tabList = $('#tabList');
-        UI.schemaPanel = $('.schemaPanel');
+        UI.tabContent = $('.tab-content');
+        UI.schemaTab = $('.schemaTab');
 
-        UI.schemaSourceFile = UI.mainPanel.find('.schemaSourceFile');
-        UI.schemaSourceText = UI.mainPanel.find('.schemaSourceText');
-        UI.titleInput = UI.mainPanel.find('.titleInput');
-        UI.descInput = UI.mainPanel.find('.descriptionInput');
-        UI.enabledInput = UI.mainPanel.find('.enabledInput');
-        UI.defaultInput = UI.mainPanel.find('.defaultInput');
+        UI.schemaSourceFile = UI.mainTab.find('.schemaSourceFile');
+        UI.schemaSourceText = UI.mainTab.find('.schemaSourceText');
+        UI.titleInput = UI.mainTab.find('.titleInput');
+        UI.descInput = UI.mainTab.find('.descriptionInput');
+        UI.enabledInput = UI.mainTab.find('.enabledInput');
+        UI.defaultInput = UI.mainTab.find('.defaultInput');
 
-        UI.schemaErrorAlert = UI.mainPanel.find('.schemaErrorAlert');
-        UI.schemaSuccessAlert = UI.mainPanel.find('.schemaSuccessAlert');
-        UI.addSchemaButton = UI.mainPanel.find('.addSchema');
+        UI.schemaErrorAlert = UI.mainTab.find('.schemaErrorAlert');
+        UI.schemaSuccessAlert = UI.mainTab.find('.schemaSuccessAlert');
+        UI.addSchemaButton = UI.mainTab.find('.addSchema');
+        UI.saveSchemaButton = $('.saveSchema');
         UI.downloadConfigButton = $('#finish');
 
         UI.schemaArray = [];
     },
 
     resetSchemaForm: function resetSchemaForm(){
-        UI.mainPanel.find('form')[0].reset();
+        UI.mainTab.find('form')[0].reset();
         UI.addSchemaButton.addClass('disabled');
     },
 
@@ -58,19 +59,26 @@ UI = {
         }
     },
 
-    createNewPanel: function createNewPanel(schemaObject){
-        var schemaPanel = UI.schemaPanel.parent().clone();
+    getTabPane: function getTabPane(elem){
+        return $(elem).closest('.tab-pane');
+    },
 
-        // remove or edit add schema button
-        schemaPanel.find('button.addSchema').remove();
+    createNewTab: function createNewTab(schemaObject){
+        var schemaTab = UI.schemaTab.clone(true);
+
+        // create save button
+        schemaTab.find('button.addSchema')
+            .removeClass('addSchema')
+            .addClass('saveSchema')
+            .html('<span class="glyphicon glyphicon-floppy-save"></span> Save');
 
         // workaround for textarea cloning bug: http://bugs.jquery.com/ticket/3016
-        schemaPanel.find('.schemaSourceText').val(schemaObject.schema);
+        schemaTab.find('.schemaSourceText').val(schemaObject.schema);
 
         // add a 'remove schema' button
 
         // get index for next tab
-        var nextTab = $('#tabList li').size() + 1;
+        var nextTab = $('#tabList li').size();
         var nextTabID = 'tab' + nextTab;
         var navTabID = 'nav_tab' + nextTab;
 
@@ -78,8 +86,8 @@ UI = {
         $('<li><a id="' + navTabID + '" href="#'+ nextTabID +'" data-toggle="tab">' + schemaObject.title +'</a></li>').appendTo('#tabList');
 
         // create the tab content
-        var newTabContent = $('<div class="tab-pane" id="'+ nextTabID +'">' + '</div>').appendTo('.tab-content');
-        newTabContent.append(schemaPanel);
+        var newTabContent = $('<div class="tab-pane" id="'+ nextTabID +'" data-index="' + nextTab + '" >' + '</div>').appendTo('.tab-content');
+        newTabContent.append(schemaTab);
 
         // animate new tab
         Util.animateOnce($('#' + navTabID), 'bounce');
@@ -130,7 +138,7 @@ UI = {
                 UI.resetDefaultInput(schemaObject.default);
 
                 // create new schema panel
-                UI.createNewPanel(schemaObject);
+                UI.createNewTab(schemaObject);
 
                 // move schema to schema array
                 UI.schemaArray.push(schemaObject);
@@ -150,6 +158,28 @@ UI = {
             {
                 ShExValidator.validate(UI.schemaSourceText.val(), "", Validata.callbacks, {});
             }, 500, "schemaValidator");
+
+        }),
+
+        UI.tabContent.on('click','.saveSchema', function clickSaveSchemaButton(e){
+            e.preventDefault();
+
+            var tab = UI.getTabPane(this);
+            var index = tab.data('index');
+            // update with form values
+            var schemaObject = {
+                title: tab.find('.titleInput').val(),
+                description: tab.find('.descriptionInput').val(),
+                enabled: tab.find('.enabledInput').prop('checked'),
+                default: tab.find('.defaultInput').prop('checked'),
+                creationDate: Util.getUnixtime(),
+                schema: tab.find('.schemaSourceText').val()
+            };
+
+            // save to schemaArray
+            UI.schemaArray[index] = schemaObject;
+
+            console.log('saved object');
 
         }),
 
