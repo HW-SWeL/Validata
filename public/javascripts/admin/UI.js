@@ -6,6 +6,8 @@ UI = {
         UI.refreshCurrentTab();
         UI.setupEventHandlers();
         UI.resetSchemaForm();
+        UI.createCachedTabClone();
+        UI.setupBootstrapSwitch(UI.mainTab);
     },
 
     initialiseElements: function initialiseElements()
@@ -34,6 +36,15 @@ UI = {
         UI.schemaErrorAlert = UI.currentTab.find('.schemaErrorAlert');
         UI.schemaSuccessAlert = UI.currentTab.find('.schemaSuccessAlert');
         UI.submitButton = UI.currentTab.find('button.btn-success');
+    },
+
+    setupBootstrapSwitch: function setupBootstrapSwitch(elem){
+        elem.find('.enabledInput').bootstrapSwitch();
+        elem.find('.defaultInput').bootstrapSwitch();
+    },
+
+    createCachedTabClone: function createTabClone(){
+      UI.cachedTab = UI.schemaTab.clone(true);
     },
 
     resetSchemaForm: function resetSchemaForm(){
@@ -72,7 +83,7 @@ UI = {
     },
 
     createNewTab: function createNewTab(schemaObject){
-        var schemaTab = UI.schemaTab.clone(true);
+        var schemaTab = UI.cachedTab.clone(true);
 
         // create save button
         schemaTab.find('button.addSchema')
@@ -88,7 +99,7 @@ UI = {
         schemaTab.find('.defaultInput').prop('checked', schemaObject.default);
         schemaTab.find('.schemaSourceText').val(schemaObject.schema);
 
-        // add a 'remove schema' button
+        UI.setupBootstrapSwitch(schemaTab);
 
         // get index for next tab
         var nextTab = $('#tabList li').size();

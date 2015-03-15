@@ -10,6 +10,7 @@
         <link rel="icon" type="image/png" href="components/material-design-icons/action/drawable-hdpi/ic_spellcheck_black_48dp.png"/>
         
         <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css"/>
+        <link rel="stylesheet" href="components/bootstrap-switch/dist/css/bootstrap-switch.min.css"/>
         <link rel="stylesheet" href="components/animate.css/animate.css"/>
 
         <link rel="stylesheet" href="stylesheets/vendor/material-design-icons.css"/>
@@ -57,27 +58,21 @@
                                     </div>
 
                                     <div class="form-group">
-                                        <div class="col-sm-offset-1 col-sm-10">
-                                            <div class="checkbox">
-                                                <label>
-                                                    <input type="checkbox" class="enabledInput" checked="checked"> Enabled?
-                                                </label>
-                                            </div>
+                                        <label class="col-sm-1 control-label">Enabled? </label>
+                                        <div class="col-sm-10">
+                                            <input type="checkbox" class="enabledInput" checked="checked" data-off-text="No" data-on-text="Yes">
                                         </div>
                                     </div>
 
                                     <div class="form-group">
-                                        <div class="col-sm-offset-1 col-sm-10">
-                                            <div class="checkbox">
-                                                <label>
-                                                    <input type="checkbox" class="defaultInput"> Default?
-                                                </label>
-                                            </div>
+                                        <label class="col-sm-1 control-label">Default? </label>
+                                        <div class="col-sm-10">
+                                            <input type="checkbox" class="defaultInput" data-off-text="No" data-on-text="Yes">
                                         </div>
                                     </div>
 
                                     <div class="form-group">
-                                        <label class="col-sm-1 control-label">Upload Schema File</label>
+                                        <label class="col-sm-1 control-label">Upload Schema</label>
                                         <div class="col-sm-10">
                                             <input type="file" class="schemaSourceFile">
                                         </div>
@@ -98,7 +93,7 @@
                                     </div>
 
                                     <div class="form-group">
-                                        <label class="col-sm-1 control-label">Schema</label>
+                                        <label class="col-sm-1 control-label">Schema Text</label>
                                         <div class="col-sm-10">
                                             <textarea cols="30" rows="10" class="form-control schemaSourceText" required></textarea>
                                         </div>
@@ -138,6 +133,7 @@
         
         <script src="components/jquery/dist/jquery.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.js"></script>
+        <script src="components/bootstrap-switch/dist/js/bootstrap-switch.min.js"></script>
 
         <script src="javascripts/ShExValidator.js"></script>
         <script src="javascripts/Log.js"></script>
