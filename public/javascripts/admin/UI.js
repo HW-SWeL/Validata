@@ -36,6 +36,13 @@ UI = {
         UI.schemaErrorAlert = UI.currentTab.find('.schemaErrorAlert');
         UI.schemaSuccessAlert = UI.currentTab.find('.schemaSuccessAlert');
         UI.submitButton = UI.currentTab.find('button.btn-success');
+
+        if(UI.currentTab.index() > 0){
+            Validata.schemaValid = true;
+        }
+        else{
+            Validata.schemaValid = false;
+        }
     },
 
     setupBootstrapSwitch: function setupBootstrapSwitch(elem){
