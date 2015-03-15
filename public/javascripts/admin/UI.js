@@ -91,8 +91,8 @@ UI = {
         // create save button
         schemaTab.find('button.addSchema')
             .off()
-            .removeClass('addSchema')
-            .addClass('saveSchema disabled')
+            .removeClass('addSchema disabled')
+            .addClass('saveSchema')
             .html('<span class="glyphicon glyphicon-floppy-save"></span> Save');
 
         // populate form fields
@@ -196,17 +196,17 @@ UI = {
 
         UI.tabContent.on('click','.saveSchema', function clickSaveSchemaButton(e){
             e.preventDefault();
+            var tab = UI.getTabPane(this);
 
             if(UI.formValid()) {
-
-                var tab = UI.getTabPane(this);
                 var index = tab.data('index');
 
                 // update with form values
                 var schemaObject = UI.getCurrentTabFields(tab);
 
-                // reset tab nav title
-                UI.tabList.find('a').eq(index).text(schemaObject.title);
+                // update nav tab title
+                var currentNavTab = UI.tabList.find('a').eq(index);
+                currentNavTab.text(schemaObject.title);
 
                 // reset default values if necessary
                 UI.resetDefaultInput(schemaObject.default);
@@ -215,7 +215,11 @@ UI = {
                 UI.schemaArray[index] = schemaObject;
 
                 // signal that changes were saved
-                UI.saveSchemaButton.addClass('disabled');
+                Util.animateOnce(currentNavTab, 'rubberBand');
+            }
+            else {
+                // shake tab to indicate not saved
+                Util.animateOnce(tab, 'shake');
             }
 
         }),
@@ -251,6 +255,9 @@ UI = {
                 $(UI.schemaArray).each(function(){
                    UI.createNewTab(this);
                 });
+
+                // enable download button
+                UI.downloadConfigButton.removeClass('disabled');
             };
 
             reader.onerror = function (event) {
