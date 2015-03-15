@@ -73,8 +73,11 @@ UI = {
             $(UI.schemaArray).each(function(){
                 this.default = false;
             });
-            $('.defaultInput').prop('checked', false);
-            UI.defaultInput.prop('checked', true);
+
+            // switch off all default switches
+            $('.defaultInput').bootstrapSwitch('state', false);
+            // switch on current switch
+            UI.defaultInput.bootstrapSwitch('state', true);
         }
     },
 
