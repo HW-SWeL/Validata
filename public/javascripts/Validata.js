@@ -17,14 +17,16 @@ Validata = {
         data: "",
         parsed: false,
         errors: [],
-        rawResponse: {}
+        rawResponse: {},
+        shapesResponse: {}            
     },
 
     Validation: {
         passed: false,
         options: {
             closedShapes: true,
-            startingNodes: []
+            startingNodes: [],
+            startingShape: false
         },
         callbacks: {},
         errors: [],
@@ -79,8 +81,9 @@ Validata = {
             schemaParseError: Validata.schemaParseErrorCallback,
             dataParsed: Validata.dataParsedCallback,
             dataParseError: Validata.dataParseErrorCallback,
+            findShapesResult: Validata.findShapesResultCallback,
             validationResult: Validata.validationResultCallback
-        }
+        };
     },
 
     validate: function validate()
@@ -91,8 +94,23 @@ Validata = {
         
         Log.i("Validating with options:");
         Log.i(Validata.Validation.options);
+
+        Validata.validator = new ShExValidator.Validator(Validata.Schema.data, Validata.Data.data, Validata.Validation.callbacks, Validata.Validation.options);
+
+        if( Validata.Validation.options.startingShape == false )
+        { 
+            Log.i("startingShape is false; calling findShapes");
+            
+            Validata.validator.findShapes().done(function findShapesDone()
+            {
+                Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+            });
+        }
+        else
+        {
+            Validata.validator.validate([Validata.Validation.options.startingShape]);
+        }
         
-        ShExValidator.validate(Validata.Schema.data, Validata.Data.data, Validata.Validation.callbacks, Validata.Validation.options);
     },
 
     schemaParsedCallback: function schemaParsedCallback(responseObject)
@@ -169,6 +187,46 @@ Validata = {
         Validata.Data.parsed = false;
         
         Validata.triggerValidationMessageUpdate();
+    },
+
+    findShapesResultCallback: function findShapesResultCallback(shapesResponse)
+    {
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+
+        Validata.Data.shapesResponse = shapesResponse;
+
+        // Recreate the options selector(s) from the newly parsed data and stored selected options, every time we validate
+        // This could be mildly annoying for a user but is necessary to ensure the select has options which still exist in the data
+        UI.schemaStartShapeSelector.empty();
+
+        var nodeIndex = 0;
+        $.each(Validata.Data.shapesResponse, function shapesResponseIterator(nodeKey, nodeObject)
+        {
+            var selected = '';
+            
+            if( Validata.Validation.options.startingShape == nodeObject )
+            {
+                selected = 'selected'
+            }
+            
+            if(nodeObject != null)
+            {
+                UI.schemaStartShapeSelector.append('<option value="' + nodeObject + '" ' + selected + '>' + Util.escapeHtml(nodeObject) + '</option>');
+                Validata.Validation.options.startingShape = nodeObject;
+            }
+            
+            nodeIndex++;
+        });
+
+        var startingNodesLength = Util.iterableLength( Validata.Validation.options.startingNodes );
+        if( Util.stringIsNotBlank(Validata.Data.data) && startingNodesLength > 0 && Validata.Validation.options.startingShape != false )
+        {
+            Validata.validate();
+        }
+        else
+        {
+            Validata.triggerValidationMessageUpdate();
+        }
     },
 
     validationResultCallback: function validationResultCallback(resultObject)

@@ -95,6 +95,13 @@ UI = {
             UI.updateSelectedSchema();
             UI.triggerStaggeredContentChange();
         });
+        
+
+        UI.schemaStartShapeSelector.on('change', function schemaSelectorChange()
+        {
+            UI.updateSelectedStartShape();
+            UI.triggerStaggeredContentChange();
+        });
 
         // Pressing any key inside or changing the value of any input or editable source text field inside a step panel triggers the staggered update
         UI.wizardStepPanels
@@ -218,6 +225,13 @@ UI = {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Schema.data = UI.schemaSourceText.text();
+    },
+    
+    updateSelectedStartShape: function updateSelectedStartShape()
+    {
+        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+        
+        Validata.Validation.options.startingShape = UI.schemaStartShapeSelector.val();
     },
     
     updateSelectedSchema: function updateSelectedSchema()
