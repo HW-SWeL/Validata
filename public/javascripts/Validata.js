@@ -25,7 +25,7 @@ Validata = {
         passed: false,
         options: {
             closedShapes: true,
-            startingNodes: [],
+            startingResources: [],
             startingShape: false
         },
         callbacks: {},
@@ -90,7 +90,7 @@ Validata = {
     {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
-        Validata.Validation.options.startingNodes = UI.dataStartNodesSelector.val();
+        Validata.Validation.options.startingResources = UI.dataStartNodesSelector.val();
         
         Log.i("Validating with options:");
         Log.i(Validata.Validation.options);
@@ -151,9 +151,9 @@ Validata = {
             var selected = '';
             var nodeKeyText = nodeKey.replace(/[<>]/g, '');
             
-            if( ( $.inArray(nodeKeyText, Validata.Validation.options.startingNodes) > -1 )
+            if( ( $.inArray(nodeKeyText, Validata.Validation.options.startingResources) > -1 )
                 || 
-                ( Util.iterableLength(Validata.Validation.options.startingNodes) == 0 && nodeIndex == 0 )
+                ( Util.iterableLength(Validata.Validation.options.startingResources) == 0 && nodeIndex == 0 )
             )
             {
                 selected = 'selected'
@@ -165,11 +165,11 @@ Validata = {
 
         UI.dataStartNodesSelector.multiselect();
 
-        var startingNodesLengthBeforeParse = Util.iterableLength( Validata.Validation.options.startingNodes );
+        var startingResourcesLengthBeforeParse = Util.iterableLength( Validata.Validation.options.startingResources );
         
-        Validata.Validation.options.startingNodes = UI.dataStartNodesSelector.val();
+        Validata.Validation.options.startingResources = UI.dataStartNodesSelector.val();
         
-        if( Util.stringIsNotBlank(Validata.Data.data) && startingNodesLengthBeforeParse == 0 )
+        if( Util.stringIsNotBlank(Validata.Data.data) && startingResourcesLengthBeforeParse == 0 )
         {
             Validata.validate();
         }
@@ -200,26 +200,23 @@ Validata = {
         UI.schemaStartShapeSelector.empty();
 
         var nodeIndex = 0;
-        $.each(Validata.Data.shapesResponse, function shapesResponseIterator(nodeKey, nodeObject)
+        $.each(Validata.Schema.rawResponse.shapes, function shapesResponseIterator(shape, resource)
         {
             var selected = '';
             
-            if( Validata.Validation.options.startingShape == nodeObject )
+            if( Validata.Validation.options.startingShape == resource )
             {
                 selected = 'selected'
             }
             
-            if(nodeObject != null)
-            {
-                UI.schemaStartShapeSelector.append('<option value="' + nodeObject + '" ' + selected + '>' + Util.escapeHtml(nodeObject) + '</option>');
-                Validata.Validation.options.startingShape = nodeObject;
-            }
+            UI.schemaStartShapeSelector.append('<option value="' + resource + '" ' + selected + '>' + Util.escapeHtml(resource) + '</option>');
+            Validata.Validation.options.startingShape = resource;
             
             nodeIndex++;
         });
 
-        var startingNodesLength = Util.iterableLength( Validata.Validation.options.startingNodes );
-        if( Util.stringIsNotBlank(Validata.Data.data) && startingNodesLength > 0 && Validata.Validation.options.startingShape != false )
+        var startingResourcesLength = Util.iterableLength( Validata.Validation.options.startingResources );
+        if( Util.stringIsNotBlank(Validata.Data.data) && startingResourcesLength > 0 && Validata.Validation.options.startingShape != false )
         {
             Validata.validate();
         }
@@ -430,7 +427,7 @@ Validata = {
             UI.dataErrorAlert.fadeOut('fast').find('.sourceText').empty();
         }
         
-        if ( Util.stringIsNotBlank( Validata.Data.data ) && ! Util.iterableLength( Validata.Validation.options.startingNodes ) )
+        if ( Util.stringIsNotBlank( Validata.Data.data ) && ! Util.iterableLength( Validata.Validation.options.startingResources ) )
         {
             UI.optionsErrorAlert.fadeIn('slow')
                 .find('.sourceText')
