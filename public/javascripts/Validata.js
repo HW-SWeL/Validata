@@ -25,8 +25,8 @@ Validata = {
         passed: false,
         options: {
             closedShapes: true,
-            startingResources: [],
-            startingShape: false
+            resourceSelection: [],
+            shapeSelection: []
         },
         callbacks: {},
         errors: [],
@@ -90,16 +90,14 @@ Validata = {
     {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
-        Validata.Validation.options.startingResources = UI.dataStartNodesSelector.val();
-        
         Log.i("Validating with options:");
         Log.i(Validata.Validation.options);
 
         Validata.validator = new ShExValidator.Validator(Validata.Schema.data, Validata.Data.data, Validata.Validation.callbacks, Validata.Validation.options);
 
-        if( Validata.Validation.options.startingShape == false )
+        if( Validata.Validation.options.shapeSelection.length == 0 )
         { 
-            Log.i("startingShape is false; calling findShapes");
+            Log.i("shapeSelection is empty; calling findShapes");
             
             Validata.validator.findShapes().done(function findShapesDone()
             {
@@ -108,7 +106,10 @@ Validata = {
         }
         else
         {
-            Validata.validator.validate([Validata.Validation.options.startingShape]);
+            var resourceShapeMap = {};
+            resourceShapeMap[Validata.Validation.options.resourceSelection[0]] = Validata.Validation.options.shapeSelection[0];
+            
+            Validata.validator.validate(resourceShapeMap);
         }
         
     },
@@ -119,6 +120,7 @@ Validata = {
 
         Validata.Schema.rawResponse = responseObject;
         Validata.Schema.parsed = true;
+        
 
         Validata.triggerValidationMessageUpdate();
     },
@@ -142,8 +144,8 @@ Validata = {
         
         // Recreate the options selector(s) from the newly parsed data and stored selected options, every time we validate
         // This could be mildly annoying for a user but is necessary to ensure the select has options which still exist in the data
-        UI.dataStartNodesSelector.multiselect('destroy');
-        UI.dataStartNodesSelector.empty();
+        UI.resourceSelector.multiselect('destroy');
+        UI.resourceSelector.empty();
 
         var nodeIndex = 0;
         $.each(Validata.Data.rawResponse['db']['SPO'], function (nodeKey, nodeObject)
@@ -151,25 +153,25 @@ Validata = {
             var selected = '';
             var nodeKeyText = nodeKey.replace(/[<>]/g, '');
             
-            if( ( $.inArray(nodeKeyText, Validata.Validation.options.startingResources) > -1 )
+            if( ( $.inArray(nodeKeyText, Validata.Validation.options.resourceSelection) > -1 )
                 || 
-                ( Util.iterableLength(Validata.Validation.options.startingResources) == 0 && nodeIndex == 0 )
+                ( Util.iterableLength(Validata.Validation.options.resourceSelection) == 0 && nodeIndex == 0 )
             )
             {
                 selected = 'selected'
             }
             
-            UI.dataStartNodesSelector.append('<option value="' + nodeKeyText + '" ' + selected + '>' + nodeKeyText + '</option>');
+            UI.resourceSelector.append('<option value="' + nodeKeyText + '" ' + selected + '>' + nodeKeyText + '</option>');
             nodeIndex++;
         });
 
-        UI.dataStartNodesSelector.multiselect();
+        UI.resourceSelector.multiselect();
 
-        var startingResourcesLengthBeforeParse = Util.iterableLength( Validata.Validation.options.startingResources );
+        var resourceSelectionLengthBeforeParse = Util.iterableLength( Validata.Validation.options.resourceSelection );
+
+        UI.updateResourceShapeMap();
         
-        Validata.Validation.options.startingResources = UI.dataStartNodesSelector.val();
-        
-        if( Util.stringIsNotBlank(Validata.Data.data) && startingResourcesLengthBeforeParse == 0 )
+        if( Util.stringIsNotBlank(Validata.Data.data) && resourceSelectionLengthBeforeParse == 0 )
         {
             Validata.validate();
         }
@@ -185,6 +187,7 @@ Validata = {
 
         Validata.Data.rawResponse = responseObject;
         Validata.Data.parsed = false;
+        Validata.Validation.options.resourceSelection = [];
         
         Validata.triggerValidationMessageUpdate();
     },
@@ -197,26 +200,25 @@ Validata = {
 
         // Recreate the options selector(s) from the newly parsed data and stored selected options, every time we validate
         // This could be mildly annoying for a user but is necessary to ensure the select has options which still exist in the data
-        UI.schemaStartShapeSelector.empty();
+        UI.shapeSelector.empty();
 
-        var nodeIndex = 0;
-        $.each(Validata.Schema.rawResponse.shapes, function shapesResponseIterator(shape, resource)
+        $.each(Validata.Schema.rawResponse.shapes, function shapesResponseIterator(index, shape)
         {
             var selected = '';
             
-            if( Validata.Validation.options.startingShape == resource )
+            if( $.inArray(shape, Validata.Validation.options.shapeSelection) !== -1 )
             {
                 selected = 'selected'
             }
             
-            UI.schemaStartShapeSelector.append('<option value="' + resource + '" ' + selected + '>' + Util.escapeHtml(resource) + '</option>');
-            Validata.Validation.options.startingShape = resource;
-            
-            nodeIndex++;
+            UI.shapeSelector.append('<option value="' + shape + '" ' + selected + '>' + Util.escapeHtml(shape) + '</option>');
         });
 
-        var startingResourcesLength = Util.iterableLength( Validata.Validation.options.startingResources );
-        if( Util.stringIsNotBlank(Validata.Data.data) && startingResourcesLength > 0 && Validata.Validation.options.startingShape != false )
+        UI.updateResourceShapeMap();
+        
+        var resourceSelectionLength = Util.iterableLength( Validata.Validation.options.resourceSelection );
+        var shapeSelectionLength = Util.iterableLength( Validata.Validation.options.shapeSelection );
+        if( Util.stringIsNotBlank(Validata.Data.data) && resourceSelectionLength > 0 && shapeSelectionLength > 0 )
         {
             Validata.validate();
         }
@@ -364,6 +366,8 @@ Validata = {
                     dataErrorAlertVisible = true;
                     
                     UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
+                    
+                    UI.resourceSelector.empty();
                 }
 
             }
@@ -376,6 +380,8 @@ Validata = {
                 
                 UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
                 UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+
+                UI.resourceSelector.empty();
             }
         }
         else
@@ -427,7 +433,7 @@ Validata = {
             UI.dataErrorAlert.fadeOut('fast').find('.sourceText').empty();
         }
         
-        if ( Util.stringIsNotBlank( Validata.Data.data ) && ! Util.iterableLength( Validata.Validation.options.startingResources ) )
+        if ( Util.stringIsNotBlank( Validata.Data.data ) && ! Util.iterableLength( Validata.Validation.options.resourceSelection ) )
         {
             UI.optionsErrorAlert.fadeIn('slow')
                 .find('.sourceText')
