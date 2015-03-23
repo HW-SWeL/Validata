@@ -49,8 +49,8 @@ UI = {
         UI.dataSourceFile = $('#dataSourceFile');
         UI.dataSourceText = $('#dataSourceText');
         
-        UI.dataStartNodesSelector = $('#dataStartNodesSelector');
-        UI.schemaStartShapeSelector = $('#schemaStartShapeSelector');
+        UI.shapeSelector = $('#shapeSelector');
+        UI.resourceSelector = $('#resourceSelector');
         
         UI.schemaErrorAlert = $('#schemaErrorAlert');
         UI.dataErrorAlert = $('#dataErrorAlert');
@@ -61,6 +61,20 @@ UI = {
         UI.validationErrorsList = $('#validationErrorsList');
     },
 
+    updateResourceShapeMap: function ()
+    {
+        Validata.Validation.options.shapeSelection = [ Util.stringValue( UI.shapeSelector.val() ) ];
+
+        var resourceSelection = UI.resourceSelector.val();
+
+        if(resourceSelection == null)
+        {
+            resourceSelection = [];
+        }
+
+        Validata.Validation.options.resourceSelection = resourceSelection;
+    },
+    
     setupEventHandlers: function setupEventHandlers()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -95,11 +109,16 @@ UI = {
             UI.updateSelectedSchema();
             UI.triggerStaggeredContentChange();
         });
-        
 
-        UI.schemaStartShapeSelector.on('change', function schemaSelectorChange()
+        UI.shapeSelector.on('change', function shapeSelectorChange()
         {
-            UI.updateSelectedStartShape();
+            UI.updateResourceShapeMap();
+            UI.triggerStaggeredContentChange();
+        });
+        
+        UI.resourceSelector.on('change', function resourceSelectorChange()
+        {
+            UI.updateResourceShapeMap();            
             UI.triggerStaggeredContentChange();
         });
 
@@ -180,6 +199,7 @@ UI = {
 
         UI.updateEnteredData();
         UI.updateEnteredSchema();
+        
         Validata.validate();
     },
     
@@ -226,14 +246,7 @@ UI = {
 
         Validata.Schema.data = UI.schemaSourceText.text();
     },
-    
-    updateSelectedStartShape: function updateSelectedStartShape()
-    {
-        Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
-        
-        Validata.Validation.options.startingShape = UI.schemaStartShapeSelector.val();
-    },
-    
+
     updateSelectedSchema: function updateSelectedSchema()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
