@@ -24,6 +24,9 @@
     "material-design-icons": "~1.0.1",
     "bootstrap-multiselect": "~0.9.11",
     "moment": "~2.9.0",
-    "bootstrap-switch": "~3.3.2"
+    "bootstrap-switch": "~3.3.2",
+    "jsplumb": "~1.7.4",
+    "jqueryui": "~1.11.4",
+    "jquery-ui-touch-punch": "*"
   }
 }

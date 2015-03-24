@@ -49,6 +49,7 @@ UI = {
         UI.dataSourceFile = $('#dataSourceFile');
         UI.dataSourceText = $('#dataSourceText');
         
+        UI.closedShapesOption = $('#closedShapesOption');
         UI.shapeSelector = $('#shapeSelector');
         UI.resourceSelector = $('#resourceSelector');
         
@@ -113,6 +114,12 @@ UI = {
         UI.shapeSelector.on('change', function shapeSelectorChange()
         {
             UI.updateResourceShapeMap();
+            UI.triggerStaggeredContentChange();
+        });
+
+        UI.closedShapesOption.on('change', function closedShapesOptionChange()
+        {
+            Validata.Validation.options.closedShapes = UI.closedShapesOption.prop('checked');
             UI.triggerStaggeredContentChange();
         });
         

@@ -109,6 +109,9 @@ Validata = {
             var resourceShapeMap = {};
             resourceShapeMap[Validata.Validation.options.resourceSelection[0]] = Validata.Validation.options.shapeSelection[0];
             
+            Log.i("Calling validate with resourceShapeMap: ");
+            Log.i(resourceShapeMap);
+            
             Validata.validator.validate(resourceShapeMap);
         }
         
@@ -285,7 +288,7 @@ Validata = {
                 {
                     $.each(Validata.Validation.rawResponse['errors'], function (index, errorObject)
                     {
-                        $('<li class="list-group-item">' + errorObject['name'] + ' @ ' + Util.escapeHtml(errorObject['triple'].toString()) + '</li>').appendTo(UI.validationErrorsList);
+                        $('<li class="list-group-item">' + errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString()) + '</li>').appendTo(UI.validationErrorsList);
                     });
                 }
 
