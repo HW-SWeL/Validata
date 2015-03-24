@@ -3,6 +3,11 @@ ShExValidataConfig = {
         {
             enabled: true,
             default: false,
+			reqLevels: [
+				'MAY',
+				'SHOULD',
+				'MUST'
+			],
             name: "HCLS - 2014 Version",
             description: "HCLS schema from early 2014, scraped from http://www.w3.org/2001/sw/hcls/notes/hcls-dataset/ on 23/02/2015",
             creationDate: "1393632000",

@@ -269,6 +269,7 @@ Validata = {
         var dataErrorAlertVisible = false;
         var validationSuccessAlertVisible = false;
         var validationErrorAlertVisible = false;
+		var validationWarningAlertVisible = false;
 
         if( Util.iterableLength( Validata.Validation ) )
         {
@@ -276,6 +277,7 @@ Validata = {
             {
                 validationSuccessAlertVisible = true;
                 validationErrorAlertVisible = false;
+				validationWarningAlertVisible = false;
                 
                 UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusValid');
             }
@@ -283,17 +285,24 @@ Validata = {
             {
 
                 UI.validationErrorsList.empty();
-                
+				UI.validationWarningsList.empty();
+				
                 if (Util.iterableLength( Validata.Validation.rawResponse['errors'] ))
                 {
                     $.each(Validata.Validation.rawResponse['errors'], function (index, errorObject)
                     {
+                        //is validation strict?
+                        //warning or error?
                         $('<li class="list-group-item">' + errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString()) + '</li>').appendTo(UI.validationErrorsList);
                     });
                 }
 
                 validationSuccessAlertVisible = false;
                 validationErrorAlertVisible = true;
+				//if warnings not empty 
+				// validationWarningAlertVisible = true;
+				//else
+				// validationWarningAlertVisible = false;
                 
                 UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
             }
@@ -302,6 +311,7 @@ Validata = {
         {
             validationSuccessAlertVisible = false;
             validationErrorAlertVisible = false;
+			validationWarningAlertVisible = false;
             
             UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
         }
@@ -334,6 +344,7 @@ Validata = {
 
                 validationSuccessAlertVisible = false;
                 validationErrorAlertVisible = false;
+				validationWarningAlertVisible = false;
                 
                 UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
                 UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
@@ -345,6 +356,7 @@ Validata = {
             
             validationSuccessAlertVisible = false;
             validationErrorAlertVisible = false;
+			validationWarningAlertVisible = false;
             
             UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
             UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
@@ -380,6 +392,7 @@ Validata = {
                 
                 validationSuccessAlertVisible = false;
                 validationErrorAlertVisible = false;
+				validationWarningAlertVisible = false;
                 
                 UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
                 UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
@@ -393,6 +406,7 @@ Validata = {
 
             validationSuccessAlertVisible = false;
             validationErrorAlertVisible = false;
+			validationWarningAlertVisible = false;
             
             UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
             UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
@@ -416,6 +430,16 @@ Validata = {
         {
             UI.validationErrorAlert.fadeOut('fast');
             UI.validationErrorsList.empty();
+        }
+		
+		if( validationWarningAlertVisible )
+        {
+            UI.validationWarningAlert.fadeIn('fast');
+        }
+        else
+        {
+            UI.validationWarningAlert.fadeOut('fast');
+            UI.validationWarningsList.empty();
         }
         
         if( schemaErrorAlertVisible )

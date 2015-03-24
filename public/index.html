@@ -90,6 +90,7 @@
                     <li id="wizardSidebarStepOptions" class="wizardSidebarStep">Configure Options</li>
                     <li id="wizardSidebarStepResults" class="wizardSidebarStep">Validation Results</li>
                 </ul>
+				
 
                 <div id="demoPanel" class="panel panel-info">
 
@@ -199,6 +200,15 @@
                                                 </div>
 
                                             </div>
+											
+											<div id="reqLevelPanel" class="panel panel-default">
+												<div id = reqLevelHeading" class="panel-heading">
+													<h4>Select Requirement Level</h4>
+													<select id="reqLevelSelector" class="form-control">
+														<option value="" disabled selected>Click here to select a validation strictness...</option>
+													</select>
+												</div> 
+											</div>
 
                                             <table id="schemaDetailsTable" class="table table-bordered table-striped">
 
@@ -279,7 +289,7 @@
                                             <div class="alert alert-info">
                                                 <p>The shape to start with during validation must be specified.</p>
                                                 <br/>
-                                                <label for="shapeSelector">Shape to validate against:</label>
+												<label for="shapeSelector">Shape to validate against:</label>
                                                 <select id="shapeSelector" class="form-control"></select>
                                             </div>
 
@@ -318,6 +328,12 @@
                                             <h4>Validation Failed:</h4>
 
                                             <ul id="validationErrorsList" class="list-group"></ul>
+                                        </div>
+										
+										<div id="validationWarningAlert" class="alert alert-warning hiddenFadeIn" role="alert">
+                                            <h4>Validation Warnings:</h4>
+
+                                            <ul id="validationWarningsList" class="list-group"></ul>
                                         </div>
 
                                     </div>
