@@ -90,6 +90,7 @@
                     <li id="wizardSidebarStepOptions" class="wizardSidebarStep">Configure Options</li>
                     <li id="wizardSidebarStepResults" class="wizardSidebarStep">Validation Results</li>
                 </ul>
+				
 
                 <div id="demoPanel" class="panel panel-info">
 
@@ -199,6 +200,15 @@
                                                 </div>
 
                                             </div>
+											
+											<div id="reqLevelPanel" class="panel panel-default">
+												<div id = reqLevelHeading" class="panel-heading">
+													<h4>Select Requirement Level</h4>
+													<select id="reqLevelSelector" class="form-control">
+														<option value="" disabled selected>Click here to select a validation strictness...</option>
+													</select>
+												</div> 
+											</div>
 
                                             <table id="schemaDetailsTable" class="table table-bordered table-striped">
 
@@ -275,19 +285,19 @@
 
                                                 <div class="sourceText"></div>
                                             </div>
-                                            
-                                            <div class="alert alert-info" role="alert">
-                                                <p>The shape to start with during validation must be specified.</p>
-                                                <br/>
-                                                <label for="shapeSelector">Shape to validate against:</label>
-                                                <select id="shapeSelector" class="form-control"></select>
-                                            </div>
 
                                             <div class="alert alert-info" role="alert">
                                                 <p>The resource to validate must be specified; the default selected value is simply the first resource found in your data.</p>
                                                 <br/>
-                                                <label for="resourceSelector">Resource(s) to validate:</label>
-                                                <select id="resourceSelector" class="form-control" multiple="multiple"></select>
+                                                <label for="dataStartNodesSelector">Resource to Validate:</label>
+                                                <select id="dataStartNodesSelector" class="form-control" multiple="multiple"></select>
+                                            </div>
+                                             
+                                            <div class="alert alert-info" role="alert">
+                                                <p>The shape to start with during validation must be specified.</p>
+                                                <br/>
+                                                <label for="schemaStartShapeSelector">Starting Shape:</label>
+                                                <select id="schemaStartShapeSelector" class="form-control"></select>
                                             </div>
                                             
                                         </form>

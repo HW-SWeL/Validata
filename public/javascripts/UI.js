@@ -30,6 +30,8 @@ UI = {
         UI.quickSummarySectionResults = $('#quickSummarySectionResults');
         
         UI.demoPanelButtonGroup = $('#demoPanelButtonGroup');
+		UI.reqLevelSelector = $('#reqLevelSelector');
+		UI.reqLevelPanel = $('#reqLevelPanel');
         
         UI.wizardStepsPanelGroup = $('#wizardStepsPanelGroup');
         UI.wizardStepPanels = UI.wizardStepsPanelGroup.find('div.wizardStepPanel');
@@ -58,7 +60,9 @@ UI = {
         
         UI.validationSuccessAlert = $('#validationSuccessAlert');
         UI.validationErrorAlert = $('#validationErrorAlert');
+		UI.validationWarningAlert = $('#validationWarningAlert');
         UI.validationErrorsList = $('#validationErrorsList');
+		UI.validationWarningsList = $('#validationWarningsList');
     },
 
     updateResourceShapeMap: function ()
@@ -254,6 +258,16 @@ UI = {
         var selectedSchemaIndex = UI.schemaSelector.val();
         
         Validata.Schema = ShExValidataConfig['schemas'][selectedSchemaIndex];
+		Validata.ReqLevels = ShExValidataConfig['schemas'][selectedSchemaIndex]['reqLevels'];
+		if(Validata.ReqLevels){
+			Validata.ReqLevels.forEach(function(req){
+				UI.reqLevelSelector.append('<option>'+req+'</option>');
+			})
+			UI.reqLevelPanel.show();
+		}
+		else{
+			UI.reqLevelPanel.hide();
+		}
 
         if( ! Util.iterableLength(Validata.Schema) )
         {
