@@ -163,12 +163,14 @@ UI = {
             reader.readAsText(inputFile);
         });
 
-        var body = $("body");
+        var body = $("body");        
+        var sidebarContentWrapper = $("#sidebarContentWrapper");
 
         $(window).scroll(function(){
             if (body[0].scrollTop > 125) {
                 body.removeClass("topNavbarVisible").addClass("topNavbarInvisible");
             } else {
+                sidebarContentWrapper.css('max-height', body.height() - 360 + body[0].scrollTop);
                 body.removeClass("topNavbarInvisible").addClass("topNavbarVisible");
             }
         });
@@ -180,7 +182,15 @@ UI = {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         UI.quickSummaryPanelLoader.removeClass('hidden');
+
+        UI.validationSuccessAlert.fadeOut('fast');
         
+        UI.validationErrorAlert.fadeOut('fast');
+        UI.validationErrorsList.empty();
+        
+        UI.validationWarningAlert.fadeOut('fast');
+        UI.validationWarningsList.empty();
+
         Util.waitForFinalEvent(function waitForFinalEventCallback()
         {
             UI.staggeredContentChange();

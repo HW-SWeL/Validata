@@ -1,0 +1,38 @@
+
+#topNavbar h2 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+/*
+    Demo Data Panel - shows buttons to load sample data for selected schema, if any exists
+*/
+
+div#demoPanel h4 {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+div#quickSummaryPanelHeading h4 {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+div#quickSummaryPanel tr.quickSummarySection th.quickSummarySectionTitle {
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+}
+
+div#quickSummaryPanel tr.quickSummarySection td {
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+}
+
+body.topNavbarVisible #sidebarContentWrapper {
+    max-height: calc(100% - 400px);
+}
+
+.loader {
+    top: 0;
+    right: 2px;
+}
