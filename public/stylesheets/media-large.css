@@ -44,3 +44,8 @@ div#quickSummaryPanel tr.quickSummarySection td {
 body.topNavbarVisible #sidebarContentWrapper {
     max-height: calc(100% - 400px);
 }
+
+.loader {
+    top: 0
+    right: 2px;
+}
