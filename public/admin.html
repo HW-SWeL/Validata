@@ -100,7 +100,7 @@
             .schema-delete, .schema-reorder {
                 background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-action.svg);
             }
-            .schema-default, .schema-enable, .config-showsource-toggle-icon {
+            .schema-default, .schema-enable, .config-showsource-toggle-icon, .config-allowcustom-toggle-icon {
                 background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
             }
             .download-icon {
@@ -217,12 +217,21 @@
                 background-color: #bfe3b2;
             }
 
-            .config-showsource-toggle-icon {
-                float: right;
+            .config-showsource-toggle, .config-allowcustom-toggle {
+                cursor: pointer;
+                padding: 4px;
+            }
+
+            .config-showsource-toggle-icon, .config-allowcustom-toggle-icon {
+                margin-right: 10px;
+                display: inline-block;
                 width: 24px;
                 height: 24px;
                 vertical-align: middle;
                 background-position: 0 -2208px;
+            }
+            .config-showsource .config-showsource-toggle-icon, .config-allowcustom .config-allowcustom-toggle-icon{
+                background-position: 0 0;
             }
 
         </style>
@@ -462,6 +471,38 @@
         <script src="javascripts/admin/Validata.js"></script>
         <script src="javascripts/admin/DocumentReady.js"></script>
         <script>
+            var setAllowCustom = function setAllowCustom(t){
+                if(t)
+                    $(".config-allowcustom-toggle").addClass("config-allowcustom");
+                else
+                    $(".config-allowcustom-toggle").removeClass("config-allowcustom");
+            };
+            var setShowSource = function setShowSource(t){
+                if(t)
+                    $(".config-showsource-toggle").addClass("config-showsource");
+                else
+                    $(".config-showsource-toggle").removeClass("config-showsource");
+            };
+            var getAllowCustom = function getAllowCustom(){
+                return $(".config-allowcustom-toggle").hasClass("config-allowcustom");
+            };
+            var getShowSource = function getShowSource(){
+                return $(".config-showsource-toggle").hasClass("config-showsource");
+            };
+            $(".config-allowcustom-toggle").click(function(){
+                if(getAllowCustom()){
+                    setAllowCustom(false);
+                } else {
+                    setAllowCustom(true);
+                }
+            });
+            $(".config-showsource-toggle").click(function(){
+                if(getShowSource()){
+                    setShowSource(false);
+                } else {
+                    setShowSource(true);
+                }
+            });
             var deleteSchema = function deleteSchema(schema){
                 $(schema).fadeOut(350,function(){
                     $(this).remove();
@@ -488,14 +529,72 @@
                     $(schema).addClass("schema-is-default");
                 }
             };
+            var setSchemaEnable = function setSchemaDefault(schema,t){
+                if(t)
+                    $(schema).addClass("schema-is-enabled");
+                else
+                    $(schema).removeClass("schema-is-enabled");
+            };
+            var setSchemaDefault = function setSchemaDefault(schema,t){
+                if(t)
+                    $(schema).addClass("schema-is-default");
+                else
+                    $(schema).removeClass("schema-is-default");
+            };
+            var setSchemaName = function setSchemaName(schema,name){
+                $(schema).find(".schema-input-name-input").val(name).trigger("input");
+            };
+            var setSchemaDescription = function setSchemaDescription(schema,description){
+                $(schema).find(".schema-input-description-input").val(description).trigger("input");
+            };
+            var setSchemaCreationDate = function setSchemaCreationdate(schema,creationDate){
+                $(schema).find(".schema-input-creationdate-input").val(creationDate).trigger("input");
+            };
+            var setSchemaUploadDate = function setSchemaUploaddate(schema,uploadDate){
+                $(schema).find(".schema-input-uploaddate-input").val(uploadDate).trigger("input");
+            };
+            var setSchemaData = function setSchemaData(schema,data){
+                $(schema).data("schemaInput").setValue(data);
+            };
+
+            var setDemoName = function setSchemaName(demo,name){
+                $(demo).find(".schema-demo-name-input").val(name);
+            };
+            var setDemoData = function setDemoData(demo,data){
+                console.log(demo);
+                console.log($(demo).data("demoInput"));
+                $(demo).data("demoInput").setValue(data);
+            };
+
             var getAllSchemas = function getAllSchemas(){
                 return $(".schemas").find(".schema");
             };
             var addConfiguration = function addConfiguration(json){
-
+                setAllowCustom(json.allowCustomSchema);
+                setShowSource(json.showSourceButton);
+                for(var i=0;i<json.schemas.length;i++){
+                    addSchema(json.schemas[i]);
+                }
             };
             var addSchema = function addSchema(schemajson){
-
+                var newSchema = createNewSchema();
+                setSchemaDefault(newSchema,schemajson.default);
+                setSchemaEnable(newSchema,schemajson.enabled);
+                setSchemaName(newSchema,schemajson.name);
+                setSchemaDescription(newSchema,schemajson.description);
+                setSchemaCreationDate(newSchema,schemajson.creationDate);
+                setSchemaUploadDate(newSchema,schemajson.uploadDate);
+                setSchemaData(newSchema,schemajson.data);
+                for(var i=0;i<schemajson.dataDemos.length;i++){
+                    addDemo(newSchema,schemajson.dataDemos[i]);
+                }
+                return newSchema;
+            };
+            var addDemo = function addDemo(schema,demojson){
+                var newDemo = createNewDemo(schema);
+                setDemoName(newDemo,demojson.name);
+                setDemoData(newDemo,demojson.data);
+                return newDemo;
             };
             var exportSchema = function exportSchema(schema){
                 s = {};
@@ -528,8 +627,23 @@
 
                 // Export option data
                 json.options = {};
-
+                json.options.showSourceButton = getShowSource();
+                json.options.allowCustomSchema = getAllowCustom();
                 return json;
+            };
+            var createNewDemo = function createNewDemo(schema){
+                var newDemo = $(".schema-demo-template").clone();
+                newDemo.find(".schema-demo-delete").click(function(e){
+                    $(this).parent().parent().parent().fadeOut(350,function(){$(this).remove();});
+                    e.stopPropagation();
+                });
+                newDemo.removeClass("schema-demo-template");
+                newDemo.appendTo(schema.find(".schema-demos"));
+                var demoInput = CodeMirror.fromTextArea(newDemo.find(".schema-demo-data-input").get(0), {
+                    lineNumbers: true
+                });
+                $(newDemo).data("demoInput",demoInput);
+                return newDemo;
             };
             var createNewSchema = function createNewSchema(){
                 var newSchema = $(".schema-template").clone();
@@ -566,17 +680,7 @@
                     }
                 });
                 newSchema.find(".schema-new-demo").click(function(){
-                    var newDemo = $(".schema-demo-template").clone();
-                    newDemo.find(".schema-demo-delete").click(function(e){
-                        $(this).parent().parent().parent().fadeOut(350,function(){$(this).remove();});
-                        e.stopPropagation();
-                    });
-                    newDemo.removeClass("schema-demo-template");
-                    newDemo.appendTo(newSchema.find(".schema-demos"));
-                    var demoInput = CodeMirror.fromTextArea(newDemo.find(".schema-demo-data-input").get(0), {
-                        lineNumbers: true
-                    });
-                    $(newDemo).data("demoInput",demoInput);
+                    createNewDemo(newSchema);
                 });
                 newSchema.find(".datetimepicker").datetimepicker();
                 newSchema.appendTo(".schemas");
@@ -584,6 +688,8 @@
                 var schemaInput = CodeMirror.fromTextArea(schemaInputField, {
                     lineNumbers: true
                 });
+                $(newSchema).data("schemaInput",schemaInput);
+                console.log($(newSchema).data("schemaInput"));
                 var schemaInputOutput = newSchema.find(".schema-input-schema-results");
                 var oldLine = undefined;
 
@@ -610,10 +716,9 @@
                         if(oldLine!=undefined) {
                             schemaInput.removeLineClass(oldLine, 'background', 'line-error');
                         }
-                        var validator = new ShExValidator.validate(schemaInput.getValue(), "", callbacks, {});
+                        var validator = new ShExValidator.Validator(schemaInput.getValue(), "", callbacks, {});
                     }, 500, "schemaValidator");
                 });
-                $(newSchema).data("schemaInput",schemaInput);
                 return newSchema;
             };
 
@@ -649,11 +754,6 @@
             $(".create-new-schema").click(function(){
                 createNewSchema();
             });
-
-
-            /*$(".CodeMirror-drag-handel").click {
-
-            }*/
 
             $(function () {
                 $('.datetimepicker').datetimepicker();
