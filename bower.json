@@ -27,8 +27,5 @@
     "bootstrap-switch": "~3.3.2",
     "eonasdan-bootstrap-datetimepicker": "~4.7.14",
     "slip": "~1.2.0"
-    "jsplumb": "~1.7.4",
-    "jqueryui": "~1.11.4",
-    "jquery-ui-touch-punch": "*"
   }
 }
