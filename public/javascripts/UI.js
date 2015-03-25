@@ -239,6 +239,16 @@ UI = {
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
+        // Clear any demo buttons which were previously shown 
+        UI.demoPanelButtonGroup.empty();
+        
+        // Disable clicking the schema change again immediately
+        UI.schemaSelector.attr('disabled', 'disabled');
+        
+        // Clear any resource / shape mappings which were set
+        UI.resourceShapeMapTableBody.empty();
+        Validata.Validation.options.resourceShapeMap = {};
+
         var selectedSchemaIndex = UI.schemaSelector.val();
         
         Validata.Schema = ShExValidataConfig['schemas'][selectedSchemaIndex];
@@ -285,13 +295,6 @@ UI = {
         UI.schemaSourceText.text(
             Util.stringValueNoBlank( Validata.Schema['data'], "No source code for this schema")
         );
-
-        // Clear any demo buttons which were previously shown 
-        UI.demoPanelButtonGroup.empty();
-        
-        // Clear any resource / shape mappings which were set
-        UI.resourceShapeMapTableBody.empty();
-        Validata.Validation.options.resourceShapeMap = {};
         
         // If any demo data exists for this schema, add a button to insert it
         if( Util.iterableLength(Validata.Schema.dataDemos) )

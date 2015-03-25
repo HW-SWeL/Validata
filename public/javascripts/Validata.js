@@ -396,6 +396,8 @@ Validata = {
         }
 
         UI.quickSummaryPanelLoader.addClass('hidden');
+
+        UI.schemaSelector.removeAttr('disabled');
     }
 
 };
