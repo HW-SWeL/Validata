@@ -240,16 +240,16 @@ Validata = {
                 }
 
                 validationSuccessAlertVisible = false;
+                validationErrorAlertVisible = UI.validationErrorsList.children().length > 0;
+                validationWarningAlertVisible = UI.validationWarningsList.children().length > 0;
                 
-				if(UI.validationErrorsList.children().length > 0)
+				if(validationErrorAlertVisible)
 				{
 					UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
-					validationErrorAlertVisible = true;
 				}
-				else if (UI.validationWarningsList.children().length > 0)
+				else if (validationWarningAlertVisible)
 				{
 					UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusWarning');
-					validationWarningAlertVisible = true;
 				}
             }
         }
