@@ -612,8 +612,179 @@ function utf16leSlice (buf, start, end) {
                     return pet.then(function () {
                         return handleNegation(ret);
                     });
+<<<<<<< HEAD
                 } else
                     return handleNegation(ret);
+=======
+                    return done();
+                }
+            },
+            this.SPARQLobject = function (prefixes) {
+                return "?o";
+            },
+            this.SPARQLobjectTest = function (prefixes) {
+                return "(" + this.values.map(function (v) {
+                        return "?o = " + defix(v.term, prefixes);
+                    }).join(" || ") + ")";
+            },
+            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
+                return RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
+            },
+            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
+                return RDF.arcDump(schema, label, prefixes, depth, variables, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
+            },
+            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
+                return RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
+            },
+            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
+                var lead = pad(depth, '    ');
+                var seFix = lead + sePrefix + ":";
+                var rsFix = lead + rsPrefix + ":";
+                return rsFix + "allowedValue " + this.values.map(function (v) {
+                        return defix(v, prefixes);
+                    }).join(' , ') + " ;\n";
+            },
+            this.toSExpression = function (depth) {
+                return "(ValueSet "+(this.values.map(function(ex){return ex.toString();}).join(' '))+")";
+            },
+            this.toHaskell = function (depth) {
+                return "(ValueSet "+(this.values.map(function(ex){return ex.toString();}).join(' '))+")";
+            };
+    },
+
+    // . - <foo> - <bar>~
+    ValueWild: function (exclusions, _pos) {
+        this._ = 'ValueWild'; this.exclusions = exclusions; this._pos = _pos;
+        this.toString = function (orig, schema) {
+            var x = exclusions.map(function (t) { return t.toString(orig); });
+            x.unshift('.');
+            return x.join(' ');
+        },
+            this.validate = function (schema, rule, t, point, db, validatorStuff) {
+                for (var i = 0; i < this.exclusions.length; ++i) {
+                    if (this.exclusions[i].matches(point)) {
+                        var ret1 = new RDF.ValRes();
+                        { ret1.status = RDF.DISPOSITION.FAIL; ret1.error_noMatch(rule, t); }
+                        return validatorStuff.async ? Promise.resolve(ret1) : ret1;
+                    }
+                }
+                var ret2 = new RDF.ValRes();
+                { ret2.status = RDF.DISPOSITION.PASS; ret2.matched(rule, t); }
+                return validatorStuff.async ? Promise.resolve(ret2) : ret2;
+            },
+            this.SPARQLobject = function (prefixes) {
+                return "?o";
+            },
+            this.SPARQLobjectTest = function (prefixes) {
+                if (exclusions.length === 0)
+                    return "true";
+                return "(" + this.exclusions.map(function (v) {
+                        return "?o !" + v.asSPARQLfilter(prefixes);
+                    }).join(" && ") + ")";
+            },
+            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
+                return RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
+            },
+            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
+                return RDF.arcDump(schema, label, prefixes, depth, variables, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
+            },
+            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
+                return RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
+            },
+            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
+                return "# haven't made up some schema for ValueWild yet.\n";
+            },
+            this.toSExpression = function (depth) {
+                return "(ValueWild "+(this.exclusions.map(function(ex){return ex.toString();}).join(' '))+")";
+            },
+            this.toHaskell = function (depth) {
+                return "(ValueWild "+(this.exclusions.map(function(ex){return ex.toString();}).join(' '))+")";
+            };
+    },
+
+    // <foo>~
+    ValuePattern: function (term, exclusions, _pos) {
+        this._ = 'ValuePattern'; this.term = term; this.exclusions = exclusions; this._pos = _pos;
+        this.toString = function (orig, schema) {
+            return this.term.toString(orig) + '~' + this.exclusions.map(function (ex) { return ' - ' + ex.toString(orig); }).join('');
+        },
+            this.validate = function (schema, rule, t, point, db, validatorStuff) {
+                for (var i = 0; i < this.exclusions.length; ++i) {
+                    if (this.exclusions[i].toString() === point.toString()) {
+                        var ret1 = new RDF.ValRes();
+                        { ret1.status = RDF.DISPOSITION.FAIL; ret1.error_noMatch(rule, t); }
+                        return validatorStuff.async ? Promise.resolve(ret1) : ret1;
+                    }
+                }
+
+                if (point.datatype.lex.substr(0,this.term.lex.length) !== this.term.lex) {
+                    var ret2 = new RDF.ValRes();
+                    { ret2.status = RDF.DISPOSITION.FAIL; ret2.error_noMatch(rule, t); }
+                    return validatorStuff.async ? Promise.resolve(ret2) : ret2;
+                }
+                var ret3 = new RDF.ValRes();
+                { ret3.status = RDF.DISPOSITION.PASS; ret3.matched(rule, t); }
+                return validatorStuff.async ? Promise.resolve(ret3) : ret3;
+            },
+            this.SPARQLobject = function (prefixes) {
+                return "?o";
+            },
+            this.SPARQLobjectTest = function (prefixes) {
+                var ret = '';
+                ret += "(regex(STR(?o), \"^" + this.term.lex + "\"))";
+                if (this.exclusions.length > 0)
+                    ret += "(" + this.exclusions.map(function (v) {
+                        return "?o !" + v.asSPARQLfilter(prefixes);
+                    }).join(" && ") + ")";
+                return ret;
+            },
+            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
+                // throw "SPARQLobjectJoin of ValuePattern " + this.toString() + " needs attention.";
+                return RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
+            },
+            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
+                // throw "SPARQLobjectJoin of ValuePattern " + this.toString() + " needs attention.";
+                return RDF.arcDump(schema, label, prefixes, depth, variables, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), code);
+            },
+            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
+                // throw "SPARQLobjectSelect of ValuePattern " + this.toString() + " needs attention.";
+                return RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
+            },
+            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
+                return "# haven't made up some schema for ValuePattern yet (POWDER?).\n";
+            },
+            this.toSExpression = function (depth) {
+                return "(ValuePattern "+this.term.toString()+")";
+            },
+            this.toHaskell = function (depth) {
+                return "(ValuePattern "+this.term.toString()+")";
+            };
+    },
+
+    AtomicRule: function (negated, reversed, additive, nameClass, valueClass, min, max, codes, _pos, _req_lev) {
+        this._ = 'AtomicRule'; this.negated = negated; this.reversed = reversed; this.additive = additive; this.nameClass = nameClass; this.valueClass = valueClass; this.min = min; this.max = max; this.codes = codes; this._pos = _pos; this.req_lev = _req_lev;
+        this.ruleID = undefined;
+        this.setRuleID = function (ruleID) { this.ruleID = ruleID; };
+        this.label = undefined;
+        this.setLabel = function (label) { this.label = label; };
+        this.toKey = function () { return this.label.toString() + ' ' + this.toString(); };
+        this.toString = function (orig, schema) {
+            var ret = '';
+            if (reversed) ret += '^';
+            ret += nameClass.toString(orig) + ' ';
+            ret += valueClass.toString(orig, schema);
+            if (min === 1 && max === 1) {
+            } else if (min === 0 && max === 1) {
+                ret += '?';
+            }  else if (min === 0 && max === undefined) {
+                ret += '*';
+            }  else if (min === 1 && max === undefined) {
+                ret += '+';
+            } else {
+                ret += '{' + min;
+                if (max !== undefined) { ret += ', ' + max; }
+                ret += '}';
+>>>>>>> d87278b... Updated validator, removed escapejs tool
             }
         };
         this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
@@ -673,6 +844,202 @@ function utf16leSlice (buf, start, end) {
             Object.keys(this.codes).map(function (k) {
                 ret += AtomicRule.codes[k].toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
             });
+<<<<<<< HEAD
+=======
+        };
+        // only returns âˆ…|ðœƒ if inOpt
+        // ArcRule: if (inOpt âˆ§ SIZE(matchName)=0) if (min=0) return ðœƒ else return âˆ…;
+        // if(SIZE(matchName)<min|>max) return ð•—;
+        // vs=matchName.map(valueClass(v,_,g,false)); if(âˆƒð•—) return ð•—; return dispatch('post', ð•¡);
+        this.validate = function (schema, point, inOpt, db, validatorStuff) {
+            var matched = 0;
+            var ret = new RDF.ValRes();
+            ret.status = RDF.DISPOSITION.PASS;
+            var _AtomicRule = this;
+            function handleError (e) {
+                var message =
+                    [["text", "exception testing " + point.toString() + " against:"],
+                        ["code", _AtomicRule.toString()],
+                        ["text", "[["],
+                        ["NestedError", e],
+                        ["text", "]]"]
+                    ];
+                throw RDF.StructuredError(message);
+            }
+
+            var rOrP = db.triplesMatching(this.reversed ? null : point,
+                this.nameClass._ === 'NameTerm' ? this.nameClass.term : null,
+                this.reversed ? point : null,
+                validatorStuff);
+
+            return validatorStuff.async ?
+                rOrP.then(testTriples).catch(handleError) :
+                testTriples(rOrP);
+            function testTriples (matchName) {
+                matchName = matchName.filter(function (t) {
+                    return _AtomicRule.nameClass.match(t.p);
+                });
+                var pet = null;
+                if (inOpt && matchName.length === 0)
+                { ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE; ret.matchedEmpty(_AtomicRule);
+                    if (validatorStuff.async) pet = Promise.resolve(ret);
+                }
+                else if (matchName.length < _AtomicRule.min)
+                { ret.status = RDF.DISPOSITION.FAIL; ret.error_belowMin(_AtomicRule.min, _AtomicRule);
+                    if (validatorStuff.async) pet = Promise.resolve(ret);
+                }
+                //             else if (matchName.length > _AtomicRule.max)
+                //                 { ret.status = RDF.DISPOSITION.FAIL; ret.error_aboveMax(_AtomicRule.max, _AtomicRule, matchName[_AtomicRule.max]); }
+                else {
+                    var passes = [];
+                    var fails = [];
+                    var promises = [];
+                    matchName.forEach(function (t) {
+                        if (_AtomicRule.valueClass._ == 'ValueReference')
+                            schema.dispatch(0, 'link', _AtomicRule.codes, null, t);
+                        var resOrPromise = _AtomicRule.valueClass.validate(schema, _AtomicRule, t,
+                            _AtomicRule.reversed ? t.s : t.o,
+                            db, validatorStuff);
+                        if (validatorStuff.async)
+                            resOrPromise = resOrPromise.then(noteResults);
+                        else
+                            noteResults(resOrPromise);
+                        function noteResults (r) {
+                            if (_AtomicRule.valueClass._ != 'ValueReference')
+                                schema.dispatch(0, 'visit', _AtomicRule.codes, r, t);
+                            if (!r.passed() ||
+                                schema.dispatch(0, 'post', _AtomicRule.codes, r, t) == RDF.DISPOSITION.FAIL)
+                                fails.push({t:t, r:r});
+                            else
+                                passes.push({t:t, r:r});
+                            return r;
+                        }
+                        if (validatorStuff.async)
+                            promises.push(resOrPromise);
+                    });
+                    function postTest () {
+                        if (inOpt && passes.length === 0) {
+                            ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE;
+                            ret.matchedEmpty(_AtomicRule);
+                        } else if (passes.length < _AtomicRule.min) {
+                            ret.status = RDF.DISPOSITION.FAIL;
+                            ret.error_belowMin(_AtomicRule.min, _AtomicRule);
+                        } else if (_AtomicRule.max !== null && passes.length > _AtomicRule.max) {
+                            ret.status = RDF.DISPOSITION.FAIL;
+                            ret.error_aboveMax(_AtomicRule.max, _AtomicRule, passes[_AtomicRule.max].r);
+                        }
+                        if (ret.status == RDF.DISPOSITION.FAIL) {
+                            for (var iFails1 = 0; iFails1 < fails.length; ++iFails1)
+                                ret.add(fails[iFails1].r);
+                        } else {
+                            for (var iPasses = 0; iPasses < passes.length; ++iPasses)
+                                ret.add(passes[iPasses].r);
+                            for (var iFails2 = 0; iFails2 < fails.length; ++iFails2)
+                                if (!_AtomicRule.additive)
+                                    ret.missed(fails[iFails2].r);
+                        }
+                    }
+                    if (validatorStuff.async)
+                        pet = Promise.all(promises).then(function () {
+                            postTest();
+                            return ret;
+                        }).catch(function (e) {
+                            debugger;
+                            return Promise.reject(e);
+                        });
+                    else
+                        postTest();
+                }
+                function handleNegation (ret) {
+                    if (_AtomicRule.negated) {
+                        if (ret.status == RDF.DISPOSITION.FAIL) {
+                            ret.status = RDF.DISPOSITION.PASS;
+                            ret.errors = [];
+                        } else if (ret.status == RDF.DISPOSITION.PASS) {
+                            ret.status = RDF.DISPOSITION.FAIL;
+                            ret.error_aboveMax(0, _AtomicRule, matchName[0]); // !! take a triple from passes
+                        }
+                    }
+                    return ret;
+                }
+                
+
+                if (validatorStuff.async) {
+                    return pet.then(function () {
+                        ret = handleNegation(ret);
+                        if(["MAY", "SHOULD", "SHOULD NOT"].indexOf(_AtomicRule.req_lev) !== -1){
+                            ret.status = RDF.DISPOSITION.PASS;
+                        }
+                        return ret;
+                    });
+                } else {
+                    ret = handleNegation(ret);
+                    if(["MAY", "SHOULD", "SHOULD NOT"].indexOf(_AtomicRule.req_lev) !== -1){
+                        ret.status = RDF.DISPOSITION.PASS;
+                    }
+                    return ret;
+                }
+
+            }
+        };
+        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
+            var lead = pad(depth, '    ');
+            var ret =
+                this.valueClass.SPARQLobjectJoin(schema, label, prefixes, depth, counters, inOpt,
+                    this.nameClass.SPARQLpredicate(prefixes),
+                    this.nameClass.SPARQLpredicateTest(prefixes),
+                    // if we are in an optional, we mustn't test card constraints.
+                    inOpt ? undefined : {min:this.min, max:this.max},
+                    this.codes.sparql);
+            ret.min = this.min;
+            ret.max = this.max;
+            return ret;
+        };
+        this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
+            var lead = pad(depth, '    ');
+            if (this.nameClass._ != 'NameTerm')
+                throw "unable to dump data in non-constant nameClass " + this.nameClass.toString();
+            var ret =
+                this.valueClass.SPARQLobjectDump(schema, label, prefixes, this.min === 0 ? depth + 1 : depth, variables,
+                    this.nameClass.term,
+                    this.nameClass.SPARQLpredicateTest(prefixes), // ignored for now.
+                    {min:this.min, max:this.max}, this.codes.sparql);
+            if (this.min === 0) {
+                ret.prepend(lead + "OPTIONAL {\n");
+                ret.append(lead + "}\n");
+            }
+            return ret;
+        };
+        this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
+            var lead = pad(depth, '    ');
+            var ret =
+                this.valueClass.SPARQLobjectSelect(schema, label, as, prefixes, depth, counters,
+                    this.nameClass.SPARQLpredicate(prefixes),
+                    this.nameClass.SPARQLpredicateTest(prefixes));
+            return ret;
+        };
+        this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
+            var lead = pad(depth, '    ');
+            var seFix = lead + sePrefix + ":";
+            var rsFix = lead + rsPrefix + ":";
+            var ret = '';
+            ret += this.nameClass.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
+            ret += this.valueClass.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
+            ret += ResourceShapeCardinality(this.min, this.max, sePrefix, rsPrefix, seFix, rsFix);
+            if (this.ruleID) // !!! some day this will be a bnode
+                for (var i = 0; i < db.triples.length; ++i) {
+                    var t = db.triples[i];
+                    if (t.s.toString() == this.ruleID.toString()) {
+                        ret += lead + defix(t.p, prefixes) + " " + defix(t.o, prefixes) + " ;\n";
+                        db.triples.splice(i, 1);
+                        --i;
+                    }
+                }
+            var AtomicRule = this;
+            Object.keys(this.codes).map(function (k) {
+                ret += AtomicRule.codes[k].toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
+            });
+>>>>>>> d87278b... Updated validator, removed escapejs tool
             return ret;
         };
         this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
@@ -1211,9 +1578,507 @@ Buffer.prototype.copy = function (target, target_start, start, end) {
   if (!target_start) target_start = 0
   if (end > 0 && end < start) end = start
 
+<<<<<<< HEAD
   // Copy 0 bytes; we're done
   if (end === start) return 0
   if (target.length === 0 || self.length === 0) return 0
+=======
+        peg$c0 = peg$FAILED,
+        peg$c1 = [],
+        peg$c2 = null,
+        peg$c3 = function() {
+            if (curSubject.length > 0 ||
+        	curPredicate.length > 0) {
+        	return {_: "Bad end state:",
+        		s:curSubject, 
+        		p:curPredicate, 
+        		t:db.triples.map(
+        		    function (t) { return t.toString(); }
+        		).join('\n')
+        	       };
+            }
+            // t:db.triples.map( function (t) { console.log(t.toString()); } )
+            return curSchema;
+        },
+        peg$c4 = function(m) { curSchema.init = m; },
+        peg$c5 = function(pre, i) { iriResolver.setPrefix(pre, i.lex); },
+        peg$c6 = function(i) { iriResolver.setBase(i.lex); },
+        peg$c7 = "start",
+        peg$c8 = { type: "literal", value: "start", description: "\"start\"" },
+        peg$c9 = "=",
+        peg$c10 = { type: "literal", value: "=", description: "\"=\"" },
+        peg$c11 = function(l) { curSchema.startRule = l; },
+        peg$c12 = function(t, m) {
+            var r = Object.keys(m).length ? new RDF.UnaryRule(t, false, m, RDF.Position2(line(), column())) : t;
+            var b = RDF.BNode(bnodeScope.nextLabel(), RDF.Position5(text(), line(), column(), offset(), 1));
+            r.setLabel(b);
+            curSchema.add(b, r);
+            curSchema.startRule = b;
+            return new RDF.ValueReference(b, RDF.Position2(line(), column()));
+        },
+        peg$c13 = function(v, l, t, m) {
+            var r = Object.keys(m).length ? new RDF.UnaryRule(t, false, m, RDF.Position2(line(), column())) : t;
+            r.setLabel(l);
+            curSchema.add(l, r);
+            if (v)
+                curSchema.markVirtual(r);
+        },
+        peg$c14 = function() { return true; },
+        peg$c15 = "{",
+        peg$c16 = { type: "literal", value: "{", description: "\"{\"" },
+        peg$c17 = "}",
+        peg$c18 = { type: "literal", value: "}", description: "\"}\"" },
+        peg$c19 = function(includes, exp) {
+            // exp could be null if it's an empty (probably parent) rule.
+            if (includes.length) {
+                if (exp) { // includes, exp
+                    includes.forEach(function (p) {
+                        curSchema.hasDerivedShape(p.include, exp); // API reflects that we only care about parent->child map.
+                    });
+                    if (exp._ == 'AndRule') {
+                        exp.prepend(includes);
+                        return exp;
+                    } else {
+                        includes.push(exp);
+                        return new RDF.AndRule(includes, RDF.Position2(line(), column()));
+                    }
+                } else { // includes, !exp
+                    // could set exp to new RDF.EmptyRule(line(), column()) above but end up with pointless disjoint.
+                    var ret = new RDF.AndRule(includes, RDF.Position2(line(), column()));
+                    includes.forEach(function (p) {
+                        curSchema.hasDerivedShape(p.include, ret); // API reflects that we only care about parent->child map.
+                    });
+                    return ret;
+                }
+            } else {
+                if (exp) { // !includes, exp
+                    return exp;
+                } else { // !includes, !exp
+                    return new RDF.EmptyRule(RDF.Position2(line(), column()));
+                }
+            }
+        },
+        peg$c20 = "&",
+        peg$c21 = { type: "literal", value: "&", description: "\"&\"" },
+        peg$c22 = function(l) { return new RDF.IncludeRule(l, RDF.Position2(line(), column())); },
+        peg$c23 = function(exp, more) {
+            if (!more.length) return exp;
+            more.unshift(exp)
+            return new RDF.OrRule(more, RDF.Position2(line(), column()));
+        },
+        peg$c24 = "|",
+        peg$c25 = { type: "literal", value: "|", description: "\"|\"" },
+        peg$c26 = function(exp) { return exp; },
+        peg$c27 = function(exp, more) {
+            if (!more.length) return exp;
+            more.unshift(exp)
+            return new RDF.AndRule(more, RDF.Position2(line(), column()));
+        },
+        peg$c28 = ",",
+        peg$c29 = { type: "literal", value: ",", description: "\",\"" },
+        peg$c30 = function(i, a) {
+            if (curSubject.length > 0)
+                curSubject.pop();
+            if (i) a.setRuleID(i); // in case it has an ID but no triples.
+            return a;
+        },
+        peg$c31 = function(inc) { return inc; },
+        peg$c32 = "(",
+        peg$c33 = { type: "literal", value: "(", description: "\"(\"" },
+        peg$c34 = ")",
+        peg$c35 = { type: "literal", value: ")", description: "\")\"" },
+        peg$c36 = function(i, exp, r, c) {
+            if (r)
+                width = r.ends-offset();
+            else
+                r = {min: 1, max: 1};
+            if (curSubject.length > 0)
+                curSubject.pop();
+            if (r.min === 1 && !Object.keys(c).length) {
+                if (i) exp.setRuleID(i); // in case it has an ID but no triples.
+                return exp;
+            }
+            return new RDF.UnaryRule(exp, r.min !== 1 /* !!! extend to handle n-ary cardinality */, c, RDF.Position2(line(), column()));
+        },
+        peg$c37 = "$",
+        peg$c38 = { type: "literal", value: "$", description: "\"$\"" },
+        peg$c39 = function(i) { curSubject.push(i); return i; },
+        peg$c40 = /^[A-Z]/,
+        peg$c41 = { type: "class", value: "[A-Z]", description: "[A-Z]" },
+        peg$c42 = /^[a-z]/,
+        peg$c43 = { type: "class", value: "[a-z]", description: "[a-z]" },
+        peg$c44 = " ",
+        peg$c45 = { type: "literal", value: " ", description: "\" \"" },
+        peg$c46 = function(l, r) { return r ? l+r : l; },
+        peg$c47 = "`",
+        peg$c48 = { type: "literal", value: "`", description: "\"`\"" },
+        peg$c49 = "` ",
+        peg$c50 = { type: "literal", value: "` ", description: "\"` \"" },
+        peg$c51 = function(req_t) { return req_t },
+        peg$c52 = "@",
+        peg$c53 = { type: "literal", value: "@", description: "\"@\"" },
+        peg$c54 = function(l, r, p, c) {
+            var v = new RDF.ValueReference(l, RDF.Position5(text(), line(), column(), offset(), l._pos.offset-offset()+l._pos.width));
+            var width = v._pos.offset-offset()+v._pos.width;
+            if (r)
+                width = r.ends-offset();
+            else
+                r = {min: 1, max: 1};
+            var ret = new RDF.ConcomitantRule(v, r.min, r.max, c, RDF.Position5(text(), line(), column(), offset(), width));
+            if (p) ret.setRuleID(p);
+            return ret;
+        },
+        peg$c55 = "!",
+        peg$c56 = { type: "literal", value: "!", description: "\"!\"" },
+        peg$c57 = "^",
+        peg$c58 = { type: "literal", value: "^", description: "\"^\"" },
+        peg$c59 = "+",
+        peg$c60 = { type: "literal", value: "+", description: "\"+\"" },
+        peg$c61 = function(req, bang, inverse, addative, n, v, d, r, p, c) {
+            if (d)
+                throw peg$buildException('default (='+d.toString()+') not currently supported', null, peg$reportedPos);
+            var width = v._pos.offset-offset()+v._pos.width;
+            if (r)
+                width = r.ends-offset();
+            else
+                r = {min: 1, max: 1};
+            var ret = new RDF.AtomicRule(bang?true:false, inverse?true:false, addative?true:false, n, v, r.min, r.max, c, RDF.Position5(text(), line(), column(), offset(), width), req);
+            if (p) ret.setRuleID(p);
+            return ret;
+        },
+        peg$c62 = function(i) { return new RDF.NameTerm(i, RDF.Position2(line(), column())); },
+        peg$c63 = ".",
+        peg$c64 = { type: "literal", value: ".", description: "\".\"" },
+        peg$c65 = function(excl) { return new RDF.NameWild(excl.list, RDF.Position2(line(), column())); },
+        peg$c66 = function(i, patFlag) {
+            return patFlag ? new RDF.NamePattern(i, patFlag[3] ? patFlag[3].list : [], RDF.Position2(line(), column())) : new RDF.NameTerm(i, RDF.Position2(line(), column()));
+        },
+        peg$c67 = function(l) { return new RDF.ValueReference(l, RDF.Position5(text(), line(), column(), offset(), l._pos.offset-offset()+l._pos.width)); },
+        peg$c68 = function(r) {
+            var b = RDF.BNode(bnodeScope.nextLabel(), RDF.Position5(text(), line(), column(), offset(), 1));
+            r.setLabel(b);
+            curSchema.add(b, r);
+            return new RDF.ValueReference(b, RDF.Position5(text(), line(), column(), offset(), 1)); // Only hilight open brace.
+        },
+        peg$c69 = function(s) { return s; },
+        peg$c70 = function(t) { return new RDF.ValueType(t, RDF.Position5(text(), line(), column(), offset(), t._pos.width)); },
+        peg$c71 = function(n) { return new RDF.ValueType(n, RDF.Position5(text(), line(), column(), offset(), n._pos.width)); },
+        peg$c72 = function(s) { return new RDF.ValueSet(s.list, RDF.Position5(text(), line(), column(), offset(), s.ends-offset())); },
+        peg$c73 = function(excl) { return new RDF.ValueWild(excl.list, RDF.Position5(text(), line(), column(), offset(), excl.ends-offset())); },
+        peg$c74 = function(o) { return o; },
+        peg$c75 = ";",
+        peg$c76 = { type: "literal", value: ";", description: "\";\"" },
+        peg$c77 = function(v) { curPredicate.push(v); },
+        peg$c78 = function(o, oz) { curPredicate.pop(); },
+        peg$c79 = function(n) { db.add(curSubject.peek(), curPredicate.peek(), n); return n; },
+        peg$c80 = function(s) { curSubject.pop(); return s; },
+        peg$c81 = "[",
+        peg$c82 = { type: "literal", value: "[", description: "\"[\"" },
+        peg$c83 = function() {
+            var ret = RDF.BNode(bnodeScope.nextLabel(), RDF.Position5(text(), line(), column(), offset(), 1));
+            curSubject.push(ret);
+            return ret;
+        },
+        peg$c84 = "]",
+        peg$c85 = { type: "literal", value: "]", description: "\"]\"" },
+        peg$c86 = function(r) { return r; },
+        peg$c87 = function() {
+            curListHead.push(null);
+            curListTail.push(null);
+            insertTripleAt.push(db.triples.length);
+            curSubject.push(RDF.BNode(bnodeScope.nextLabel(), RDF.Position5(text(), line(), column()-1, offset()-1, 1)));
+            curPredicate.push(RDF.IRI(RDF_NS+'first', RDF.Position5(text(), line(), column(), offset(), 1)));
+        },
+        peg$c88 = function() {
+            curSubject.pop();
+            curPredicate.pop();
+            var nil = RDF.IRI(RDF_NS+'nil', RDF.Position5(text(), line(), column(), offset(), 1));
+            if (curListHead.peek() != null) // got some elements
+                db.add(curListTail.peek(),
+                       RDF.IRI(RDF_NS+'rest', RDF.Position5(text(), line(), column()-1, offset()-1, 1)),
+                       nil);
+            db.nextInsertAt = insertTripleAt.pop();
+            curListTail.pop();
+            var ret = curListHead.pop();
+            return (ret == null) ? nil : ret;
+        },
+        peg$c89 = function(o) {
+            var cur = curSubject.peek();
+            if (curListHead.peek() == null)
+                curListHead.replace(cur);
+            else {
+        	db.nextInsertAt = db.triples.length-1;
+                db.add(curListTail.peek(), // last tail
+                       RDF.IRI(RDF_NS+'rest', RDF.Position5(text(), line(), column(), offset(), 1)),
+                       cur);
+        	db.nextInsertAt = null;
+            }
+            var next = RDF.BNode(bnodeScope.nextLabel(), RDF.Position5(text(), line(), o._pos.column-2, o._pos.offset-2, 1));
+            curListTail.replace(cur);
+            curSubject.replace(next);
+            curPredicate.replace(RDF.IRI(RDF_NS+'first', RDF.Position5(text(), line(), o._pos.column-1, o._pos.offset-1, 1)));
+        },
+        peg$c90 = function() {
+            if (curSubject.length > 0)
+                return curSubject.slice(-1)[0]; // curSubject was set by $_id rule
+            var ret = RDF.BNode(bnodeScope.nextLabel(), RDF.Position5(text(), line(), column(), offset(), 1));
+            curSubject.push(ret);
+            return ret;
+        },
+        peg$c91 = function(ex) { return ex.length ? {ends: ex[ex.length-1]._pos.offset+ex[ex.length-1]._pos.width , list:ex} : {ends:offset(), list:[]}; },
+        peg$c92 = "-",
+        peg$c93 = { type: "literal", value: "-", description: "\"-\"" },
+        peg$c94 = function(i) { return i; },
+        peg$c95 = "*",
+        peg$c96 = { type: "literal", value: "*", description: "\"*\"" },
+        peg$c97 = function() { return {min: 0, max: undefined, ends: offset()+1}; },
+        peg$c98 = function() { return {min: 1, max: undefined, ends: offset()+1}; },
+        peg$c99 = "?",
+        peg$c100 = { type: "literal", value: "?", description: "\"?\"" },
+        peg$c101 = function() { return {min: 0, max: 1, ends: offset()+1}; },
+        peg$c102 = function(min, max, c) { return {min: min, max: max === null ? min : max, ends: c}; },
+        peg$c103 = function() { return offset()+1; },
+        peg$c104 = function(max) { return max ? max : undefined; },
+        peg$c105 = function() { return undefined; },
+        peg$c106 = function(o, c) { return {ends:c, list:o}; },
+        peg$c107 = function(codeList) {
+            var ret = {};
+            for (var i = 0; i < codeList.length; ++i)
+                ret[codeList[i].label] = codeList[i];
+            return ret;
+        },
+        peg$c108 = function(c) { return c; },
+        peg$c109 = function(i, patFlag) {
+            return new RDF.ValuePattern(i, patFlag[3] ? patFlag[3].list : [], RDF.Position5(text(), line(), column(), offset(), patFlag[1]-offset()));
+        },
+        peg$c110 = function(i, patFlag) {
+            return patFlag
+                ? new RDF.ValuePattern(i, patFlag[3] ? patFlag[3].list : [], RDF.Position5(text(), line(), column(), offset(), patFlag[1]-offset()))
+                : new RDF.ValueTerm(i, RDF.Position5(text(), line(), column(), offset(), i._pos.width));
+        },
+        peg$c111 = "~",
+        peg$c112 = { type: "literal", value: "~", description: "\"~\"" },
+        peg$c113 = function(l) { return new RDF.ValueTerm(l, RDF.Position5(text(), line(), column(), offset(), l._pos.width)); },
+        peg$c114 = function(value) { return _literalHere(value, 'double'); },
+        peg$c115 = function(value) { return _literalHere(value, 'decimal'); },
+        peg$c116 = function(value) { return _literalHere(value, 'integer'); },
+        peg$c117 = function(s, l) { return RDF.RDFLiteral(s.lex, l, undefined, RDF.Position5(text(), s.line, s.column, s.offset, s.length+1+l._pos.width)); },
+        peg$c118 = "^^",
+        peg$c119 = { type: "literal", value: "^^", description: "\"^^\"" },
+        peg$c120 = function(s, i) { return RDF.RDFLiteral(s.lex, undefined, i, RDF.Position5(text(), s.line, s.column, s.offset, s.length+2+i._pos.width)); },
+        peg$c121 = function(s) { return RDF.RDFLiteral(s.lex, undefined, undefined, RDF.Position5(text(), s.line, s.column, s.offset, s.length)); },
+        peg$c122 = "true",
+        peg$c123 = { type: "literal", value: "true", description: "\"true\"" },
+        peg$c124 = function() { return _literalHere('true', 'boolean'); },
+        peg$c125 = "false",
+        peg$c126 = { type: "literal", value: "false", description: "\"false\"" },
+        peg$c127 = function() { return _literalHere('false', 'boolean'); },
+        peg$c128 = function(ln) {
+            return RDF.IRI(iriResolver.getAbsoluteIRI(iriResolver.getPrefix(ln.prefix) + ln.lex), RDF.Position5(text(), line(), column(), offset(), ln.width));
+        },
+        peg$c129 = function(p) { return RDF.IRI(iriResolver.getAbsoluteIRI(iriResolver.getPrefix(p)), RDF.Position5(text(), line(), column(), offset(), p.length+1)); },
+        peg$c130 = "%",
+        peg$c131 = { type: "literal", value: "%", description: "\"%\"" },
+        peg$c132 = /^[a-zA-Z+#_]/,
+        peg$c133 = { type: "class", value: "[a-zA-Z+#_]", description: "[a-zA-Z+#_]" },
+        peg$c134 = /^[a-zA-Z0-9+#_]/,
+        peg$c135 = { type: "class", value: "[a-zA-Z0-9+#_]", description: "[a-zA-Z0-9+#_]" },
+        peg$c136 = /^[^%\\]/,
+        peg$c137 = { type: "class", value: "[^%\\\\]", description: "[^%\\\\]" },
+        peg$c138 = "\\",
+        peg$c139 = { type: "literal", value: "\\", description: "\"\\\\\"" },
+        peg$c140 = function(label, code) {
+            return new RDF.Code(label[0]+label[1].join(''), code.join(''), RDF.Position5(text(), line(), column(), offset(), 1+label.length+1+code.length+4));
+        },
+        peg$c141 = /^[Vv]/,
+        peg$c142 = { type: "class", value: "[Vv]", description: "[Vv]" },
+        peg$c143 = /^[Ii]/,
+        peg$c144 = { type: "class", value: "[Ii]", description: "[Ii]" },
+        peg$c145 = /^[Rr]/,
+        peg$c146 = { type: "class", value: "[Rr]", description: "[Rr]" },
+        peg$c147 = /^[Tt]/,
+        peg$c148 = { type: "class", value: "[Tt]", description: "[Tt]" },
+        peg$c149 = /^[Uu]/,
+        peg$c150 = { type: "class", value: "[Uu]", description: "[Uu]" },
+        peg$c151 = /^[Aa]/,
+        peg$c152 = { type: "class", value: "[Aa]", description: "[Aa]" },
+        peg$c153 = /^[Ll]/,
+        peg$c154 = { type: "class", value: "[Ll]", description: "[Ll]" },
+        peg$c155 = function() { return RDF.IRI('http://www.w3.org/2013/ShEx/ns#IRI', RDF.Position5(text(), line(), column(), offset(), 3)); },
+        peg$c156 = /^[Ee]/,
+        peg$c157 = { type: "class", value: "[Ee]", description: "[Ee]" },
+        peg$c158 = function() { return RDF.IRI('http://www.w3.org/2013/ShEx/ns#Literal', RDF.Position5(text(), line(), column(), offset(), 3)); },
+        peg$c159 = /^[Bb]/,
+        peg$c160 = { type: "class", value: "[Bb]", description: "[Bb]" },
+        peg$c161 = /^[Nn]/,
+        peg$c162 = { type: "class", value: "[Nn]", description: "[Nn]" },
+        peg$c163 = /^[Oo]/,
+        peg$c164 = { type: "class", value: "[Oo]", description: "[Oo]" },
+        peg$c165 = /^[Dd]/,
+        peg$c166 = { type: "class", value: "[Dd]", description: "[Dd]" },
+        peg$c167 = function() { return RDF.IRI('http://www.w3.org/2013/ShEx/ns#BNode', RDF.Position5(text(), line(), column(), offset(), 3)); },
+        peg$c168 = function() { return RDF.IRI('http://www.w3.org/2013/ShEx/ns#NonLiteral', RDF.Position5(text(), line(), column(), offset(), 3)); },
+        peg$c169 = "a",
+        peg$c170 = { type: "literal", value: "a", description: "\"a\"" },
+        peg$c171 = function() { return RDF.IRI(RDF_NS+'type', RDF.Position5(text(), line(), column(), offset(), 1)); },
+        peg$c172 = /^[^\0- <>"{}|\^`\\]/,
+        peg$c173 = { type: "class", value: "[^\\0- <>\"{}|\\^`\\\\]", description: "[^\\0- <>\"{}|\\^`\\\\]" },
+        peg$c174 = function(b, s, e) {
+            return RDF.IRI(iriResolver.getAbsoluteIRI(s.join('')), RDF.Position5(text(), line(), column(), offset(), e-b+1));
+        },
+        peg$c175 = "<",
+        peg$c176 = { type: "literal", value: "<", description: "\"<\"" },
+        peg$c177 = function() { return offset(); },
+        peg$c178 = ">",
+        peg$c179 = { type: "literal", value: ">", description: "\">\"" },
+        peg$c180 = /^[Cc]/,
+        peg$c181 = { type: "class", value: "[Cc]", description: "[Cc]" },
+        peg$c182 = /^[Mm]/,
+        peg$c183 = { type: "class", value: "[Mm]", description: "[Mm]" },
+        peg$c184 = /^[Pp]/,
+        peg$c185 = { type: "class", value: "[Pp]", description: "[Pp]" },
+        peg$c186 = /^[Ff]/,
+        peg$c187 = { type: "class", value: "[Ff]", description: "[Ff]" },
+        peg$c188 = /^[Xx]/,
+        peg$c189 = { type: "class", value: "[Xx]", description: "[Xx]" },
+        peg$c190 = /^[Ss]/,
+        peg$c191 = { type: "class", value: "[Ss]", description: "[Ss]" },
+        peg$c192 = ":",
+        peg$c193 = { type: "literal", value: ":", description: "\":\"" },
+        peg$c194 = function(pre) { return pre ? pre : '' },
+        peg$c195 = function(pre, l) { 
+            return {width: pre.length+1+l.length, prefix:pre, lex:l};
+        },
+        peg$c196 = "_:",
+        peg$c197 = { type: "literal", value: "_:", description: "\"_:\"" },
+        peg$c198 = /^[0-9]/,
+        peg$c199 = { type: "class", value: "[0-9]", description: "[0-9]" },
+        peg$c200 = function(first, rest) {
+            return RDF.BNode(bnodeScope.uniqueLabel(first+rest.join('')), RDF.Position5(text(), line(), column(), offset(), 2+first.length+rest.length));
+        },
+        peg$c201 = function(l, r) { return l+r; },
+        peg$c202 = /^[a-zA-Z]/,
+        peg$c203 = { type: "class", value: "[a-zA-Z]", description: "[a-zA-Z]" },
+        peg$c204 = /^[a-zA-Z0-9]/,
+        peg$c205 = { type: "class", value: "[a-zA-Z0-9]", description: "[a-zA-Z0-9]" },
+        peg$c206 = function(s) {
+            s[1].splice(0, 0, '');
+            var str = s[0].join('')+s[1].reduce(function(a,b){return a+b[0]+b[1].join('');});
+            return RDF.LangTag(str, RDF.Position5(text(), line(), column()+1, offset()+1, str.length));
+        },
+        peg$c207 = /^[+\-]/,
+        peg$c208 = { type: "class", value: "[+\\-]", description: "[+\\-]" },
+        peg$c209 = function(sign, s) { if (!sign) sign=''; return sign+s.join(''); },
+        peg$c210 = function(sign, l, d) { if (!sign) sign=''; return sign+l.join('')+'.'+d.join(''); },
+        peg$c211 = function(sign, v) { if (!sign) sign=''; return sign+v; },
+        peg$c212 = function(m, d, e) { return m.join('')+'.'+d.join('')+e; },
+        peg$c213 = function(d, e) { return '.'+d.join('')+e; },
+        peg$c214 = function(m, e) { return m.join('')+e; },
+        peg$c215 = /^[eE]/,
+        peg$c216 = { type: "class", value: "[eE]", description: "[eE]" },
+        peg$c217 = function(e, sign, l) { if (!sign) sign=''; return e+sign+l.join(''); },
+        peg$c218 = function(b, s, e) { return {line:line(), column:column(), offset:offset(), length:e-b+1, lex:s.join('')}; },
+        peg$c219 = "'",
+        peg$c220 = { type: "literal", value: "'", description: "\"'\"" },
+        peg$c221 = /^[^'\\\n\r]/,
+        peg$c222 = { type: "class", value: "[^'\\\\\\n\\r]", description: "[^'\\\\\\n\\r]" },
+        peg$c223 = "\"",
+        peg$c224 = { type: "literal", value: "\"", description: "\"\\\"\"" },
+        peg$c225 = /^[^"\\\n\r]/,
+        peg$c226 = { type: "class", value: "[^\"\\\\\\n\\r]", description: "[^\"\\\\\\n\\r]" },
+        peg$c227 = function(b, s, e) { return {line:line(), column:column(), offset:offset(), length:e-b+3, lex:s.join('')}; },
+        peg$c228 = "'''",
+        peg$c229 = { type: "literal", value: "'''", description: "\"'''\"" },
+        peg$c230 = /^[^'\\]/,
+        peg$c231 = { type: "class", value: "[^'\\\\]", description: "[^'\\\\]" },
+        peg$c232 = function(q, c) { // '
+            return q ? q+c : c;
+        },
+        peg$c233 = "''",
+        peg$c234 = { type: "literal", value: "''", description: "\"''\"" },
+        peg$c235 = "\"\"\"",
+        peg$c236 = { type: "literal", value: "\"\"\"", description: "\"\\\"\\\"\\\"\"" },
+        peg$c237 = /^[^"\\]/,
+        peg$c238 = { type: "class", value: "[^\"\\\\]", description: "[^\"\\\\]" },
+        peg$c239 = function(q, c) { // "
+            return q ? q+c : c;
+        },
+        peg$c240 = "\"\"",
+        peg$c241 = { type: "literal", value: "\"\"", description: "\"\\\"\\\"\"" },
+        peg$c242 = "\\u",
+        peg$c243 = { type: "literal", value: "\\u", description: "\"\\\\u\"" },
+        peg$c244 = function(s) { return String.fromCharCode(parseInt(s.join(''), 16)); },
+        peg$c245 = "\\U",
+        peg$c246 = { type: "literal", value: "\\U", description: "\"\\\\U\"" },
+        peg$c247 = function(s) {
+            var code = parseInt(s.join(''), 16);
+            if (code<0x10000) { // RDFa.1.2.0.js:2712
+                return String.fromCharCode(code);
+            } else {
+                // Treat this as surrogate pairs until use cases for me to push it up to the toString function. (sigh)
+                var n = code - 0x10000;
+                var h = n >> 10;
+                var l = n & 0x3ff;
+                return String.fromCharCode(h + 0xd800) + String.fromCharCode(l + 0xdc00);
+            }
+        },
+        peg$c248 = /^[tbnrf"'\\]/,
+        peg$c249 = { type: "class", value: "[tbnrf\"'\\\\]", description: "[tbnrf\"'\\\\]" },
+        peg$c250 = function(r) { // "
+            return r=='t' ? '\t'
+                 : r=='b' ? '\b'
+                 : r=='n' ? '\n'
+                 : r=='r' ? '\r'
+                 : r=='f' ? '\f'
+                 : r=='"' ? '"'
+                 : r=='\'' ? '\''
+                 : '\\'
+        },
+        peg$c251 = function(s) { return RDF.BNode(bnodeScope.nextLabel(), RDF.Position5(text(), line(), column(), offset(), s.length+2)); },
+        peg$c252 = /^[\xC0-\xD6]/,
+        peg$c253 = { type: "class", value: "[\\xC0-\\xD6]", description: "[\\xC0-\\xD6]" },
+        peg$c254 = /^[\xD8-\xF6]/,
+        peg$c255 = { type: "class", value: "[\\xD8-\\xF6]", description: "[\\xD8-\\xF6]" },
+        peg$c256 = /^[\xF8-\u02FF]/,
+        peg$c257 = { type: "class", value: "[\\xF8-\\u02FF]", description: "[\\xF8-\\u02FF]" },
+        peg$c258 = /^[\u0370-\u037D]/,
+        peg$c259 = { type: "class", value: "[\\u0370-\\u037D]", description: "[\\u0370-\\u037D]" },
+        peg$c260 = /^[\u037F-\u1FFF]/,
+        peg$c261 = { type: "class", value: "[\\u037F-\\u1FFF]", description: "[\\u037F-\\u1FFF]" },
+        peg$c262 = /^[\u200C-\u200D]/,
+        peg$c263 = { type: "class", value: "[\\u200C-\\u200D]", description: "[\\u200C-\\u200D]" },
+        peg$c264 = /^[\u2070-\u218F]/,
+        peg$c265 = { type: "class", value: "[\\u2070-\\u218F]", description: "[\\u2070-\\u218F]" },
+        peg$c266 = /^[\u2C00-\u2FEF]/,
+        peg$c267 = { type: "class", value: "[\\u2C00-\\u2FEF]", description: "[\\u2C00-\\u2FEF]" },
+        peg$c268 = /^[\u3001-\uFFFD]/,
+        peg$c269 = { type: "class", value: "[\\u3001-\\uFFFD]", description: "[\\u3001-\\uFFFD]" },
+        peg$c270 = "_",
+        peg$c271 = { type: "literal", value: "_", description: "\"_\"" },
+        peg$c272 = /^[\xB7]/,
+        peg$c273 = { type: "class", value: "[\\xB7]", description: "[\\xB7]" },
+        peg$c274 = /^[\u0300-\u036F]/,
+        peg$c275 = { type: "class", value: "[\\u0300-\\u036F]", description: "[\\u0300-\\u036F]" },
+        peg$c276 = /^[\u203F-\u2040]/,
+        peg$c277 = { type: "class", value: "[\\u203F-\\u2040]", description: "[\\u203F-\\u2040]" },
+        peg$c278 = function(b, r) { return r ? b+r : b; },
+        peg$c279 = function(l, r) { return '%'+l+r; },
+        peg$c280 = /^[A-F]/,
+        peg$c281 = { type: "class", value: "[A-F]", description: "[A-F]" },
+        peg$c282 = /^[a-f]/,
+        peg$c283 = { type: "class", value: "[a-f]", description: "[a-f]" },
+        peg$c284 = /^[_~.!$&'()*+,;=\/?#@%\-]/,
+        peg$c285 = { type: "class", value: "[_~.!$&'()*+,;=\\/?#@%\\-]", description: "[_~.!$&'()*+,;=\\/?#@%\\-]" },
+        peg$c286 = function(x) { return ''; },
+        peg$c287 = /^[ \t\r\n]/,
+        peg$c288 = { type: "class", value: "[ \\t\\r\\n]", description: "[ \\t\\r\\n]" },
+        peg$c289 = function() { return ''; },
+        peg$c290 = "#",
+        peg$c291 = { type: "literal", value: "#", description: "\"#\"" },
+        peg$c292 = /^[^\r\n]/,
+        peg$c293 = { type: "class", value: "[^\\r\\n]", description: "[^\\r\\n]" },
+        peg$c294 = function(comment) { curSchema.addComment(new RDF.Comment(comment.join(''), RDF.Position5(text(), line(), column(), offset(), comment.length+1))); },
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // Fatal error conditions
   if (target_start < 0)
@@ -1922,7 +2787,113 @@ EventEmitter.prototype.addListener = function(type, listener) {
   return this;
 };
 
+<<<<<<< HEAD
 EventEmitter.prototype.on = EventEmitter.prototype.addListener;
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 64) {
+        s1 = peg$c52;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c53); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parselabel();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c67(s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parsetypeSpec();
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c68(s1);
+        }
+        s0 = s1;
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = peg$parse_objSingleIriStem();
+          if (s1 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c69(s1);
+          }
+          s0 = s1;
+          if (s0 === peg$FAILED) {
+            s0 = peg$currPos;
+            s1 = peg$parsenodeType();
+            if (s1 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c70(s1);
+            }
+            s0 = s1;
+            if (s0 === peg$FAILED) {
+              s0 = peg$currPos;
+              s1 = peg$parseiri();
+              if (s1 !== peg$FAILED) {
+                peg$reportedPos = s0;
+                s1 = peg$c71(s1);
+              }
+              s0 = s1;
+              if (s0 === peg$FAILED) {
+                s0 = peg$currPos;
+                s1 = peg$parsevalueSet();
+                if (s1 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c72(s1);
+                }
+                s0 = s1;
+                if (s0 === peg$FAILED) {
+                  s0 = peg$currPos;
+                  if (input.charCodeAt(peg$currPos) === 46) {
+                    s1 = peg$c63;
+                    peg$currPos++;
+                  } else {
+                    s1 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c64); }
+                  }
+                  if (s1 !== peg$FAILED) {
+                    s2 = peg$parse_();
+                    if (s2 !== peg$FAILED) {
+                      s3 = peg$parseexclusions();
+                      if (s3 !== peg$FAILED) {
+                        peg$reportedPos = s0;
+                        s1 = peg$c73(s3);
+                        s0 = s1;
+                      } else {
+                        peg$currPos = s0;
+                        s0 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s0;
+                      s0 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 EventEmitter.prototype.once = function(type, listener) {
   if (!isFunction(listener))
@@ -1942,8 +2913,33 @@ EventEmitter.prototype.once = function(type, listener) {
   g.listener = listener;
   this.on(type, g);
 
+<<<<<<< HEAD
   return this;
 };
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 61) {
+        s1 = peg$c9;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c10); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_iri_OR_literal();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c74(s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 // emits a 'removeListener' event iff the listener was removed
 EventEmitter.prototype.removeListener = function(type, listener) {
@@ -1965,12 +2961,176 @@ EventEmitter.prototype.removeListener = function(type, listener) {
     if (this._events.removeListener)
       this.emit('removeListener', type, listener);
 
+<<<<<<< HEAD
   } else if (isObject(list)) {
     for (i = length; i-- > 0;) {
       if (list[i] === listener ||
           (list[i].listener && list[i].listener === listener)) {
         position = i;
         break;
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parseverb();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseobjectList();
+          if (s3 !== peg$FAILED) {
+            s4 = [];
+            s5 = peg$currPos;
+            s6 = peg$parse_();
+            if (s6 !== peg$FAILED) {
+              if (input.charCodeAt(peg$currPos) === 59) {
+                s7 = peg$c75;
+                peg$currPos++;
+              } else {
+                s7 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c76); }
+              }
+              if (s7 !== peg$FAILED) {
+                s8 = peg$parse_();
+                if (s8 !== peg$FAILED) {
+                  s9 = [];
+                  s10 = peg$currPos;
+                  s11 = peg$parseverb();
+                  if (s11 !== peg$FAILED) {
+                    s12 = peg$parseobjectList();
+                    if (s12 !== peg$FAILED) {
+                      s11 = [s11, s12];
+                      s10 = s11;
+                    } else {
+                      peg$currPos = s10;
+                      s10 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s10;
+                    s10 = peg$c0;
+                  }
+                  while (s10 !== peg$FAILED) {
+                    s9.push(s10);
+                    s10 = peg$currPos;
+                    s11 = peg$parseverb();
+                    if (s11 !== peg$FAILED) {
+                      s12 = peg$parseobjectList();
+                      if (s12 !== peg$FAILED) {
+                        s11 = [s11, s12];
+                        s10 = s11;
+                      } else {
+                        peg$currPos = s10;
+                        s10 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s10;
+                      s10 = peg$c0;
+                    }
+                  }
+                  if (s9 !== peg$FAILED) {
+                    s6 = [s6, s7, s8, s9];
+                    s5 = s6;
+                  } else {
+                    peg$currPos = s5;
+                    s5 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s5;
+                  s5 = peg$c0;
+                }
+              } else {
+                peg$currPos = s5;
+                s5 = peg$c0;
+              }
+            } else {
+              peg$currPos = s5;
+              s5 = peg$c0;
+            }
+            while (s5 !== peg$FAILED) {
+              s4.push(s5);
+              s5 = peg$currPos;
+              s6 = peg$parse_();
+              if (s6 !== peg$FAILED) {
+                if (input.charCodeAt(peg$currPos) === 59) {
+                  s7 = peg$c75;
+                  peg$currPos++;
+                } else {
+                  s7 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c76); }
+                }
+                if (s7 !== peg$FAILED) {
+                  s8 = peg$parse_();
+                  if (s8 !== peg$FAILED) {
+                    s9 = [];
+                    s10 = peg$currPos;
+                    s11 = peg$parseverb();
+                    if (s11 !== peg$FAILED) {
+                      s12 = peg$parseobjectList();
+                      if (s12 !== peg$FAILED) {
+                        s11 = [s11, s12];
+                        s10 = s11;
+                      } else {
+                        peg$currPos = s10;
+                        s10 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s10;
+                      s10 = peg$c0;
+                    }
+                    while (s10 !== peg$FAILED) {
+                      s9.push(s10);
+                      s10 = peg$currPos;
+                      s11 = peg$parseverb();
+                      if (s11 !== peg$FAILED) {
+                        s12 = peg$parseobjectList();
+                        if (s12 !== peg$FAILED) {
+                          s11 = [s11, s12];
+                          s10 = s11;
+                        } else {
+                          peg$currPos = s10;
+                          s10 = peg$c0;
+                        }
+                      } else {
+                        peg$currPos = s10;
+                        s10 = peg$c0;
+                      }
+                    }
+                    if (s9 !== peg$FAILED) {
+                      s6 = [s6, s7, s8, s9];
+                      s5 = s6;
+                    } else {
+                      peg$currPos = s5;
+                      s5 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s5;
+                    s5 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s5;
+                  s5 = peg$c0;
+                }
+              } else {
+                peg$currPos = s5;
+                s5 = peg$c0;
+              }
+            }
+            if (s4 !== peg$FAILED) {
+              s1 = [s1, s2, s3, s4];
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
       }
     }
 
@@ -1988,8 +3148,27 @@ EventEmitter.prototype.removeListener = function(type, listener) {
       this.emit('removeListener', type, listener);
   }
 
+<<<<<<< HEAD
   return this;
 };
+=======
+      s0 = peg$currPos;
+      s1 = peg$parseiri();
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c77(s1);
+      }
+      s0 = s1;
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parseRDF_TYPE();
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c77(s1);
+        }
+        s0 = s1;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 EventEmitter.prototype.removeAllListeners = function(type) {
   var key, listeners;
@@ -1997,6 +3176,7 @@ EventEmitter.prototype.removeAllListeners = function(type) {
   if (!this._events)
     return this;
 
+<<<<<<< HEAD
   // not listening for removeListener, no need to emit
   if (!this._events.removeListener) {
     if (arguments.length === 0)
@@ -2005,6 +3185,99 @@ EventEmitter.prototype.removeAllListeners = function(type) {
       delete this._events[type];
     return this;
   }
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parseobject();
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          s4 = peg$currPos;
+          s5 = peg$parse_();
+          if (s5 !== peg$FAILED) {
+            if (input.charCodeAt(peg$currPos) === 44) {
+              s6 = peg$c28;
+              peg$currPos++;
+            } else {
+              s6 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c29); }
+            }
+            if (s6 !== peg$FAILED) {
+              s7 = peg$parse_();
+              if (s7 !== peg$FAILED) {
+                s8 = peg$parseobject();
+                if (s8 !== peg$FAILED) {
+                  s5 = [s5, s6, s7, s8];
+                  s4 = s5;
+                } else {
+                  peg$currPos = s4;
+                  s4 = peg$c0;
+                }
+              } else {
+                peg$currPos = s4;
+                s4 = peg$c0;
+              }
+            } else {
+              peg$currPos = s4;
+              s4 = peg$c0;
+            }
+          } else {
+            peg$currPos = s4;
+            s4 = peg$c0;
+          }
+          while (s4 !== peg$FAILED) {
+            s3.push(s4);
+            s4 = peg$currPos;
+            s5 = peg$parse_();
+            if (s5 !== peg$FAILED) {
+              if (input.charCodeAt(peg$currPos) === 44) {
+                s6 = peg$c28;
+                peg$currPos++;
+              } else {
+                s6 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c29); }
+              }
+              if (s6 !== peg$FAILED) {
+                s7 = peg$parse_();
+                if (s7 !== peg$FAILED) {
+                  s8 = peg$parseobject();
+                  if (s8 !== peg$FAILED) {
+                    s5 = [s5, s6, s7, s8];
+                    s4 = s5;
+                  } else {
+                    peg$currPos = s4;
+                    s4 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s4;
+                  s4 = peg$c0;
+                }
+              } else {
+                peg$currPos = s4;
+                s4 = peg$c0;
+              }
+            } else {
+              peg$currPos = s4;
+              s4 = peg$c0;
+            }
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c78(s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // emit removeListener for all listeners on all events
   if (arguments.length === 0) {
@@ -2017,7 +3290,56 @@ EventEmitter.prototype.removeAllListeners = function(type) {
     return this;
   }
 
+<<<<<<< HEAD
   listeners = this._events[type];
+=======
+    function peg$parseobject() {
+      var s0, s1;
+
+      s0 = peg$currPos;
+      s1 = peg$parseiri();
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c79(s1);
+      }
+      s0 = s1;
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parseBlankNode();
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c79(s1);
+        }
+        s0 = s1;
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = peg$parsecollection();
+          if (s1 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c79(s1);
+          }
+          s0 = s1;
+          if (s0 === peg$FAILED) {
+            s0 = peg$currPos;
+            s1 = peg$parseblankNodePropertyList();
+            if (s1 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c79(s1);
+            }
+            s0 = s1;
+            if (s0 === peg$FAILED) {
+              s0 = peg$currPos;
+              s1 = peg$parseliteral();
+              if (s1 !== peg$FAILED) {
+                peg$reportedPos = s0;
+                s1 = peg$c79(s1);
+              }
+              s0 = s1;
+            }
+          }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   if (isFunction(listeners)) {
     this.removeListener(type, listeners);
@@ -2031,6 +3353,7 @@ EventEmitter.prototype.removeAllListeners = function(type) {
   return this;
 };
 
+<<<<<<< HEAD
 EventEmitter.prototype.listeners = function(type) {
   var ret;
   if (!this._events || !this._events[type])
@@ -2041,6 +3364,36 @@ EventEmitter.prototype.listeners = function(type) {
     ret = this._events[type].slice();
   return ret;
 };
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_lbracket();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parsepredicateObjectList();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_();
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_rbracket();
+            if (s4 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c80(s1);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 EventEmitter.listenerCount = function(emitter, type) {
   var ret;
@@ -2057,9 +3410,25 @@ function isFunction(arg) {
   return typeof arg === 'function';
 }
 
+<<<<<<< HEAD
 function isNumber(arg) {
   return typeof arg === 'number';
 }
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 91) {
+        s1 = peg$c81;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c82); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c83();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function isObject(arg) {
   return typeof arg === 'object' && arg !== null;
@@ -2069,6 +3438,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
+<<<<<<< HEAD
 },{}],7:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
@@ -2080,6 +3450,54 @@ if (typeof Object.create === 'function') {
         enumerable: false,
         writable: true,
         configurable: true
+=======
+      if (input.charCodeAt(peg$currPos) === 93) {
+        s0 = peg$c84;
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c85); }
+      }
+
+      return s0;
+    }
+
+    function peg$parsecollection() {
+      var s0, s1, s2, s3, s4;
+
+      s0 = peg$currPos;
+      s1 = peg$parse_openCollection();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          s4 = peg$parse_members();
+          while (s4 !== peg$FAILED) {
+            s3.push(s4);
+            s4 = peg$parse_members();
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_closeCollection();
+            if (s4 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c86(s4);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
       }
     });
   };
@@ -2102,9 +3520,25 @@ module.exports = Array.isArray || function (arr) {
 },{}],9:[function(require,module,exports){
 // shim for using process in browser
 
+<<<<<<< HEAD
 var process = module.exports = {};
 var queue = [];
 var draining = false;
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 40) {
+        s1 = peg$c32;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c33); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c87();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function drainQueue() {
     if (draining) {
@@ -2137,7 +3571,23 @@ process.env = {};
 process.argv = [];
 process.version = ''; // empty string to avoid regexp issues
 
+<<<<<<< HEAD
 function noop() {}
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 41) {
+        s1 = peg$c34;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c35); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c88();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 process.on = noop;
 process.addListener = noop;
@@ -2151,12 +3601,31 @@ process.binding = function (name) {
     throw new Error('process.binding is not supported');
 };
 
+<<<<<<< HEAD
 // TODO(shtylman)
 process.cwd = function () { return '/' };
 process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 process.umask = function() { return 0; };
+=======
+      s0 = peg$currPos;
+      s1 = peg$parseobject();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c89(s1);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 },{}],10:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
@@ -2184,10 +3653,41 @@ module.exports = require("./lib/_stream_duplex.js")
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+<<<<<<< HEAD
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
 // Writable.
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_lbracket1();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parsepredicateObjectList();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_();
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_rbracket1();
+            if (s4 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c80(s1);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 module.exports = Duplex;
 
@@ -2199,6 +3699,22 @@ var objectKeys = Object.keys || function (obj) {
 }
 /*</replacement>*/
 
+<<<<<<< HEAD
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 91) {
+        s1 = peg$c81;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c82); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c90();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 /*<replacement>*/
 var util = require('core-util-is');
@@ -2208,7 +3724,17 @@ util.inherits = require('inherits');
 var Readable = require('./_stream_readable');
 var Writable = require('./_stream_writable');
 
+<<<<<<< HEAD
 util.inherits(Duplex, Readable);
+=======
+      if (input.charCodeAt(peg$currPos) === 93) {
+        s0 = peg$c84;
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c85); }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 forEach(objectKeys(Writable.prototype), function(method) {
   if (!Duplex.prototype[method])
@@ -2219,8 +3745,23 @@ function Duplex(options) {
   if (!(this instanceof Duplex))
     return new Duplex(options);
 
+<<<<<<< HEAD
   Readable.call(this, options);
   Writable.call(this, options);
+=======
+      s0 = peg$currPos;
+      s1 = [];
+      s2 = peg$parse_excl();
+      while (s2 !== peg$FAILED) {
+        s1.push(s2);
+        s2 = peg$parse_excl();
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c91(s1);
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   if (options && options.readable === false)
     this.readable = false;
@@ -2228,9 +3769,46 @@ function Duplex(options) {
   if (options && options.writable === false)
     this.writable = false;
 
+<<<<<<< HEAD
   this.allowHalfOpen = true;
   if (options && options.allowHalfOpen === false)
     this.allowHalfOpen = false;
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 45) {
+        s1 = peg$c92;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c93); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseiri();
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_();
+            if (s4 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c94(s3);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   this.once('end', onend);
 }
@@ -2242,10 +3820,101 @@ function onend() {
   if (this.allowHalfOpen || this._writableState.ended)
     return;
 
+<<<<<<< HEAD
   // no more data can be written.
   // But allow more writes to happen in this tick.
   process.nextTick(this.end.bind(this));
 }
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 42) {
+        s1 = peg$c95;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c96); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c97();
+      }
+      s0 = s1;
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.charCodeAt(peg$currPos) === 43) {
+          s1 = peg$c59;
+          peg$currPos++;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c60); }
+        }
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c98();
+        }
+        s0 = s1;
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          if (input.charCodeAt(peg$currPos) === 63) {
+            s1 = peg$c99;
+            peg$currPos++;
+          } else {
+            s1 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c100); }
+          }
+          if (s1 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c101();
+          }
+          s0 = s1;
+          if (s0 === peg$FAILED) {
+            s0 = peg$currPos;
+            s1 = peg$parse_openBRACE();
+            if (s1 !== peg$FAILED) {
+              s2 = peg$parseINTEGER();
+              if (s2 !== peg$FAILED) {
+                s3 = peg$parse_();
+                if (s3 !== peg$FAILED) {
+                  s4 = peg$parse_max();
+                  if (s4 === peg$FAILED) {
+                    s4 = peg$c2;
+                  }
+                  if (s4 !== peg$FAILED) {
+                    s5 = peg$parse_();
+                    if (s5 !== peg$FAILED) {
+                      s6 = peg$parse_closeBRACE();
+                      if (s6 !== peg$FAILED) {
+                        peg$reportedPos = s0;
+                        s1 = peg$c102(s2, s4, s6);
+                        s0 = s1;
+                      } else {
+                        peg$currPos = s0;
+                        s0 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s0;
+                      s0 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function forEach (xs, f) {
   for (var i = 0, l = xs.length; i < l; i++) {
@@ -2284,10 +3953,26 @@ module.exports = PassThrough;
 
 var Transform = require('./_stream_transform');
 
+<<<<<<< HEAD
 /*<replacement>*/
 var util = require('core-util-is');
 util.inherits = require('inherits');
 /*</replacement>*/
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 125) {
+        s1 = peg$c17;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c18); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c103();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 util.inherits(PassThrough, Transform);
 
@@ -2295,12 +3980,93 @@ function PassThrough(options) {
   if (!(this instanceof PassThrough))
     return new PassThrough(options);
 
+<<<<<<< HEAD
   Transform.call(this, options);
 }
 
 PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 44) {
+        s1 = peg$c28;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c29); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_upper();
+          if (s3 === peg$FAILED) {
+            s3 = peg$c2;
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c104(s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parse_upper() {
+      var s0, s1, s2;
+
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 42) {
+        s1 = peg$c95;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c96); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c105();
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parseINTEGER();
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parse_();
+          if (s2 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c94(s1);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 },{"./_stream_transform":14,"core-util-is":16,"inherits":7}],13:[function(require,module,exports){
 (function (process){
@@ -2327,9 +4093,49 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
 
 module.exports = Readable;
 
+<<<<<<< HEAD
 /*<replacement>*/
 var isArray = require('isarray');
 /*</replacement>*/
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_openPAREN();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          s4 = peg$parse_values();
+          if (s4 !== peg$FAILED) {
+            while (s4 !== peg$FAILED) {
+              s3.push(s4);
+              s4 = peg$parse_values();
+            }
+          } else {
+            s3 = peg$c0;
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parse_closePAREN();
+            if (s4 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c106(s3, s4);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 
 /*<replacement>*/
@@ -2346,7 +4152,23 @@ if (!EE.listenerCount) EE.listenerCount = function(emitter, type) {
 };
 /*</replacement>*/
 
+<<<<<<< HEAD
 var Stream = require('stream');
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 41) {
+        s1 = peg$c34;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c35); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c103();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 /*<replacement>*/
 var util = require('core-util-is');
@@ -2355,6 +4177,25 @@ util.inherits = require('inherits');
 
 var StringDecoder;
 
+<<<<<<< HEAD
+=======
+      s0 = peg$currPos;
+      s1 = peg$parsevalueChoice();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c74(s1);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 /*<replacement>*/
 var debug = require('util');
@@ -2366,18 +4207,101 @@ if (debug && debug.debuglog) {
 /*</replacement>*/
 
 
+<<<<<<< HEAD
 util.inherits(Readable, Stream);
+=======
+      s0 = peg$currPos;
+      s1 = [];
+      s2 = peg$parse_codePair();
+      while (s2 !== peg$FAILED) {
+        s1.push(s2);
+        s2 = peg$parse_codePair();
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c107(s1);
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function ReadableState(options, stream) {
   var Duplex = require('./_stream_duplex');
 
   options = options || {};
 
+<<<<<<< HEAD
   // the point at which it stops calling _read() to fill the buffer
   // Note: 0 is a valid value, means "don't call _read preemptively ever"
   var hwm = options.highWaterMark;
   var defaultHwm = options.objectMode ? 16 : 16 * 1024;
   this.highWaterMark = (hwm || hwm === 0) ? hwm : defaultHwm;
+=======
+      s0 = peg$currPos;
+      s1 = peg$parseCODE();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c108(s1);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+
+    function peg$parse_objSingleIriStem() {
+      var s0, s1, s2, s3, s4, s5, s6;
+
+      s0 = peg$currPos;
+      s1 = peg$parseiri();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$currPos;
+        s3 = peg$parse_();
+        if (s3 !== peg$FAILED) {
+          s4 = peg$parseTILDE();
+          if (s4 !== peg$FAILED) {
+            s5 = peg$parse_();
+            if (s5 !== peg$FAILED) {
+              s6 = peg$parseexclusions();
+              if (s6 !== peg$FAILED) {
+                s3 = [s3, s4, s5, s6];
+                s2 = s3;
+              } else {
+                peg$currPos = s2;
+                s2 = peg$c0;
+              }
+            } else {
+              peg$currPos = s2;
+              s2 = peg$c0;
+            }
+          } else {
+            peg$currPos = s2;
+            s2 = peg$c0;
+          }
+        } else {
+          peg$currPos = s2;
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c109(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // cast to ints.
   this.highWaterMark = ~~this.highWaterMark;
@@ -2391,11 +4315,59 @@ function ReadableState(options, stream) {
   this.endEmitted = false;
   this.reading = false;
 
+<<<<<<< HEAD
   // a flag to be able to tell if the onwrite cb is called immediately,
   // or on a later tick.  We set this to true at first, because any
   // actions that shouldn't happen until "later" should generally also
   // not happen before the first write call.
   this.sync = true;
+=======
+      s0 = peg$currPos;
+      s1 = peg$parseiri();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$currPos;
+        s3 = peg$parse_();
+        if (s3 !== peg$FAILED) {
+          s4 = peg$parseTILDE();
+          if (s4 !== peg$FAILED) {
+            s5 = peg$parse_();
+            if (s5 !== peg$FAILED) {
+              s6 = peg$parseexclusions();
+              if (s6 !== peg$FAILED) {
+                s3 = [s3, s4, s5, s6];
+                s2 = s3;
+              } else {
+                peg$currPos = s2;
+                s2 = peg$c0;
+              }
+            } else {
+              peg$currPos = s2;
+              s2 = peg$c0;
+            }
+          } else {
+            peg$currPos = s2;
+            s2 = peg$c0;
+          }
+        } else {
+          peg$currPos = s2;
+          s2 = peg$c0;
+        }
+        if (s2 === peg$FAILED) {
+          s2 = peg$c2;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c110(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // whenever we return null, then we set a flag to say
   // that we're awaiting a 'readable' event emission.
@@ -2404,9 +4376,25 @@ function ReadableState(options, stream) {
   this.readableListening = false;
 
 
+<<<<<<< HEAD
   // object stream flag. Used to make read(n) ignore n and to
   // make all the buffer merging and length checks go away
   this.objectMode = !!options.objectMode;
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 126) {
+        s1 = peg$c111;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c112); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c103();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   if (stream instanceof Duplex)
     this.objectMode = this.objectMode || !!options.readableObjectMode;
@@ -2416,9 +4404,22 @@ function ReadableState(options, stream) {
   // Everything else in the universe uses 'utf8', though.
   this.defaultEncoding = options.defaultEncoding || 'utf8';
 
+<<<<<<< HEAD
   // when piping, we only care about 'readable' events that happen
   // after read()ing all the bytes and not getting any pushback.
   this.ranOut = false;
+=======
+      s0 = peg$parse_objIriStem();
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parseliteral();
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c113(s1);
+        }
+        s0 = s1;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // the number of writers that are awaiting a drain event in .pipe()s
   this.awaitDrain = 0;
@@ -2442,7 +4443,35 @@ function Readable(options) {
   if (!(this instanceof Readable))
     return new Readable(options);
 
+<<<<<<< HEAD
   this._readableState = new ReadableState(options, this);
+=======
+      s0 = peg$currPos;
+      s1 = peg$parseDOUBLE();
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c114(s1);
+      }
+      s0 = s1;
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parseDECIMAL();
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c115(s1);
+        }
+        s0 = s1;
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = peg$parseINTEGER();
+          if (s1 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c116(s1);
+          }
+          s0 = s1;
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // legacy
   this.readable = true;
@@ -2468,6 +4497,7 @@ Readable.prototype.push = function(chunk, encoding) {
   return readableAddChunk(this, state, chunk, encoding, false);
 };
 
+<<<<<<< HEAD
 // Unshift should *always* be something directly out of read()
 Readable.prototype.unshift = function(chunk) {
   var state = this._readableState;
@@ -2510,6 +4540,80 @@ function readableAddChunk(stream, state, chunk, encoding, addToFront) {
 
         if (state.needReadable)
           emitReadable(stream);
+=======
+      s0 = peg$currPos;
+      s1 = peg$parseString();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseLANGTAG();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c117(s1, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parseString();
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parse_();
+          if (s2 !== peg$FAILED) {
+            if (input.substr(peg$currPos, 2) === peg$c118) {
+              s3 = peg$c118;
+              peg$currPos += 2;
+            } else {
+              s3 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c119); }
+            }
+            if (s3 !== peg$FAILED) {
+              s4 = peg$parse_();
+              if (s4 !== peg$FAILED) {
+                s5 = peg$parseiri();
+                if (s5 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c120(s1, s5);
+                  s0 = s1;
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = peg$parseString();
+          if (s1 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c121(s1);
+          }
+          s0 = s1;
+        }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
       }
 
       maybeReadMore(stream, state);
@@ -2521,6 +4625,37 @@ function readableAddChunk(stream, state, chunk, encoding, addToFront) {
   return needMoreData(state);
 }
 
+<<<<<<< HEAD
+=======
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 4) === peg$c122) {
+        s1 = peg$c122;
+        peg$currPos += 4;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c123); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c124();
+      }
+      s0 = s1;
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.substr(peg$currPos, 5) === peg$c125) {
+          s1 = peg$c125;
+          peg$currPos += 5;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c126); }
+        }
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c127();
+        }
+        s0 = s1;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 
 // if it's past the high water mark, we can push in some more.
@@ -2578,12 +4713,31 @@ function howMuchToRead(n, state) {
   if (n <= 0)
     return 0;
 
+<<<<<<< HEAD
   // If we're asking for more than the target buffer level,
   // then raise the water mark.  Bump up to the next highest
   // power of 2, to prevent increasing it excessively in tiny
   // amounts.
   if (n > state.highWaterMark)
     state.highWaterMark = roundUpToNextPowerOf2(n);
+=======
+      s0 = peg$currPos;
+      s1 = peg$parsePNAME_LN();
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c128(s1);
+      }
+      s0 = s1;
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parsePNAME_NS();
+        if (s1 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c129(s1);
+        }
+        s0 = s1;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // don't have that much.  return null, unless we've ended.
   if (n > state.length) {
@@ -2620,7 +4774,189 @@ Readable.prototype.read = function(n) {
     return null;
   }
 
+<<<<<<< HEAD
   n = howMuchToRead(n, state);
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 37) {
+        s1 = peg$c130;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c131); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$currPos;
+        if (peg$c132.test(input.charAt(peg$currPos))) {
+          s3 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c133); }
+        }
+        if (s3 !== peg$FAILED) {
+          s4 = [];
+          if (peg$c134.test(input.charAt(peg$currPos))) {
+            s5 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s5 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c135); }
+          }
+          while (s5 !== peg$FAILED) {
+            s4.push(s5);
+            if (peg$c134.test(input.charAt(peg$currPos))) {
+              s5 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s5 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c135); }
+            }
+          }
+          if (s4 !== peg$FAILED) {
+            s3 = [s3, s4];
+            s2 = s3;
+          } else {
+            peg$currPos = s2;
+            s2 = peg$c0;
+          }
+        } else {
+          peg$currPos = s2;
+          s2 = peg$c0;
+        }
+        if (s2 === peg$FAILED) {
+          s2 = peg$c2;
+        }
+        if (s2 !== peg$FAILED) {
+          if (input.charCodeAt(peg$currPos) === 123) {
+            s3 = peg$c15;
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c16); }
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = [];
+            if (peg$c136.test(input.charAt(peg$currPos))) {
+              s5 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s5 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c137); }
+            }
+            if (s5 === peg$FAILED) {
+              s5 = peg$currPos;
+              if (input.charCodeAt(peg$currPos) === 92) {
+                s6 = peg$c138;
+                peg$currPos++;
+              } else {
+                s6 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c139); }
+              }
+              if (s6 !== peg$FAILED) {
+                if (input.charCodeAt(peg$currPos) === 37) {
+                  s7 = peg$c130;
+                  peg$currPos++;
+                } else {
+                  s7 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c131); }
+                }
+                if (s7 !== peg$FAILED) {
+                  s6 = [s6, s7];
+                  s5 = s6;
+                } else {
+                  peg$currPos = s5;
+                  s5 = peg$c0;
+                }
+              } else {
+                peg$currPos = s5;
+                s5 = peg$c0;
+              }
+            }
+            while (s5 !== peg$FAILED) {
+              s4.push(s5);
+              if (peg$c136.test(input.charAt(peg$currPos))) {
+                s5 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c137); }
+              }
+              if (s5 === peg$FAILED) {
+                s5 = peg$currPos;
+                if (input.charCodeAt(peg$currPos) === 92) {
+                  s6 = peg$c138;
+                  peg$currPos++;
+                } else {
+                  s6 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c139); }
+                }
+                if (s6 !== peg$FAILED) {
+                  if (input.charCodeAt(peg$currPos) === 37) {
+                    s7 = peg$c130;
+                    peg$currPos++;
+                  } else {
+                    s7 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c131); }
+                  }
+                  if (s7 !== peg$FAILED) {
+                    s6 = [s6, s7];
+                    s5 = s6;
+                  } else {
+                    peg$currPos = s5;
+                    s5 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s5;
+                  s5 = peg$c0;
+                }
+              }
+            }
+            if (s4 !== peg$FAILED) {
+              if (input.charCodeAt(peg$currPos) === 37) {
+                s5 = peg$c130;
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c131); }
+              }
+              if (s5 !== peg$FAILED) {
+                if (input.charCodeAt(peg$currPos) === 125) {
+                  s6 = peg$c17;
+                  peg$currPos++;
+                } else {
+                  s6 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c18); }
+                }
+                if (s6 !== peg$FAILED) {
+                  peg$reportedPos = s0;
+                  s1 = peg$c140(s2, s4);
+                  s0 = s1;
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // if we've ended, and we're now clear, then finish it up.
   if (n === 0 && state.ended) {
@@ -2651,9 +4987,99 @@ Readable.prototype.read = function(n) {
   //
   // 3. Actually pull the requested chunks out of the buffer and return.
 
+<<<<<<< HEAD
   // if we need a readable event, then we need to do some reading.
   var doRead = state.needReadable;
   debug('need readable', doRead);
+=======
+      s0 = peg$currPos;
+      if (peg$c141.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c142); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c143.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c144); }
+        }
+        if (s2 !== peg$FAILED) {
+          if (peg$c145.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c146); }
+          }
+          if (s3 !== peg$FAILED) {
+            if (peg$c147.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c148); }
+            }
+            if (s4 !== peg$FAILED) {
+              if (peg$c149.test(input.charAt(peg$currPos))) {
+                s5 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c150); }
+              }
+              if (s5 !== peg$FAILED) {
+                if (peg$c151.test(input.charAt(peg$currPos))) {
+                  s6 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s6 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c152); }
+                }
+                if (s6 !== peg$FAILED) {
+                  if (peg$c153.test(input.charAt(peg$currPos))) {
+                    s7 = input.charAt(peg$currPos);
+                    peg$currPos++;
+                  } else {
+                    s7 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c154); }
+                  }
+                  if (s7 !== peg$FAILED) {
+                    s1 = [s1, s2, s3, s4, s5, s6, s7];
+                    s0 = s1;
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // if we currently have less than the highWaterMark, then also read some
   if (state.length === 0 || state.length - n < state.highWaterMark) {
@@ -2668,6 +5094,7 @@ Readable.prototype.read = function(n) {
     debug('reading or ended', doRead);
   }
 
+<<<<<<< HEAD
   if (doRead) {
     debug('do read');
     state.reading = true;
@@ -2679,6 +5106,48 @@ Readable.prototype.read = function(n) {
     this._read(state.highWaterMark);
     state.sync = false;
   }
+=======
+      s0 = peg$currPos;
+      if (peg$c143.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c144); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c145.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c146); }
+        }
+        if (s2 !== peg$FAILED) {
+          if (peg$c143.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c144); }
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c155();
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // If _read pushed data synchronously, then `reading` will be false,
   // and we need to re-evaluate how much data we can return to the user.
@@ -2691,10 +5160,101 @@ Readable.prototype.read = function(n) {
   else
     ret = null;
 
+<<<<<<< HEAD
   if (util.isNull(ret)) {
     state.needReadable = true;
     n = 0;
   }
+=======
+      s0 = peg$currPos;
+      if (peg$c153.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c154); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c143.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c144); }
+        }
+        if (s2 !== peg$FAILED) {
+          if (peg$c147.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c148); }
+          }
+          if (s3 !== peg$FAILED) {
+            if (peg$c156.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c157); }
+            }
+            if (s4 !== peg$FAILED) {
+              if (peg$c145.test(input.charAt(peg$currPos))) {
+                s5 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c146); }
+              }
+              if (s5 !== peg$FAILED) {
+                if (peg$c151.test(input.charAt(peg$currPos))) {
+                  s6 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s6 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c152); }
+                }
+                if (s6 !== peg$FAILED) {
+                  if (peg$c153.test(input.charAt(peg$currPos))) {
+                    s7 = input.charAt(peg$currPos);
+                    peg$currPos++;
+                  } else {
+                    s7 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c154); }
+                  }
+                  if (s7 !== peg$FAILED) {
+                    peg$reportedPos = s0;
+                    s1 = peg$c158();
+                    s0 = s1;
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   state.length -= n;
 
@@ -2739,6 +5299,7 @@ function onEofChunk(stream, state) {
   emitReadable(stream);
 }
 
+<<<<<<< HEAD
 // Don't emit readable right away in sync mode, because this can trigger
 // another read() call => stack overflow.  This way, it might trigger
 // a nextTick recursion warning, but that's not so bad.
@@ -2756,6 +5317,75 @@ function emitReadable(stream) {
       emitReadable_(stream);
   }
 }
+=======
+      s0 = peg$currPos;
+      if (peg$c159.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c160); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c161.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c162); }
+        }
+        if (s2 !== peg$FAILED) {
+          if (peg$c163.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c164); }
+          }
+          if (s3 !== peg$FAILED) {
+            if (peg$c165.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c166); }
+            }
+            if (s4 !== peg$FAILED) {
+              if (peg$c156.test(input.charAt(peg$currPos))) {
+                s5 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c157); }
+              }
+              if (s5 !== peg$FAILED) {
+                peg$reportedPos = s0;
+                s1 = peg$c167();
+                s0 = s1;
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+
+      return s0;
+    }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function emitReadable_(stream) {
   debug('emit readable');
@@ -2763,6 +5393,133 @@ function emitReadable_(stream) {
   flow(stream);
 }
 
+<<<<<<< HEAD
+=======
+      s0 = peg$currPos;
+      if (peg$c161.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c162); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c163.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c164); }
+        }
+        if (s2 !== peg$FAILED) {
+          if (peg$c161.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c162); }
+          }
+          if (s3 !== peg$FAILED) {
+            if (peg$c153.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c154); }
+            }
+            if (s4 !== peg$FAILED) {
+              if (peg$c143.test(input.charAt(peg$currPos))) {
+                s5 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c144); }
+              }
+              if (s5 !== peg$FAILED) {
+                if (peg$c147.test(input.charAt(peg$currPos))) {
+                  s6 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s6 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c148); }
+                }
+                if (s6 !== peg$FAILED) {
+                  if (peg$c156.test(input.charAt(peg$currPos))) {
+                    s7 = input.charAt(peg$currPos);
+                    peg$currPos++;
+                  } else {
+                    s7 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c157); }
+                  }
+                  if (s7 !== peg$FAILED) {
+                    if (peg$c145.test(input.charAt(peg$currPos))) {
+                      s8 = input.charAt(peg$currPos);
+                      peg$currPos++;
+                    } else {
+                      s8 = peg$FAILED;
+                      if (peg$silentFails === 0) { peg$fail(peg$c146); }
+                    }
+                    if (s8 !== peg$FAILED) {
+                      if (peg$c151.test(input.charAt(peg$currPos))) {
+                        s9 = input.charAt(peg$currPos);
+                        peg$currPos++;
+                      } else {
+                        s9 = peg$FAILED;
+                        if (peg$silentFails === 0) { peg$fail(peg$c152); }
+                      }
+                      if (s9 !== peg$FAILED) {
+                        if (peg$c153.test(input.charAt(peg$currPos))) {
+                          s10 = input.charAt(peg$currPos);
+                          peg$currPos++;
+                        } else {
+                          s10 = peg$FAILED;
+                          if (peg$silentFails === 0) { peg$fail(peg$c154); }
+                        }
+                        if (s10 !== peg$FAILED) {
+                          peg$reportedPos = s0;
+                          s1 = peg$c168();
+                          s0 = s1;
+                        } else {
+                          peg$currPos = s0;
+                          s0 = peg$c0;
+                        }
+                      } else {
+                        peg$currPos = s0;
+                        s0 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s0;
+                      s0 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 // at this point, the user has presumably seen the 'readable' event,
 // and called read() to consume some data.  that may have triggered
@@ -2794,6 +5551,7 @@ function maybeReadMore_(stream, state) {
   state.readingMore = false;
 }
 
+<<<<<<< HEAD
 // abstract method.  to be overridden in specific implementation classes.
 // call cb(er, data) where data is <= n in length.
 // for virtual (non-string, non-buffer) streams, "length" is somewhat
@@ -2801,6 +5559,21 @@ function maybeReadMore_(stream, state) {
 Readable.prototype._read = function(n) {
   this.emit('error', new Error('not implemented'));
 };
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 97) {
+        s1 = peg$c169;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c170); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c171();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 Readable.prototype.pipe = function(dest, pipeOpts) {
   var src = this;
@@ -2820,9 +5593,57 @@ Readable.prototype.pipe = function(dest, pipeOpts) {
   state.pipesCount += 1;
   debug('pipe count=%d opts=%j', state.pipesCount, pipeOpts);
 
+<<<<<<< HEAD
   var doEnd = (!pipeOpts || pipeOpts.end !== false) &&
               dest !== process.stdout &&
               dest !== process.stderr;
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_IRIREF_BEGIN();
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        if (peg$c172.test(input.charAt(peg$currPos))) {
+          s3 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c173); }
+        }
+        if (s3 === peg$FAILED) {
+          s3 = peg$parseUCHAR();
+        }
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          if (peg$c172.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c173); }
+          }
+          if (s3 === peg$FAILED) {
+            s3 = peg$parseUCHAR();
+          }
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_IRIREF_END();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c174(s1, s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   var endFn = doEnd ? onend : cleanup;
   if (state.endEmitted)
@@ -2843,12 +5664,28 @@ Readable.prototype.pipe = function(dest, pipeOpts) {
     dest.end();
   }
 
+<<<<<<< HEAD
   // when the dest drains, it reduces the awaitDrain counter
   // on the source.  This would be more elegant with a .once()
   // handler in flow(), but adding and removing repeatedly is
   // too slow.
   var ondrain = pipeOnDrain(src);
   dest.on('drain', ondrain);
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 60) {
+        s1 = peg$c175;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c176); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c177();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   function cleanup() {
     debug('cleanup');
@@ -2902,6 +5739,22 @@ Readable.prototype.pipe = function(dest, pipeOpts) {
   else
     dest._events.error = [onerror, dest._events.error];
 
+<<<<<<< HEAD
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 62) {
+        s1 = peg$c178;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c179); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c177();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 
   // Both close and finish should trigger unpipe, but only once.
@@ -2948,8 +5801,146 @@ function pipeOnDrain(src) {
 }
 
 
+<<<<<<< HEAD
 Readable.prototype.unpipe = function(dest) {
   var state = this._readableState;
+=======
+      s0 = peg$currPos;
+      if (peg$c180.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c181); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c163.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c164); }
+        }
+        if (s2 !== peg$FAILED) {
+          if (peg$c161.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c162); }
+          }
+          if (s3 !== peg$FAILED) {
+            if (peg$c180.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c181); }
+            }
+            if (s4 !== peg$FAILED) {
+              if (peg$c163.test(input.charAt(peg$currPos))) {
+                s5 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c164); }
+              }
+              if (s5 !== peg$FAILED) {
+                if (peg$c182.test(input.charAt(peg$currPos))) {
+                  s6 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s6 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c183); }
+                }
+                if (s6 !== peg$FAILED) {
+                  if (peg$c143.test(input.charAt(peg$currPos))) {
+                    s7 = input.charAt(peg$currPos);
+                    peg$currPos++;
+                  } else {
+                    s7 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c144); }
+                  }
+                  if (s7 !== peg$FAILED) {
+                    if (peg$c147.test(input.charAt(peg$currPos))) {
+                      s8 = input.charAt(peg$currPos);
+                      peg$currPos++;
+                    } else {
+                      s8 = peg$FAILED;
+                      if (peg$silentFails === 0) { peg$fail(peg$c148); }
+                    }
+                    if (s8 !== peg$FAILED) {
+                      if (peg$c151.test(input.charAt(peg$currPos))) {
+                        s9 = input.charAt(peg$currPos);
+                        peg$currPos++;
+                      } else {
+                        s9 = peg$FAILED;
+                        if (peg$silentFails === 0) { peg$fail(peg$c152); }
+                      }
+                      if (s9 !== peg$FAILED) {
+                        if (peg$c161.test(input.charAt(peg$currPos))) {
+                          s10 = input.charAt(peg$currPos);
+                          peg$currPos++;
+                        } else {
+                          s10 = peg$FAILED;
+                          if (peg$silentFails === 0) { peg$fail(peg$c162); }
+                        }
+                        if (s10 !== peg$FAILED) {
+                          if (peg$c147.test(input.charAt(peg$currPos))) {
+                            s11 = input.charAt(peg$currPos);
+                            peg$currPos++;
+                          } else {
+                            s11 = peg$FAILED;
+                            if (peg$silentFails === 0) { peg$fail(peg$c148); }
+                          }
+                          if (s11 !== peg$FAILED) {
+                            s1 = [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11];
+                            s0 = s1;
+                          } else {
+                            peg$currPos = s0;
+                            s0 = peg$c0;
+                          }
+                        } else {
+                          peg$currPos = s0;
+                          s0 = peg$c0;
+                        }
+                      } else {
+                        peg$currPos = s0;
+                        s0 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s0;
+                      s0 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s0;
+                    s0 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // if we're not piping anywhere, then do nothing.
   if (state.pipesCount === 0)
@@ -2961,8 +5952,86 @@ Readable.prototype.unpipe = function(dest) {
     if (dest && dest !== state.pipes)
       return this;
 
+<<<<<<< HEAD
     if (!dest)
       dest = state.pipes;
+=======
+      s0 = peg$currPos;
+      if (peg$c184.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c185); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c145.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c146); }
+        }
+        if (s2 !== peg$FAILED) {
+          if (peg$c156.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c157); }
+          }
+          if (s3 !== peg$FAILED) {
+            if (peg$c186.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c187); }
+            }
+            if (s4 !== peg$FAILED) {
+              if (peg$c143.test(input.charAt(peg$currPos))) {
+                s5 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s5 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c144); }
+              }
+              if (s5 !== peg$FAILED) {
+                if (peg$c188.test(input.charAt(peg$currPos))) {
+                  s6 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s6 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c189); }
+                }
+                if (s6 !== peg$FAILED) {
+                  s1 = [s1, s2, s3, s4, s5, s6];
+                  s0 = s1;
+                } else {
+                  peg$currPos = s0;
+                  s0 = peg$c0;
+                }
+              } else {
+                peg$currPos = s0;
+                s0 = peg$c0;
+              }
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
     // got a match.
     state.pipes = null;
@@ -2975,6 +6044,7 @@ Readable.prototype.unpipe = function(dest) {
 
   // slow case. multiple pipe destinations.
 
+<<<<<<< HEAD
   if (!dest) {
     // remove all.
     var dests = state.pipes;
@@ -2982,6 +6052,59 @@ Readable.prototype.unpipe = function(dest) {
     state.pipes = null;
     state.pipesCount = 0;
     state.flowing = false;
+=======
+      s0 = peg$currPos;
+      if (peg$c159.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c160); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c151.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c152); }
+        }
+        if (s2 !== peg$FAILED) {
+          if (peg$c190.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c191); }
+          }
+          if (s3 !== peg$FAILED) {
+            if (peg$c156.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c157); }
+            }
+            if (s4 !== peg$FAILED) {
+              s1 = [s1, s2, s3, s4];
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
     for (var i = 0; i < len; i++)
       dests[i].emit('unpipe', this);
@@ -2993,16 +6116,45 @@ Readable.prototype.unpipe = function(dest) {
   if (i === -1)
     return this;
 
+<<<<<<< HEAD
   state.pipes.splice(i, 1);
   state.pipesCount -= 1;
   if (state.pipesCount === 1)
     state.pipes = state.pipes[0];
+=======
+      s0 = peg$currPos;
+      s1 = peg$parsePN_PREFIX();
+      if (s1 === peg$FAILED) {
+        s1 = peg$c2;
+      }
+      if (s1 !== peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 58) {
+          s2 = peg$c192;
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c193); }
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c194(s1);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   dest.emit('unpipe', this);
 
   return this;
 };
 
+<<<<<<< HEAD
 // set up data events if they are asked for
 // Ensure readable listeners eventually get something
 Readable.prototype.on = function(ev, fn) {
@@ -3028,6 +6180,23 @@ Readable.prototype.on = function(ev, fn) {
         });
       } else if (state.length) {
         emitReadable(this, state);
+=======
+      s0 = peg$currPos;
+      s1 = peg$parsePNAME_NS();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parsePN_LOCAL();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c195(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
       }
     }
   }
@@ -3061,6 +6230,7 @@ function resume(stream, state) {
   }
 }
 
+<<<<<<< HEAD
 function resume_(stream, state) {
   state.resumeScheduled = false;
   stream.emit('resume');
@@ -3068,6 +6238,50 @@ function resume_(stream, state) {
   if (state.flowing && !state.reading)
     stream.read(0);
 }
+=======
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 2) === peg$c196) {
+        s1 = peg$c196;
+        peg$currPos += 2;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c197); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parsePN_CHARS_U();
+        if (s2 === peg$FAILED) {
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s2 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          s4 = peg$parseBLANK_NODE_LABEL2();
+          while (s4 !== peg$FAILED) {
+            s3.push(s4);
+            s4 = peg$parseBLANK_NODE_LABEL2();
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c200(s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 Readable.prototype.pause = function() {
   debug('call pause flowing=%j', this._readableState.flowing);
@@ -3108,12 +6322,58 @@ Readable.prototype.wrap = function(stream) {
     self.push(null);
   });
 
+<<<<<<< HEAD
   stream.on('data', function(chunk) {
     debug('wrapped data');
     if (state.decoder)
       chunk = state.decoder.write(chunk);
     if (!chunk || !state.objectMode && !chunk.length)
       return;
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 46) {
+        s1 = peg$c63;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c64); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parseBLANK_NODE_LABEL2();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c201(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parsePN_CHARS();
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parseBLANK_NODE_LABEL2();
+          if (s2 === peg$FAILED) {
+            s2 = peg$c2;
+          }
+          if (s2 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c46(s1, s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
     var ret = self.push(chunk);
     if (!ret) {
@@ -3132,11 +6392,158 @@ Readable.prototype.wrap = function(stream) {
     }
   }
 
+<<<<<<< HEAD
   // proxy certain important events.
   var events = ['error', 'close', 'destroy', 'pause', 'resume'];
   forEach(events, function(ev) {
     stream.on(ev, self.emit.bind(self, ev));
   });
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 64) {
+        s1 = peg$c52;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c53); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$currPos;
+        s3 = [];
+        if (peg$c202.test(input.charAt(peg$currPos))) {
+          s4 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s4 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c203); }
+        }
+        if (s4 !== peg$FAILED) {
+          while (s4 !== peg$FAILED) {
+            s3.push(s4);
+            if (peg$c202.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c203); }
+            }
+          }
+        } else {
+          s3 = peg$c0;
+        }
+        if (s3 !== peg$FAILED) {
+          s4 = [];
+          s5 = peg$currPos;
+          if (input.charCodeAt(peg$currPos) === 45) {
+            s6 = peg$c92;
+            peg$currPos++;
+          } else {
+            s6 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c93); }
+          }
+          if (s6 !== peg$FAILED) {
+            s7 = [];
+            if (peg$c204.test(input.charAt(peg$currPos))) {
+              s8 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s8 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c205); }
+            }
+            if (s8 !== peg$FAILED) {
+              while (s8 !== peg$FAILED) {
+                s7.push(s8);
+                if (peg$c204.test(input.charAt(peg$currPos))) {
+                  s8 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s8 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c205); }
+                }
+              }
+            } else {
+              s7 = peg$c0;
+            }
+            if (s7 !== peg$FAILED) {
+              s6 = [s6, s7];
+              s5 = s6;
+            } else {
+              peg$currPos = s5;
+              s5 = peg$c0;
+            }
+          } else {
+            peg$currPos = s5;
+            s5 = peg$c0;
+          }
+          while (s5 !== peg$FAILED) {
+            s4.push(s5);
+            s5 = peg$currPos;
+            if (input.charCodeAt(peg$currPos) === 45) {
+              s6 = peg$c92;
+              peg$currPos++;
+            } else {
+              s6 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c93); }
+            }
+            if (s6 !== peg$FAILED) {
+              s7 = [];
+              if (peg$c204.test(input.charAt(peg$currPos))) {
+                s8 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s8 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c205); }
+              }
+              if (s8 !== peg$FAILED) {
+                while (s8 !== peg$FAILED) {
+                  s7.push(s8);
+                  if (peg$c204.test(input.charAt(peg$currPos))) {
+                    s8 = input.charAt(peg$currPos);
+                    peg$currPos++;
+                  } else {
+                    s8 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c205); }
+                  }
+                }
+              } else {
+                s7 = peg$c0;
+              }
+              if (s7 !== peg$FAILED) {
+                s6 = [s6, s7];
+                s5 = s6;
+              } else {
+                peg$currPos = s5;
+                s5 = peg$c0;
+              }
+            } else {
+              peg$currPos = s5;
+              s5 = peg$c0;
+            }
+          }
+          if (s4 !== peg$FAILED) {
+            s3 = [s3, s4];
+            s2 = s3;
+          } else {
+            peg$currPos = s2;
+            s2 = peg$c0;
+          }
+        } else {
+          peg$currPos = s2;
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c206(s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // when we try to consume some more bytes, simply unpause the
   // underlying stream.
@@ -3151,11 +6558,61 @@ Readable.prototype.wrap = function(stream) {
   return self;
 };
 
+<<<<<<< HEAD
+=======
+      s0 = peg$currPos;
+      if (peg$c207.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c208); }
+      }
+      if (s1 === peg$FAILED) {
+        s1 = peg$c2;
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        if (peg$c198.test(input.charAt(peg$currPos))) {
+          s3 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c199); }
+        }
+        if (s3 !== peg$FAILED) {
+          while (s3 !== peg$FAILED) {
+            s2.push(s3);
+            if (peg$c198.test(input.charAt(peg$currPos))) {
+              s3 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s3 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c199); }
+            }
+          }
+        } else {
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c209(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 
 // exposed for testing purposes only.
 Readable._fromList = fromList;
 
+<<<<<<< HEAD
 // Pluck off n bytes from an array of buffers.
 // Length is the combined lengths of all the buffers in the list.
 function fromList(n, state) {
@@ -3164,6 +6621,89 @@ function fromList(n, state) {
   var stringMode = !!state.decoder;
   var objectMode = !!state.objectMode;
   var ret;
+=======
+      s0 = peg$currPos;
+      if (peg$c207.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c208); }
+      }
+      if (s1 === peg$FAILED) {
+        s1 = peg$c2;
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        if (peg$c198.test(input.charAt(peg$currPos))) {
+          s3 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c199); }
+        }
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+        }
+        if (s2 !== peg$FAILED) {
+          if (input.charCodeAt(peg$currPos) === 46) {
+            s3 = peg$c63;
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c64); }
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = [];
+            if (peg$c198.test(input.charAt(peg$currPos))) {
+              s5 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s5 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c199); }
+            }
+            if (s5 !== peg$FAILED) {
+              while (s5 !== peg$FAILED) {
+                s4.push(s5);
+                if (peg$c198.test(input.charAt(peg$currPos))) {
+                  s5 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s5 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c199); }
+                }
+              }
+            } else {
+              s4 = peg$c0;
+            }
+            if (s4 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c210(s1, s2, s4);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // nothing in the list, definitely empty.
   if (list.length === 0)
@@ -3199,10 +6739,38 @@ function fromList(n, state) {
       else
         ret = new Buffer(n);
 
+<<<<<<< HEAD
       var c = 0;
       for (var i = 0, l = list.length; i < l && c < n; i++) {
         var buf = list[0];
         var cpy = Math.min(n - c, buf.length);
+=======
+      s0 = peg$currPos;
+      if (peg$c207.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c208); }
+      }
+      if (s1 === peg$FAILED) {
+        s1 = peg$c2;
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_DOUBLE_VAL();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c211(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
         if (stringMode)
           ret += buf.slice(0, cpy);
@@ -3214,6 +6782,7 @@ function fromList(n, state) {
         else
           list.shift();
 
+<<<<<<< HEAD
         c += cpy;
       }
     }
@@ -3238,6 +6807,169 @@ function endReadable(stream) {
         state.endEmitted = true;
         stream.readable = false;
         stream.emit('end');
+=======
+      s0 = peg$currPos;
+      s1 = [];
+      if (peg$c198.test(input.charAt(peg$currPos))) {
+        s2 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s2 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c199); }
+      }
+      if (s2 !== peg$FAILED) {
+        while (s2 !== peg$FAILED) {
+          s1.push(s2);
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s2 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+        }
+      } else {
+        s1 = peg$c0;
+      }
+      if (s1 !== peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 46) {
+          s2 = peg$c63;
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c64); }
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s4 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s4 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+          while (s4 !== peg$FAILED) {
+            s3.push(s4);
+            if (peg$c198.test(input.charAt(peg$currPos))) {
+              s4 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s4 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c199); }
+            }
+          }
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parseEXPONENT();
+            if (s4 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c212(s1, s3, s4);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.charCodeAt(peg$currPos) === 46) {
+          s1 = peg$c63;
+          peg$currPos++;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c64); }
+        }
+        if (s1 !== peg$FAILED) {
+          s2 = [];
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+          if (s3 !== peg$FAILED) {
+            while (s3 !== peg$FAILED) {
+              s2.push(s3);
+              if (peg$c198.test(input.charAt(peg$currPos))) {
+                s3 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s3 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c199); }
+              }
+            }
+          } else {
+            s2 = peg$c0;
+          }
+          if (s2 !== peg$FAILED) {
+            s3 = peg$parseEXPONENT();
+            if (s3 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c213(s2, s3);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+        if (s0 === peg$FAILED) {
+          s0 = peg$currPos;
+          s1 = [];
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s2 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+          if (s2 !== peg$FAILED) {
+            while (s2 !== peg$FAILED) {
+              s1.push(s2);
+              if (peg$c198.test(input.charAt(peg$currPos))) {
+                s2 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s2 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c199); }
+              }
+            }
+          } else {
+            s1 = peg$c0;
+          }
+          if (s1 !== peg$FAILED) {
+            s2 = peg$parseEXPONENT();
+            if (s2 !== peg$FAILED) {
+              peg$reportedPos = s0;
+              s1 = peg$c214(s1, s2);
+              s0 = s1;
+            } else {
+              peg$currPos = s0;
+              s0 = peg$c0;
+            }
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
       }
     });
   }
@@ -3256,6 +6988,7 @@ function indexOf (xs, x) {
   return -1;
 }
 
+<<<<<<< HEAD
 }).call(this,require('_process'))
 },{"./_stream_duplex":11,"_process":9,"buffer":2,"core-util-is":16,"events":6,"inherits":7,"isarray":8,"stream":21,"string_decoder/":22,"util":1}],14:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
@@ -3278,6 +7011,66 @@ function indexOf (xs, x) {
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
+=======
+      s0 = peg$currPos;
+      if (peg$c215.test(input.charAt(peg$currPos))) {
+        s1 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c216); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c207.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c208); }
+        }
+        if (s2 === peg$FAILED) {
+          s2 = peg$c2;
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = [];
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s4 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s4 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+          if (s4 !== peg$FAILED) {
+            while (s4 !== peg$FAILED) {
+              s3.push(s4);
+              if (peg$c198.test(input.charAt(peg$currPos))) {
+                s4 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s4 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c199); }
+              }
+            }
+          } else {
+            s3 = peg$c0;
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c217(s1, s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 
 // a transform stream is a readable/writable stream where you do
@@ -3322,7 +7115,37 @@ function indexOf (xs, x) {
 // would be consumed, and then the rest would wait (un-transformed) until
 // the results of the previous transformed chunk were consumed.
 
+<<<<<<< HEAD
 module.exports = Transform;
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_STRING_LITERAL1_DELIM();
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parse_NON_1();
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$parse_NON_1();
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_STRING_LITERAL1_DELIM();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c218(s1, s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 var Duplex = require('./_stream_duplex');
 
@@ -3331,7 +7154,23 @@ var util = require('core-util-is');
 util.inherits = require('inherits');
 /*</replacement>*/
 
+<<<<<<< HEAD
 util.inherits(Transform, Duplex);
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 39) {
+        s1 = peg$c219;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c220); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c177();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 
 function TransformState(options, stream) {
@@ -3339,11 +7178,27 @@ function TransformState(options, stream) {
     return afterTransform(stream, er, data);
   };
 
+<<<<<<< HEAD
   this.needTransform = false;
   this.transforming = false;
   this.writecb = null;
   this.writechunk = null;
 }
+=======
+      if (peg$c221.test(input.charAt(peg$currPos))) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c222); }
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$parseECHAR();
+        if (s0 === peg$FAILED) {
+          s0 = peg$parseUCHAR();
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function afterTransform(stream, er, data) {
   var ts = stream._transformState;
@@ -3351,8 +7206,38 @@ function afterTransform(stream, er, data) {
 
   var cb = ts.writecb;
 
+<<<<<<< HEAD
   if (!cb)
     return stream.emit('error', new Error('no writecb in Transform class'));
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_STRING_LITERAL2_DELIM();
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parse_NON_2();
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$parse_NON_2();
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_STRING_LITERAL2_DELIM();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c218(s1, s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   ts.writechunk = null;
   ts.writecb = null;
@@ -3360,8 +7245,24 @@ function afterTransform(stream, er, data) {
   if (!util.isNullOrUndefined(data))
     stream.push(data);
 
+<<<<<<< HEAD
   if (cb)
     cb(er);
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 34) {
+        s1 = peg$c223;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c224); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c177();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   var rs = stream._readableState;
   rs.reading = false;
@@ -3371,16 +7272,62 @@ function afterTransform(stream, er, data) {
 }
 
 
+<<<<<<< HEAD
 function Transform(options) {
   if (!(this instanceof Transform))
     return new Transform(options);
+=======
+      if (peg$c225.test(input.charAt(peg$currPos))) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c226); }
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$parseECHAR();
+        if (s0 === peg$FAILED) {
+          s0 = peg$parseUCHAR();
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   Duplex.call(this, options);
 
   this._transformState = new TransformState(options, this);
 
+<<<<<<< HEAD
   // when the writable side finishes, then flush out anything remaining.
   var stream = this;
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_STRING_LITERAL_LONG1_DELIM();
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parse_NON_LONG1();
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$parse_NON_LONG1();
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_STRING_LITERAL_LONG1_DELIM();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c227(s1, s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // start out asking for a readable event once data is transformed.
   this._readableState.needReadable = true;
@@ -3390,6 +7337,7 @@ function Transform(options) {
   // sync guard flag.
   this._readableState.sync = false;
 
+<<<<<<< HEAD
   this.once('prefinish', function() {
     if (util.isFunction(this._flush))
       this._flush(function(er) {
@@ -3399,6 +7347,21 @@ function Transform(options) {
       done(stream);
   });
 }
+=======
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 3) === peg$c228) {
+        s1 = peg$c228;
+        peg$currPos += 3;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c229); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c177();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 Transform.prototype.push = function(chunk, encoding) {
   this._transformState.needTransform = false;
@@ -3419,6 +7382,7 @@ Transform.prototype._transform = function(chunk, encoding, cb) {
   throw new Error('not implemented');
 };
 
+<<<<<<< HEAD
 Transform.prototype._write = function(chunk, encoding, cb) {
   var ts = this._transformState;
   ts.writecb = cb;
@@ -3432,6 +7396,39 @@ Transform.prototype._write = function(chunk, encoding, cb) {
       this._read(rs.highWaterMark);
   }
 };
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_LONG1();
+      if (s1 === peg$FAILED) {
+        s1 = peg$c2;
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c230.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c231); }
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c232(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$parseECHAR();
+        if (s0 === peg$FAILED) {
+          s0 = peg$parseUCHAR();
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 // Doesn't matter what the args are here.
 // _transform does all the work.
@@ -3449,6 +7446,25 @@ Transform.prototype._read = function(n) {
   }
 };
 
+<<<<<<< HEAD
+=======
+      if (input.substr(peg$currPos, 2) === peg$c233) {
+        s0 = peg$c233;
+        peg$currPos += 2;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c234); }
+      }
+      if (s0 === peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 39) {
+          s0 = peg$c219;
+          peg$currPos++;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c220); }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function done(stream, er) {
   if (er)
@@ -3459,8 +7475,38 @@ function done(stream, er) {
   var ws = stream._writableState;
   var ts = stream._transformState;
 
+<<<<<<< HEAD
   if (ws.length)
     throw new Error('calling transform done when ws.length != 0');
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_STRING_LITERAL_LONG2_DELIM();
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        s3 = peg$parse_NON_LONG2();
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          s3 = peg$parse_NON_LONG2();
+        }
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parse_STRING_LITERAL_LONG2_DELIM();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c227(s1, s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   if (ts.transforming)
     throw new Error('calling transform done when still transforming');
@@ -3468,6 +7514,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
+<<<<<<< HEAD
 },{"./_stream_duplex":11,"core-util-is":16,"inherits":7}],15:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
@@ -3490,6 +7537,21 @@ function done(stream, er) {
 // DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 // USE OR OTHER DEALINGS IN THE SOFTWARE.
+=======
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 3) === peg$c235) {
+        s1 = peg$c235;
+        peg$currPos += 3;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c236); }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c177();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, cb), and it'll handle all
@@ -3497,39 +7559,248 @@ function done(stream, er) {
 
 module.exports = Writable;
 
+<<<<<<< HEAD
 /*<replacement>*/
 var Buffer = require('buffer').Buffer;
 /*</replacement>*/
+=======
+      s0 = peg$currPos;
+      s1 = peg$parse_LONG2();
+      if (s1 === peg$FAILED) {
+        s1 = peg$c2;
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c237.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c238); }
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c239(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$parseECHAR();
+        if (s0 === peg$FAILED) {
+          s0 = peg$parseUCHAR();
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 Writable.WritableState = WritableState;
 
 
+<<<<<<< HEAD
 /*<replacement>*/
 var util = require('core-util-is');
 util.inherits = require('inherits');
 /*</replacement>*/
+=======
+      if (input.substr(peg$currPos, 2) === peg$c240) {
+        s0 = peg$c240;
+        peg$currPos += 2;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c241); }
+      }
+      if (s0 === peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 34) {
+          s0 = peg$c223;
+          peg$currPos++;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c224); }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 var Stream = require('stream');
 
 util.inherits(Writable, Stream);
 
+<<<<<<< HEAD
 function WriteReq(chunk, encoding, cb) {
   this.chunk = chunk;
   this.encoding = encoding;
   this.callback = cb;
 }
+=======
+      s0 = peg$currPos;
+      if (input.substr(peg$currPos, 2) === peg$c242) {
+        s1 = peg$c242;
+        peg$currPos += 2;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c243); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$currPos;
+        s3 = peg$parseHEX();
+        if (s3 !== peg$FAILED) {
+          s4 = peg$parseHEX();
+          if (s4 !== peg$FAILED) {
+            s5 = peg$parseHEX();
+            if (s5 !== peg$FAILED) {
+              s6 = peg$parseHEX();
+              if (s6 !== peg$FAILED) {
+                s3 = [s3, s4, s5, s6];
+                s2 = s3;
+              } else {
+                peg$currPos = s2;
+                s2 = peg$c0;
+              }
+            } else {
+              peg$currPos = s2;
+              s2 = peg$c0;
+            }
+          } else {
+            peg$currPos = s2;
+            s2 = peg$c0;
+          }
+        } else {
+          peg$currPos = s2;
+          s2 = peg$c0;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c244(s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        if (input.substr(peg$currPos, 2) === peg$c245) {
+          s1 = peg$c245;
+          peg$currPos += 2;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c246); }
+        }
+        if (s1 !== peg$FAILED) {
+          s2 = peg$currPos;
+          s3 = peg$parseHEX();
+          if (s3 !== peg$FAILED) {
+            s4 = peg$parseHEX();
+            if (s4 !== peg$FAILED) {
+              s5 = peg$parseHEX();
+              if (s5 !== peg$FAILED) {
+                s6 = peg$parseHEX();
+                if (s6 !== peg$FAILED) {
+                  s7 = peg$parseHEX();
+                  if (s7 !== peg$FAILED) {
+                    s8 = peg$parseHEX();
+                    if (s8 !== peg$FAILED) {
+                      s9 = peg$parseHEX();
+                      if (s9 !== peg$FAILED) {
+                        s10 = peg$parseHEX();
+                        if (s10 !== peg$FAILED) {
+                          s3 = [s3, s4, s5, s6, s7, s8, s9, s10];
+                          s2 = s3;
+                        } else {
+                          peg$currPos = s2;
+                          s2 = peg$c0;
+                        }
+                      } else {
+                        peg$currPos = s2;
+                        s2 = peg$c0;
+                      }
+                    } else {
+                      peg$currPos = s2;
+                      s2 = peg$c0;
+                    }
+                  } else {
+                    peg$currPos = s2;
+                    s2 = peg$c0;
+                  }
+                } else {
+                  peg$currPos = s2;
+                  s2 = peg$c0;
+                }
+              } else {
+                peg$currPos = s2;
+                s2 = peg$c0;
+              }
+            } else {
+              peg$currPos = s2;
+              s2 = peg$c0;
+            }
+          } else {
+            peg$currPos = s2;
+            s2 = peg$c0;
+          }
+          if (s2 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c247(s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function WritableState(options, stream) {
   var Duplex = require('./_stream_duplex');
 
   options = options || {};
 
+<<<<<<< HEAD
   // the point at which write() starts returning false
   // Note: 0 is a valid value, means that we always return false if
   // the entire buffer is not flushed immediately on write()
   var hwm = options.highWaterMark;
   var defaultHwm = options.objectMode ? 16 : 16 * 1024;
   this.highWaterMark = (hwm || hwm === 0) ? hwm : defaultHwm;
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 92) {
+        s1 = peg$c138;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c139); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c248.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c249); }
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c250(s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // object stream flag to indicate whether or not this stream
   // contains buffers or objects.
@@ -3538,8 +7809,45 @@ function WritableState(options, stream) {
   if (stream instanceof Duplex)
     this.objectMode = this.objectMode || !!options.writableObjectMode;
 
+<<<<<<< HEAD
   // cast to ints.
   this.highWaterMark = ~~this.highWaterMark;
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 91) {
+        s1 = peg$c81;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c82); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parse_();
+        if (s2 !== peg$FAILED) {
+          if (input.charCodeAt(peg$currPos) === 93) {
+            s3 = peg$c84;
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c85); }
+          }
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c251(s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   this.needDrain = false;
   // at the start of calling end()
@@ -3555,10 +7863,110 @@ function WritableState(options, stream) {
   var noDecode = options.decodeStrings === false;
   this.decodeStrings = !noDecode;
 
+<<<<<<< HEAD
   // Crypto is kind of old and crusty.  Historically, its default string
   // encoding is 'binary' so we have to make this configurable.
   // Everything else in the universe uses 'utf8', though.
   this.defaultEncoding = options.defaultEncoding || 'utf8';
+=======
+      if (peg$c40.test(input.charAt(peg$currPos))) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c41); }
+      }
+      if (s0 === peg$FAILED) {
+        if (peg$c42.test(input.charAt(peg$currPos))) {
+          s0 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c43); }
+        }
+        if (s0 === peg$FAILED) {
+          if (peg$c252.test(input.charAt(peg$currPos))) {
+            s0 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s0 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c253); }
+          }
+          if (s0 === peg$FAILED) {
+            if (peg$c254.test(input.charAt(peg$currPos))) {
+              s0 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s0 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c255); }
+            }
+            if (s0 === peg$FAILED) {
+              if (peg$c256.test(input.charAt(peg$currPos))) {
+                s0 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s0 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c257); }
+              }
+              if (s0 === peg$FAILED) {
+                if (peg$c258.test(input.charAt(peg$currPos))) {
+                  s0 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s0 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c259); }
+                }
+                if (s0 === peg$FAILED) {
+                  if (peg$c260.test(input.charAt(peg$currPos))) {
+                    s0 = input.charAt(peg$currPos);
+                    peg$currPos++;
+                  } else {
+                    s0 = peg$FAILED;
+                    if (peg$silentFails === 0) { peg$fail(peg$c261); }
+                  }
+                  if (s0 === peg$FAILED) {
+                    if (peg$c262.test(input.charAt(peg$currPos))) {
+                      s0 = input.charAt(peg$currPos);
+                      peg$currPos++;
+                    } else {
+                      s0 = peg$FAILED;
+                      if (peg$silentFails === 0) { peg$fail(peg$c263); }
+                    }
+                    if (s0 === peg$FAILED) {
+                      if (peg$c264.test(input.charAt(peg$currPos))) {
+                        s0 = input.charAt(peg$currPos);
+                        peg$currPos++;
+                      } else {
+                        s0 = peg$FAILED;
+                        if (peg$silentFails === 0) { peg$fail(peg$c265); }
+                      }
+                      if (s0 === peg$FAILED) {
+                        if (peg$c266.test(input.charAt(peg$currPos))) {
+                          s0 = input.charAt(peg$currPos);
+                          peg$currPos++;
+                        } else {
+                          s0 = peg$FAILED;
+                          if (peg$silentFails === 0) { peg$fail(peg$c267); }
+                        }
+                        if (s0 === peg$FAILED) {
+                          if (peg$c268.test(input.charAt(peg$currPos))) {
+                            s0 = input.charAt(peg$currPos);
+                            peg$currPos++;
+                          } else {
+                            s0 = peg$FAILED;
+                            if (peg$silentFails === 0) { peg$fail(peg$c269); }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // not an actual buffer we keep track of, but a measurement
   // of how much we're waiting to get pushed to some underlying
@@ -3568,8 +7976,21 @@ function WritableState(options, stream) {
   // a flag to see when we're in the middle of a write.
   this.writing = false;
 
+<<<<<<< HEAD
   // when true all writes will be buffered until .uncork() call
   this.corked = 0;
+=======
+      s0 = peg$parsePN_CHARS_BASE();
+      if (s0 === peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 95) {
+          s0 = peg$c270;
+          peg$currPos++;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c271); }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // a flag to be able to tell if the onwrite cb is called immediately,
   // or on a later tick.  We set this to true at first, because any
@@ -3582,10 +8003,59 @@ function WritableState(options, stream) {
   // end up in an overlapped onwrite situation.
   this.bufferProcessing = false;
 
+<<<<<<< HEAD
   // the callback that's passed to _write(chunk,cb)
   this.onwrite = function(er) {
     onwrite(stream, er);
   };
+=======
+      s0 = peg$parsePN_CHARS_U();
+      if (s0 === peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 45) {
+          s0 = peg$c92;
+          peg$currPos++;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c93); }
+        }
+        if (s0 === peg$FAILED) {
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s0 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s0 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+          if (s0 === peg$FAILED) {
+            if (peg$c272.test(input.charAt(peg$currPos))) {
+              s0 = input.charAt(peg$currPos);
+              peg$currPos++;
+            } else {
+              s0 = peg$FAILED;
+              if (peg$silentFails === 0) { peg$fail(peg$c273); }
+            }
+            if (s0 === peg$FAILED) {
+              if (peg$c274.test(input.charAt(peg$currPos))) {
+                s0 = input.charAt(peg$currPos);
+                peg$currPos++;
+              } else {
+                s0 = peg$FAILED;
+                if (peg$silentFails === 0) { peg$fail(peg$c275); }
+              }
+              if (s0 === peg$FAILED) {
+                if (peg$c276.test(input.charAt(peg$currPos))) {
+                  s0 = input.charAt(peg$currPos);
+                  peg$currPos++;
+                } else {
+                  s0 = peg$FAILED;
+                  if (peg$silentFails === 0) { peg$fail(peg$c277); }
+                }
+              }
+            }
+          }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // the callback that the user supplies to write(chunk,encoding,cb)
   this.writecb = null;
@@ -3593,7 +8063,29 @@ function WritableState(options, stream) {
   // the amount that is being written when _write is called.
   this.writelen = 0;
 
+<<<<<<< HEAD
   this.buffer = [];
+=======
+      s0 = peg$currPos;
+      s1 = peg$parsePN_CHARS_BASE();
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parsePN_PREFIX2();
+        if (s2 === peg$FAILED) {
+          s2 = peg$c2;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c278(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // number of pending user-supplied write callbacks
   // this must be 0 before 'finish' can be emitted
@@ -3603,9 +8095,55 @@ function WritableState(options, stream) {
   // This is relevant for synchronous Transform streams
   this.prefinished = false;
 
+<<<<<<< HEAD
   // True if the error was already emitted and should not be thrown again
   this.errorEmitted = false;
 }
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 46) {
+        s1 = peg$c63;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c64); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parsePN_PREFIX2();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c201(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parsePN_CHARS();
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parsePN_PREFIX2();
+          if (s2 === peg$FAILED) {
+            s2 = peg$c2;
+          }
+          if (s2 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c46(s1, s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function Writable(options) {
   var Duplex = require('./_stream_duplex');
@@ -3615,7 +8153,50 @@ function Writable(options) {
   if (!(this instanceof Writable) && !(this instanceof Duplex))
     return new Writable(options);
 
+<<<<<<< HEAD
   this._writableState = new WritableState(options, this);
+=======
+      s0 = peg$currPos;
+      s1 = peg$parsePN_CHARS_U();
+      if (s1 === peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 58) {
+          s1 = peg$c192;
+          peg$currPos++;
+        } else {
+          s1 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c193); }
+        }
+        if (s1 === peg$FAILED) {
+          if (peg$c198.test(input.charAt(peg$currPos))) {
+            s1 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s1 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c199); }
+          }
+          if (s1 === peg$FAILED) {
+            s1 = peg$parsePLX();
+          }
+        }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parsePN_LOCAL2();
+        if (s2 === peg$FAILED) {
+          s2 = peg$c2;
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c46(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   // legacy.
   this.writable = true;
@@ -3623,10 +8204,56 @@ function Writable(options) {
   Stream.call(this);
 }
 
+<<<<<<< HEAD
 // Otherwise people can pipe Writable streams, which is just wrong.
 Writable.prototype.pipe = function() {
   this.emit('error', new Error('Cannot pipe. Not readable.'));
 };
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 46) {
+        s1 = peg$c63;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c64); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parsePN_LOCAL2();
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c201(s1, s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+      if (s0 === peg$FAILED) {
+        s0 = peg$currPos;
+        s1 = peg$parsePN_CHARS_colon_PLX();
+        if (s1 !== peg$FAILED) {
+          s2 = peg$parsePN_LOCAL2();
+          if (s2 === peg$FAILED) {
+            s2 = peg$c2;
+          }
+          if (s2 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c46(s1, s2);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 
 function writeAfterEnd(stream, state, cb) {
@@ -3638,6 +8265,7 @@ function writeAfterEnd(stream, state, cb) {
   });
 }
 
+<<<<<<< HEAD
 // If we get something that is not a buffer, string, null, or undefined,
 // and we're not in objectMode, then that's an error.
 // Otherwise stream chunks are all considered to be of length=1, and the
@@ -3658,6 +8286,21 @@ function validChunk(stream, state, chunk, cb) {
   }
   return valid;
 }
+=======
+      s0 = peg$parsePN_CHARS();
+      if (s0 === peg$FAILED) {
+        if (input.charCodeAt(peg$currPos) === 58) {
+          s0 = peg$c192;
+          peg$currPos++;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c193); }
+        }
+        if (s0 === peg$FAILED) {
+          s0 = peg$parsePLX();
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 Writable.prototype.write = function(chunk, encoding, cb) {
   var state = this._writableState;
@@ -3683,8 +8326,39 @@ Writable.prototype.write = function(chunk, encoding, cb) {
     ret = writeOrBuffer(this, state, chunk, encoding, cb);
   }
 
+<<<<<<< HEAD
   return ret;
 };
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 37) {
+        s1 = peg$c130;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c131); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = peg$parseHEX();
+        if (s2 !== peg$FAILED) {
+          s3 = peg$parseHEX();
+          if (s3 !== peg$FAILED) {
+            peg$reportedPos = s0;
+            s1 = peg$c279(s2, s3);
+            s0 = s1;
+          } else {
+            peg$currPos = s0;
+            s0 = peg$c0;
+          }
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 Writable.prototype.cork = function() {
   var state = this._writableState;
@@ -3692,8 +8366,36 @@ Writable.prototype.cork = function() {
   state.corked++;
 };
 
+<<<<<<< HEAD
 Writable.prototype.uncork = function() {
   var state = this._writableState;
+=======
+      if (peg$c198.test(input.charAt(peg$currPos))) {
+        s0 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s0 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c199); }
+      }
+      if (s0 === peg$FAILED) {
+        if (peg$c280.test(input.charAt(peg$currPos))) {
+          s0 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s0 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c281); }
+        }
+        if (s0 === peg$FAILED) {
+          if (peg$c282.test(input.charAt(peg$currPos))) {
+            s0 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s0 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c283); }
+          }
+        }
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   if (state.corked) {
     state.corked--;
@@ -3707,6 +8409,7 @@ Writable.prototype.uncork = function() {
   }
 };
 
+<<<<<<< HEAD
 function decodeChunk(state, chunk, encoding) {
   if (!state.objectMode &&
       state.decodeStrings !== false &&
@@ -3715,6 +8418,36 @@ function decodeChunk(state, chunk, encoding) {
   }
   return chunk;
 }
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 92) {
+        s1 = peg$c138;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c139); }
+      }
+      if (s1 !== peg$FAILED) {
+        if (peg$c284.test(input.charAt(peg$currPos))) {
+          s2 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s2 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c285); }
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c86(s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 // if we're already writing something, then just put this
 // in the queue, and wait our turn.  Otherwise, call _write
@@ -3727,10 +8460,31 @@ function writeOrBuffer(stream, state, chunk, encoding, cb) {
 
   state.length += len;
 
+<<<<<<< HEAD
   var ret = state.length < state.highWaterMark;
   // we must ensure that previous needDrain will not be reset to false.
   if (!ret)
     state.needDrain = true;
+=======
+      s0 = peg$currPos;
+      s1 = [];
+      s2 = peg$parseWS();
+      if (s2 === peg$FAILED) {
+        s2 = peg$parseCOMMENT();
+      }
+      while (s2 !== peg$FAILED) {
+        s1.push(s2);
+        s2 = peg$parseWS();
+        if (s2 === peg$FAILED) {
+          s2 = peg$parseCOMMENT();
+        }
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c286(s1);
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
   if (state.writing || state.corked)
     state.buffer.push(new WriteReq(chunk, encoding, cb));
@@ -3740,6 +8494,7 @@ function writeOrBuffer(stream, state, chunk, encoding, cb) {
   return ret;
 }
 
+<<<<<<< HEAD
 function doWrite(stream, state, writev, len, chunk, encoding, cb) {
   state.writelen = len;
   state.writecb = cb;
@@ -3751,6 +8506,36 @@ function doWrite(stream, state, writev, len, chunk, encoding, cb) {
     stream._write(chunk, encoding, state.onwrite);
   state.sync = false;
 }
+=======
+      s0 = peg$currPos;
+      s1 = [];
+      if (peg$c287.test(input.charAt(peg$currPos))) {
+        s2 = input.charAt(peg$currPos);
+        peg$currPos++;
+      } else {
+        s2 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c288); }
+      }
+      if (s2 !== peg$FAILED) {
+        while (s2 !== peg$FAILED) {
+          s1.push(s2);
+          if (peg$c287.test(input.charAt(peg$currPos))) {
+            s2 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s2 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c288); }
+          }
+        }
+      } else {
+        s1 = peg$c0;
+      }
+      if (s1 !== peg$FAILED) {
+        peg$reportedPos = s0;
+        s1 = peg$c289();
+      }
+      s0 = s1;
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function onwriteError(stream, state, sync, er, cb) {
   if (sync)
@@ -3767,12 +8552,54 @@ function onwriteError(stream, state, sync, er, cb) {
   stream.emit('error', er);
 }
 
+<<<<<<< HEAD
 function onwriteStateUpdate(state) {
   state.writing = false;
   state.writecb = null;
   state.length -= state.writelen;
   state.writelen = 0;
 }
+=======
+      s0 = peg$currPos;
+      if (input.charCodeAt(peg$currPos) === 35) {
+        s1 = peg$c290;
+        peg$currPos++;
+      } else {
+        s1 = peg$FAILED;
+        if (peg$silentFails === 0) { peg$fail(peg$c291); }
+      }
+      if (s1 !== peg$FAILED) {
+        s2 = [];
+        if (peg$c292.test(input.charAt(peg$currPos))) {
+          s3 = input.charAt(peg$currPos);
+          peg$currPos++;
+        } else {
+          s3 = peg$FAILED;
+          if (peg$silentFails === 0) { peg$fail(peg$c293); }
+        }
+        while (s3 !== peg$FAILED) {
+          s2.push(s3);
+          if (peg$c292.test(input.charAt(peg$currPos))) {
+            s3 = input.charAt(peg$currPos);
+            peg$currPos++;
+          } else {
+            s3 = peg$FAILED;
+            if (peg$silentFails === 0) { peg$fail(peg$c293); }
+          }
+        }
+        if (s2 !== peg$FAILED) {
+          peg$reportedPos = s0;
+          s1 = peg$c294(s2);
+          s0 = s1;
+        } else {
+          peg$currPos = s0;
+          s0 = peg$c0;
+        }
+      } else {
+        peg$currPos = s0;
+        s0 = peg$c0;
+      }
+>>>>>>> d87278b... Updated validator, removed escapejs tool
 
 function onwrite(stream, er) {
   var state = stream._writableState;
