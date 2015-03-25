@@ -17,7 +17,7 @@
 
         <link rel="stylesheet" href="stylesheets/media-sizes.css"/>
     </head>
-    <body>
+    <body class="topNavbarVisible">
 
         <nav id="topNavbar" class="navbar navbar-default">
             <div class="container-fluid">
@@ -31,9 +31,19 @@
                                 <h3 class="modal-title" id="contributorsModalLabel">Contributors</h3>
                             </div>
                             <div class="modal-body">
-                                <h4>Validata Core Team</h4>
                                 <p>
-                                    <a href="http://www.andrewbeveridge.co.uk">Andrew Beveridge</a>
+                                    Validata was developed as part of a group project for students on the <a href="http://www.undergraduate.hw.ac.uk/programmes/G601/">Software Engineering MEng</a> course at Heriot-Watt University led by <a href="http://www.macs.hw.ac.uk/~ajg33/">Alasdair J G Gray</a>.<br />
+                                    Building upon previous work, the group developed this tool to demonstrate real-world usage of Shape Expressions with a simple, intuitive interface.
+                                </p>
+                                <p>
+                                    All code and resources are licensed under the free and permissive MIT license.<br />
+                                    Code for both the validator (NodeJS module) and Validata (this web interface) is available on <a href="https://github.com/HeriotWattMEng2015">GitHub</a>
+                                </p>
+                                <br />
+                                
+                                <h4>Development Team</h4>
+                                <p>
+                                    <a href="http://andrewbeveridge.co.uk">Andrew Beveridge</a>
                                 </p>
                                 <p>
                                     <a href="https://www.linkedin.com/profile/view?id=35338396">Jacob Baungard Hansen</a>
@@ -42,7 +52,7 @@
                                     <a href="https://github.com/Doix">Johnny Val</a>
                                 </p>
                                 <p>
-                                    <a href="https://www.linkedin.com/profile/view?id=353351072">Leif Gehrmann</a>
+                                    <a href="http://leifgehrmann.co.uk">Leif Gehrmann</a>
                                 </p>
                                 <p>
                                     <a href="https://www.linkedin.com/profile/view?id=229423071">Roisin Farmer</a>
@@ -73,279 +83,282 @@
                     Validata is an intuitive, standalone web-based tool to help building valid RDF documents by validating against preset schemas written in the Shape Expressions (ShEx) language.
                 </p>
                 <p>
-                    The following data serialization formats are supported: <em>Turtle, TriG, N-Triples, N-Quads</em>.
                     All work is licensed under the permissive <a href="http://opensource.org/licenses/MIT">MIT license</a> by <a href="#" data-toggle="modal" data-target="#contributorsModal">various authors</a>.
                 </p>
                 
             </div>
         </nav>
 
-        <div id="wrapper">
+        <div id="sidebarContentWrapper">
 
-            <div id="sidebar-wrapper">
+            <ul id="wizardSidebarStepsList">
+                <li id="wizardSidebarStepSchema" class="wizardSidebarStep wizard-active">Select Schema</li>
+                <li id="wizardSidebarStepData" class="wizardSidebarStep">Input Data</li>
+                <li id="wizardSidebarStepOptions" class="wizardSidebarStep">Configure Options</li>
+                <li id="wizardSidebarStepResults" class="wizardSidebarStep">Validation Results</li>
+            </ul>
+            
+            <div id="demoPanel" class="panel panel-info">
 
-                <ul id="wizardSidebarStepsList" class="sidebar-nav">
-                    <li id="wizardSidebarStepSchema" class="wizardSidebarStep wizard-active">Select Schema</li>
-                    <li id="wizardSidebarStepData" class="wizardSidebarStep">Input Data</li>
-                    <li id="wizardSidebarStepOptions" class="wizardSidebarStep">Configure Options</li>
-                    <li id="wizardSidebarStepResults" class="wizardSidebarStep">Validation Results</li>
-                </ul>
-				
-
-                <div id="demoPanel" class="panel panel-info">
-
-                    <div id="demoPanelHeading" class="panel-heading">
-                        <h4>Load Demo Data</h4>
-                    </div>
-
-                    <div id="demoPanelContent" class="panel-body">
-                        <div id="demoPanelButtonGroup" class="btn-group-vertical btn-block" role="group">
-                            
-                        </div>
-                    </div>
-
+                <div id="demoPanelHeading" class="panel-heading">
+                    <h4>Load Demo Data</h4>
                 </div>
 
-                <div id="quickSummaryPanel" class="panel panel-default">
-
-                    <div id="quickSummaryPanelHeading" class="panel-heading">
-                        <h4>Status Summary</h4>
+                <div id="demoPanelContent" class="panel-body">
+                    <div id="demoPanelButtonGroup" class="btn-group-vertical btn-block" role="group">
+                        
                     </div>
-
-                    <table id="quickSummarySectionsTable" class="table table-condensed">
-
-                        <colgroup>
-                            <col class="col-xs-7">
-                            <col class="col-xs-1">
-                        </colgroup>
-
-                        <tbody>
-                            <tr id="quickSummarySectionSchema" class="quickSummarySection quickSummaryStatusIncomplete">
-                                <th scope="row" class="quickSummarySectionTitle">Schema</th>
-                                <td>
-                                    <div class="quickSummarySectionIcon"></div>
-                                </td>
-                            </tr>
-                            <tr id="quickSummarySectionData" class="quickSummarySection quickSummaryStatusIncomplete">
-                                <th scope="row" class="quickSummarySectionTitle">Data</th>
-                                <td>
-                                    <div class="quickSummarySectionIcon"></div>
-                                </td>
-                            </tr>
-                            <tr id="quickSummarySectionResults" class="quickSummarySection quickSummaryStatusIncomplete">
-                                <th scope="row" class="quickSummarySectionTitle">Validation</th>
-                                <td>
-                                    <div class="quickSummarySectionIcon"></div>
-                                </td>
-                            </tr>
-                        </tbody>
-
-                    </table>
                 </div>
 
             </div>
 
-            <div id="page-content-wrapper">
-                <div class="container-fluid">
+        </div>
+        
+        <div id="quickSummaryPanel" class="panel panel-default">
 
-                    <div class="row">
+            <div id="quickSummaryPanelHeading" class="panel-heading">
+                <h4>Status Summary</h4>
+                <div id="quickSummaryPanelLoader" class="loader hidden">
+                    <svg class="circular">
+                        <circle class="path" cx="15" cy="15" r="6" fill="none" stroke-width="0.6" stroke-miterlimit="3"/>
+                    </svg>
+                </div>
+            </div>
 
-                        <div class="modal modal-wide fade" id="schemaSourceModal" tabindex="-1" role="dialog" aria-labelledby="schemaSourceModalLabel" aria-hidden="true">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                            <span aria-hidden="true">&times;</span></button>
-                                        <h4 class="modal-title" id="schemaSourceModalLabel">Schema Source (ShEx)</h4>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div id="schemaSourceText" class="editableSourceText" contenteditable="true"></div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                                    </div>
+            <table id="quickSummarySectionsTable" class="table table-condensed">
+
+                <colgroup>
+                    <col class="col-xs-7">
+                    <col class="col-xs-1">
+                </colgroup>
+
+                <tbody>
+                    <tr id="quickSummarySectionSchema" class="quickSummarySection quickSummaryStatusIncomplete">
+                        <th scope="row" class="quickSummarySectionTitle">Schema</th>
+                        <td>
+                            <div class="quickSummarySectionIcon"></div>
+                        </td>
+                    </tr>
+                    <tr id="quickSummarySectionData" class="quickSummarySection quickSummaryStatusIncomplete">
+                        <th scope="row" class="quickSummarySectionTitle">Data</th>
+                        <td>
+                            <div class="quickSummarySectionIcon"></div>
+                        </td>
+                    </tr>
+                    <tr id="quickSummarySectionResults" class="quickSummarySection quickSummaryStatusIncomplete">
+                        <th scope="row" class="quickSummarySectionTitle">Validation</th>
+                        <td>
+                            <div class="quickSummarySectionIcon"></div>
+                        </td>
+                    </tr>
+                </tbody>
+
+            </table>
+        </div>
+
+        <div id="pageContentWrapper">
+            <div class="container-fluid">
+
+                <div class="row">
+
+                    <div class="modal modal-wide fade" id="schemaSourceModal" tabindex="-1" role="dialog" aria-labelledby="schemaSourceModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span></button>
+                                    <h4 class="modal-title" id="schemaSourceModalLabel">Schema Source (ShEx)</h4>
+                                </div>
+                                <div class="modal-body">
+                                    <div id="schemaSourceText" class="editableSourceText" contenteditable="true"></div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div id="wizardStepsPanelGroup">
+                    <div id="wizardStepsPanelGroup">
 
-                            <div id="wizardStepPanelSchema" class="panel panel-primary wizardStepPanel">
+                        <div id="wizardStepPanelSchema" class="panel panel-primary wizardStepPanel">
 
-                                <div class="panel-heading">
-                                    <h4 class="panel-title">Select Schema</h4>
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Select Schema</h4>
+                            </div>
+
+                            <div class="panel-collapse collapse in">
+                                <div class="panel-body">
+                                    <form id="form-selectschema" class="col-md-10 col-lg-8">
+
+                                        <div id="schemaErrorAlert" class="alert alert-danger hiddenFadeIn" role="alert">
+                                            <h4>An error occurred while parsing the schema:</h4>
+
+                                            <div class="sourceText"></div>
+                                        </div>
+
+                                        <div class="form-group">
+
+                                            <label for="schemaSelector">Select which schema your data should be validated against:</label>
+
+                                            <div class="input-group">
+                                                <select id="schemaSelector" class="form-control">
+                                                    <option value="" disabled selected>Click here to select a schema...</option>
+                                                </select>
+                                                <span class="input-group-btn">
+                                                    <button type="button" class="btn btn-info" data-toggle="modal" data-target="#schemaSourceModal">Show Source</button>
+                                                </span>
+                                            </div>
+
+                                        </div>
+
+                                        <table id="schemaDetailsTable" class="table table-bordered table-striped">
+
+                                            <colgroup>
+                                                <col class="col-xs-1">
+                                                <col class="col-xs-7">
+                                            </colgroup>
+
+                                            <tbody>
+                                                <tr>
+                                                    <th scope="row">Description</th>
+                                                    <td id="schemaDescription"></td>
+                                                </tr>
+                                                <tr>
+                                                    <th scope="row">Creation Date</th>
+                                                    <td id="schemaCreationDate"></td>
+                                                </tr>
+                                            </tbody>
+
+                                        </table>
+
+                                    </form>
                                 </div>
+                            </div>
 
-                                <div class="panel-collapse collapse in">
-                                    <div class="panel-body">
-                                        <form id="form-selectschema" class="col-md-10 col-lg-8">
+                        </div>
 
-                                            <div id="schemaErrorAlert" class="alert alert-danger hiddenFadeIn" role="alert">
-                                                <h4>An error occurred while parsing the schema:</h4>
+                        <div id="wizardStepPanelData" class="panel panel-info wizardStepPanel">
 
-                                                <div class="sourceText"></div>
-                                            </div>
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Input Data <em>(Turtle, TriG, N-Triples or N-Quads)</em></h4>
+                            </div>
 
-                                            <div class="form-group">
+                            <div class="panel-collapse collapse in">
+                                <div class="panel-body">
+                                    <form id="form-inputdata">
 
-                                                <label for="schemaSelector">Select which schema your data should be validated against:</label>
+                                        <div id="dataErrorAlert" class="alert alert-danger hiddenFadeIn" role="alert">
+                                            <h4>An error occurred while parsing the data:</h4>
 
-                                                <div class="input-group">
-                                                    <select id="schemaSelector" class="form-control">
-                                                        <option value="" disabled selected>Click here to select a schema...</option>
-                                                    </select>
-                                                    <span class="input-group-btn">
-                                                        <button type="button" class="btn btn-info" data-toggle="modal" data-target="#schemaSourceModal">Show Source</button>
-                                                    </span>
-                                                </div>
+                                            <div class="sourceText"></div>
+                                        </div>
 
-                                            </div>
-											
-											<div id="reqLevelPanel" class="panel panel-default">
-												<div id = reqLevelHeading" class="panel-heading">
-													<h4>Select Requirement Level</h4>
-													<select id="reqLevelSelector" class="form-control">
-														<option value="" disabled selected>Click here to select a validation strictness...</option>
-													</select>
-												</div> 
-											</div>
+                                        <div class="form-group">
+                                            <label for="dataSourceFile">Upload Data File</label>
+                                            <input type="file" id="dataSourceFile">
 
-                                            <table id="schemaDetailsTable" class="table table-bordered table-striped">
+                                            <p class="help-block">Select a data file from your computer.</p>
+                                        </div>
 
-                                                <colgroup>
-                                                    <col class="col-xs-1">
-                                                    <col class="col-xs-7">
-                                                </colgroup>
+                                        <div class="form-group">
+                                            <label for="dataSourceText">Directly Input Data</label>
 
-                                                <tbody>
+                                            <div id="dataSourceText" class="editableSourceText" contenteditable="true"></div>
+                                        </div>
+
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div id="wizardStepPanelOptions" class="panel panel-info wizardStepPanel">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Configure Options</h4>
+                            </div>
+
+                            <div class="panel-collapse collapse in">
+                                <div class="panel-body">
+                                    <form id="form-validationoptions">
+                                        
+                                        <div class="alert alert-info">
+                                            <p>The resource(s) to validate and shape(s) to validate against must be specified.</p>
+                                            <br/>
+                                            <table id="resourceShapeMapTable" class="table table-bordered table-striped">
+                                                <thead>
                                                     <tr>
-                                                        <th scope="row">Description</th>
-                                                        <td id="schemaDescription"></td>
+                                                        <th class="col-sm-7">Resource</th>
+                                                        <th class="col-sm-5">Shape</th>
                                                     </tr>
-                                                    <tr>
-                                                        <th scope="row">Creation Date</th>
-                                                        <td id="schemaCreationDate"></td>
-                                                    </tr>
+                                                </thead>
+                                                <tbody id="resourceShapeMapTableBody">
+                                                    
                                                 </tbody>
-
+                                                <tfoot>
+                                                    <tr>
+                                                        <td colspan="2">
+                                                            <button id="addNewResourceShapeButton" class="btn btn-success">Add Resource</button>
+                                                            <button id="removeResourceShapeButton" class="btn btn-danger">Remove Resource</button>
+                                                        </td>
+                                                    </tr>
+                                                </tfoot>
                                             </table>
-
-                                        </form>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <div id="wizardStepPanelData" class="panel panel-info wizardStepPanel">
-
-                                <div class="panel-heading">
-                                    <h4 class="panel-title">Input Data</h4>
-                                </div>
-
-                                <div class="panel-collapse collapse in">
-                                    <div class="panel-body">
-                                        <form id="form-inputdata">
-
-                                            <div id="dataErrorAlert" class="alert alert-danger hiddenFadeIn" role="alert">
-                                                <h4>An error occurred while parsing the data:</h4>
-
-                                                <div class="sourceText"></div>
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label for="dataSourceFile">Upload Data File</label>
-                                                <input type="file" id="dataSourceFile">
-
-                                                <p class="help-block">Select a data file from your computer.</p>
-                                            </div>
-
-                                            <div class="form-group">
-                                                <label for="dataSourceText">Directly Input Data</label>
-
-                                                <div id="dataSourceText" class="editableSourceText" contenteditable="true"></div>
-                                            </div>
-
-                                        </form>
-                                    </div>
-                                </div>
-
-                            </div>
-
-                            <div id="wizardStepPanelOptions" class="panel panel-info wizardStepPanel">
-                                <div class="panel-heading">
-                                    <h4 class="panel-title">Configure Options</h4>
-                                </div>
-
-                                <div class="panel-collapse collapse in">
-                                    <div class="panel-body">
-                                        <form id="form-validationoptions">
-
-                                            <div id="optionsErrorAlert" class="alert alert-danger hiddenFadeIn" role="alert">
-                                                <h4>An error occurred while setting the specified options:</h4>
-
-                                                <div class="sourceText"></div>
-                                            </div>
-                                            
-                                            <div class="alert alert-info">
-                                                <p>The shape to start with during validation must be specified.</p>
-                                                <br/>
-												<label for="shapeSelector">Shape to validate against:</label>
-                                                <select id="shapeSelector" class="form-control"></select>
-                                            </div>
-
-                                            <div class="alert alert-info">
-                                                <p>The resource to validate must be specified; the default selected value is simply the first resource found in your data.</p>
-                                                <br/>
-                                                <label for="resourceSelector">Resource(s) to validate:</label><br />
-                                                <select id="resourceSelector" class="form-control" multiple="multiple"></select>
-                                            </div>
-
-                                            <div class="alert alert-info">
-                                                <p>Validata uses the Closed World Assumption by default, meaning all used properties must be defined in the schema. Untick this box to validate in Open World mode.</p>
-                                                <br/>
-                                                <label for="closedShapesOption">Closed World validation:</label>
-                                                <input id="closedShapesOption" class="form-control" type="checkbox" checked />
-                                            </div>
-                                            
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="wizardStepPanelResults" class="panel panel-info wizardStepPanel">
-                                <div class="panel-heading">
-                                    <h4 class="panel-title">Validation Results</h4>
-                                </div>
-
-                                <div class="panel-collapse collapse in">
-                                    <div class="panel-body">
-
-                                        <div id="validationSuccessAlert" class="alert alert-success hiddenFadeIn" role="alert">
-                                            <h4>Validation Succeeded!</h4>
                                         </div>
 
-                                        <div id="validationErrorAlert" class="alert alert-danger hiddenFadeIn" role="alert">
-                                            <h4>Validation Failed:</h4>
-
-                                            <ul id="validationErrorsList" class="list-group"></ul>
-                                        </div>
-										
-										<div id="validationWarningAlert" class="alert alert-warning hiddenFadeIn" role="alert">
-                                            <h4>Validation Warnings:</h4>
-
-                                            <ul id="validationWarningsList" class="list-group"></ul>
+                                        <div class="alert alert-info">
+                                            <p>Validata uses the Closed World Assumption by default, meaning all used properties must be defined in the schema. Untick this box to validate in Open World mode.</p>
+                                            <br/>
+                                            <label for="closedShapesOption">Closed World validation:</label>
+                                            <input id="closedShapesOption" class="form-control" type="checkbox" checked />
                                         </div>
 
-                                    </div>
+                                        <div id="reqLevelPanel" class="alert alert-info">
+                                            <div id="reqLevelHeading" class="panel-heading">
+                                                <label for="reqLevelSelector">Select Requirement Level</label>
+                                                <select id="reqLevelSelector" class="form-control">
+                                                    <option value="" disabled selected>Click here to select a validation strictness...</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                    </form>
                                 </div>
                             </div>
+                        </div>
 
+                        <div id="wizardStepPanelResults" class="panel panel-info wizardStepPanel">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">Validation Results</h4>
+                            </div>
+
+                            <div class="panel-collapse collapse in">
+                                <div class="panel-body">
+
+                                    <div id="validationSuccessAlert" class="alert alert-success hiddenFadeIn" role="alert">
+                                        <h4>Validation Succeeded!</h4>
+                                    </div>
+
+                                    <div id="validationErrorAlert" class="alert alert-danger hiddenFadeIn" role="alert">
+                                        <h4>Validation Failed:</h4>
+
+                                        <ul id="validationErrorsList" class="list-group"></ul>
+                                    </div>
+                                    
+                                    <div id="validationWarningAlert" class="alert alert-warning hiddenFadeIn" role="alert">
+                                        <h4>Validation Warnings:</h4>
+
+                                        <ul id="validationWarningsList" class="list-group"></ul>
+                                    </div>
+
+                                </div>
+                            </div>
                         </div>
 
                     </div>
+
                 </div>
             </div>
-
         </div>
 
         <script src="components/jquery/dist/jquery.min.js"></script>

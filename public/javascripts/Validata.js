@@ -25,8 +25,7 @@ Validata = {
         passed: false,
         options: {
             closedShapes: true,
-            resourceSelection: [],
-            shapeSelection: []
+            resourceShapeMap: {}
         },
         callbacks: {},
         errors: [],
@@ -86,35 +85,24 @@ Validata = {
         };
     },
 
-    validate: function validate()
+    updateValidatorInstance: function updateValidatorInstance()
     {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
-        Log.i("Validating with options:");
-        Log.i(Validata.Validation.options);
+        Log.i("Creating new validator instance");
 
         Validata.validator = new ShExValidator.Validator(Validata.Schema.data, Validata.Data.data, Validata.Validation.callbacks, Validata.Validation.options);
 
-        if( Validata.Validation.options.shapeSelection.length == 0 )
-        { 
-            Log.i("shapeSelection is empty; calling findShapes");
-            
-            Validata.validator.findShapes().done(function findShapesDone()
-            {
-                Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
-            });
-        }
-        else
+    },
+    
+    findShapes: function findShapes()
+    {
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+
+        Validata.validator.findShapes().done(function findShapesDone()
         {
-            var resourceShapeMap = {};
-            resourceShapeMap[Validata.Validation.options.resourceSelection[0]] = Validata.Validation.options.shapeSelection[0];
-            
-            Log.i("Calling validate with resourceShapeMap: ");
-            Log.i(resourceShapeMap);
-            
-            Validata.validator.validate(resourceShapeMap);
-        }
-        
+            Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+        });
     },
 
     schemaParsedCallback: function schemaParsedCallback(responseObject)
@@ -123,7 +111,6 @@ Validata = {
 
         Validata.Schema.rawResponse = responseObject;
         Validata.Schema.parsed = true;
-        
 
         Validata.triggerValidationMessageUpdate();
     },
@@ -144,43 +131,10 @@ Validata = {
 
         Validata.Data.rawResponse = responseObject;
         Validata.Data.parsed = true;
-        
-        // Recreate the options selector(s) from the newly parsed data and stored selected options, every time we validate
-        // This could be mildly annoying for a user but is necessary to ensure the select has options which still exist in the data
-        UI.resourceSelector.multiselect('destroy');
-        UI.resourceSelector.empty();
 
-        var nodeIndex = 0;
-        $.each(Validata.Data.rawResponse['db']['SPO'], function (nodeKey, nodeObject)
+        if(Validata.Schema.parsed)
         {
-            var selected = '';
-            var nodeKeyText = nodeKey.replace(/[<>]/g, '');
-            
-            if( ( $.inArray(nodeKeyText, Validata.Validation.options.resourceSelection) > -1 )
-                || 
-                ( Util.iterableLength(Validata.Validation.options.resourceSelection) == 0 && nodeIndex == 0 )
-            )
-            {
-                selected = 'selected'
-            }
-            
-            UI.resourceSelector.append('<option value="' + nodeKeyText + '" ' + selected + '>' + nodeKeyText + '</option>');
-            nodeIndex++;
-        });
-
-        UI.resourceSelector.multiselect();
-
-        var resourceSelectionLengthBeforeParse = Util.iterableLength( Validata.Validation.options.resourceSelection );
-
-        UI.updateResourceShapeMap();
-        
-        if( Util.stringIsNotBlank(Validata.Data.data) && resourceSelectionLengthBeforeParse == 0 )
-        {
-            Validata.validate();
-        }
-        else
-        {
-            Validata.triggerValidationMessageUpdate();
+            Validata.findShapes();
         }
     },
 
@@ -190,7 +144,6 @@ Validata = {
 
         Validata.Data.rawResponse = responseObject;
         Validata.Data.parsed = false;
-        Validata.Validation.options.resourceSelection = [];
         
         Validata.triggerValidationMessageUpdate();
     },
@@ -201,34 +154,9 @@ Validata = {
 
         Validata.Data.shapesResponse = shapesResponse;
 
-        // Recreate the options selector(s) from the newly parsed data and stored selected options, every time we validate
-        // This could be mildly annoying for a user but is necessary to ensure the select has options which still exist in the data
-        UI.shapeSelector.empty();
+        UI.initializeResourceShapeMapTable();
 
-        $.each(Validata.Schema.rawResponse.shapes, function shapesResponseIterator(index, shape)
-        {
-            var selected = '';
-            
-            if( $.inArray(shape, Validata.Validation.options.shapeSelection) !== -1 )
-            {
-                selected = 'selected'
-            }
-            
-            UI.shapeSelector.append('<option value="' + shape + '" ' + selected + '>' + Util.escapeHtml(shape) + '</option>');
-        });
-
-        UI.updateResourceShapeMap();
-        
-        var resourceSelectionLength = Util.iterableLength( Validata.Validation.options.resourceSelection );
-        var shapeSelectionLength = Util.iterableLength( Validata.Validation.options.shapeSelection );
-        if( Util.stringIsNotBlank(Validata.Data.data) && resourceSelectionLength > 0 && shapeSelectionLength > 0 )
-        {
-            Validata.validate();
-        }
-        else
-        {
-            Validata.triggerValidationMessageUpdate();
-        }
+        Validata.validator.validate(Validata.Validation.options.resourceShapeMap);
     },
 
     validationResultCallback: function validationResultCallback(resultObject)
@@ -293,7 +221,7 @@ Validata = {
                     {
                         //is validation strict?
                         //warning or error?
-                        $('<li class="list-group-item">' + errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString()) + '</li>').appendTo(UI.validationErrorsList);
+                        $('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
                     });
                 }
 
@@ -334,7 +262,13 @@ Validata = {
 
                     schemaErrorAlertVisible = true;
                     
+                    validationSuccessAlertVisible = false;
+                    validationErrorAlertVisible = false;
+                    validationWarningAlertVisible = false;
+
                     UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
+                    UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+                    
                 }
 
             }
@@ -379,10 +313,13 @@ Validata = {
                     UI.dataErrorAlert.find('.sourceText').text( Validata.Data.rawResponse );
 
                     dataErrorAlertVisible = true;
+
+                    validationSuccessAlertVisible = false;
+                    validationErrorAlertVisible = false;
+                    validationWarningAlertVisible = false;
                     
                     UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
-                    
-                    UI.resourceSelector.empty();
+                    UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
                 }
 
             }
@@ -396,8 +333,6 @@ Validata = {
                 
                 UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
                 UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
-
-                UI.resourceSelector.empty();
             }
         }
         else
@@ -459,18 +394,8 @@ Validata = {
         {
             UI.dataErrorAlert.fadeOut('fast').find('.sourceText').empty();
         }
-        
-        if ( Util.stringIsNotBlank( Validata.Data.data ) && ! Util.iterableLength( Validata.Validation.options.resourceSelection ) )
-        {
-            UI.optionsErrorAlert.fadeIn('slow')
-                .find('.sourceText')
-                .text("At least one starting node must be selected!");
-        }
-        else
-        {
-            UI.optionsErrorAlert.fadeOut('fast');
-        }
-        
+
+        UI.quickSummaryPanelLoader.addClass('hidden');
     }
 
 };

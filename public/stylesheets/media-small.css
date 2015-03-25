@@ -4,29 +4,53 @@
 */
 
 #topNavbar {
-    height: 140px;
+    height: 120px;
+    overflow: hidden;
 }
 
-#wrapper {
-    padding-left: 250px;
+/*
+    Quick Summary Sidebar Panel - always visible display of current validation status
+*/
+
+div#quickSummaryPanel {
+    position: fixed;
+
+    width: 230px;
+    
+    bottom: 20px;
+    top: auto;
+    left: 20px;
+    right: auto;
+
+    margin: 0;
+    z-index: 10;
 }
 
-#wrapper.toggled {
-    padding-left: 0;
-}
-
-#sidebar-wrapper {
-    width: 250px;
-}
-
-#wrapper.toggled #sidebar-wrapper {
-    width: 0;
-}
-
-#page-content-wrapper {
+#pageContentWrapper {
     position: relative;
+    float: right;
+    width: calc(100% - 250px);
 }
 
-#wrapper.toggled #page-content-wrapper {
-    margin-right: 0;
+#sidebarContentWrapper {
+    width: 250px;
+    padding: 0 0 0 20px;
+    overflow-y: auto;
+}
+
+body.topNavbarVisible #sidebarContentWrapper {
+    position: relative;
+    float: left;
+    max-height: calc(100% - 360px);
+}
+
+body.topNavbarInvisible #sidebarContentWrapper {
+    position: fixed;
+
+    top: 20px;
+    bottom: auto;
+    left: 0;
+    right: auto;
+
+    max-height: calc(100% - 200px);
 }

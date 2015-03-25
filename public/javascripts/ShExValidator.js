@@ -504,6 +504,7 @@ function hexSlice (buf, start, end) {
   return out
 }
 
+<<<<<<< HEAD
 function utf16leSlice (buf, start, end) {
   var bytes = buf.slice(start, end)
   var res = ''
@@ -512,6 +513,212 @@ function utf16leSlice (buf, start, end) {
   }
   return res
 }
+=======
+            return validatorStuff.async ?
+                rOrP.then(testTriples).catch(handleError) :
+                testTriples(rOrP);
+            function testTriples (matchName) {
+                matchName = matchName.filter(function (t) {
+                    return _AtomicRule.nameClass.match(t.p);
+                });
+                var pet = null;
+                if (inOpt && matchName.length === 0)
+                { ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE; ret.matchedEmpty(_AtomicRule);
+                    if (validatorStuff.async) pet = Promise.resolve(ret);
+                }
+                else if (matchName.length < _AtomicRule.min)
+                { ret.status = RDF.DISPOSITION.FAIL; ret.error_belowMin(_AtomicRule.min, _AtomicRule);
+                    if (validatorStuff.async) pet = Promise.resolve(ret);
+                }
+                //             else if (matchName.length > _AtomicRule.max)
+                //                 { ret.status = RDF.DISPOSITION.FAIL; ret.error_aboveMax(_AtomicRule.max, _AtomicRule, matchName[_AtomicRule.max]); }
+                else {
+                    var passes = [];
+                    var fails = [];
+                    var promises = [];
+                    matchName.forEach(function (t) {
+                        if (_AtomicRule.valueClass._ == 'ValueReference')
+                            schema.dispatch(0, 'link', _AtomicRule.codes, null, t);
+                        var resOrPromise = _AtomicRule.valueClass.validate(schema, _AtomicRule, t,
+                            _AtomicRule.reversed ? t.s : t.o,
+                            db, validatorStuff);
+                        if (validatorStuff.async)
+                            resOrPromise = resOrPromise.then(noteResults);
+                        else
+                            noteResults(resOrPromise);
+                        function noteResults (r) {
+                            if (_AtomicRule.valueClass._ != 'ValueReference')
+                                schema.dispatch(0, 'visit', _AtomicRule.codes, r, t);
+                            if (!r.passed() ||
+                                schema.dispatch(0, 'post', _AtomicRule.codes, r, t) == RDF.DISPOSITION.FAIL)
+                                fails.push({t:t, r:r});
+                            else
+                                passes.push({t:t, r:r});
+                            return r;
+                        }
+                        if (validatorStuff.async)
+                            promises.push(resOrPromise);
+                    });
+                    function postTest () {
+                        if (inOpt && passes.length === 0) {
+                            ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE;
+                            ret.matchedEmpty(_AtomicRule);
+                        } else if (passes.length < _AtomicRule.min) {
+                            ret.status = RDF.DISPOSITION.FAIL;
+                            ret.error_belowMin(_AtomicRule.min, _AtomicRule);
+                        } else if (_AtomicRule.max !== null && passes.length > _AtomicRule.max) {
+                            ret.status = RDF.DISPOSITION.FAIL;
+                            ret.error_aboveMax(_AtomicRule.max, _AtomicRule, passes[_AtomicRule.max].r);
+                        }
+                        if (ret.status == RDF.DISPOSITION.FAIL) {
+                            for (var iFails1 = 0; iFails1 < fails.length; ++iFails1)
+                                ret.add(fails[iFails1].r);
+                        } else {
+                            for (var iPasses = 0; iPasses < passes.length; ++iPasses)
+                                ret.add(passes[iPasses].r);
+                            for (var iFails2 = 0; iFails2 < fails.length; ++iFails2)
+                                if (!_AtomicRule.additive)
+                                    ret.missed(fails[iFails2].r);
+                        }
+                    }
+                    if (validatorStuff.async)
+                        pet = Promise.all(promises).then(function () {
+                            postTest();
+                            return ret;
+                        }).catch(function (e) {
+                            debugger;
+                            return Promise.reject(e);
+                        });
+                    else
+                        postTest();
+                }
+                function handleNegation (ret) {
+                    if (_AtomicRule.negated) {
+                        if (ret.status == RDF.DISPOSITION.FAIL) {
+                            ret.status = RDF.DISPOSITION.PASS;
+                            ret.errors = [];
+                        } else if (ret.status == RDF.DISPOSITION.PASS) {
+                            ret.status = RDF.DISPOSITION.FAIL;
+                            ret.error_aboveMax(0, _AtomicRule, matchName[0]); // !! take a triple from passes
+                        }
+                    }
+                    return ret;
+                }
+
+                if(_AtomicRule.req_lev in ["may", "should", "should not"])
+                    ret.status = RDF.DISPOSITION.PASS;
+
+                if (validatorStuff.async) {
+                    return pet.then(function () {
+                        return handleNegation(ret);
+                    });
+                } else
+                    return handleNegation(ret);
+            }
+        };
+        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
+            var lead = pad(depth, '    ');
+            var ret =
+                this.valueClass.SPARQLobjectJoin(schema, label, prefixes, depth, counters, inOpt,
+                    this.nameClass.SPARQLpredicate(prefixes),
+                    this.nameClass.SPARQLpredicateTest(prefixes),
+                    // if we are in an optional, we mustn't test card constraints.
+                    inOpt ? undefined : {min:this.min, max:this.max},
+                    this.codes.sparql);
+            ret.min = this.min;
+            ret.max = this.max;
+            return ret;
+        };
+        this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
+            var lead = pad(depth, '    ');
+            if (this.nameClass._ != 'NameTerm')
+                throw "unable to dump data in non-constant nameClass " + this.nameClass.toString();
+            var ret =
+                this.valueClass.SPARQLobjectDump(schema, label, prefixes, this.min === 0 ? depth + 1 : depth, variables,
+                    this.nameClass.term,
+                    this.nameClass.SPARQLpredicateTest(prefixes), // ignored for now.
+                    {min:this.min, max:this.max}, this.codes.sparql);
+            if (this.min === 0) {
+                ret.prepend(lead + "OPTIONAL {\n");
+                ret.append(lead + "}\n");
+            }
+            return ret;
+        };
+        this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
+            var lead = pad(depth, '    ');
+            var ret =
+                this.valueClass.SPARQLobjectSelect(schema, label, as, prefixes, depth, counters,
+                    this.nameClass.SPARQLpredicate(prefixes),
+                    this.nameClass.SPARQLpredicateTest(prefixes));
+            return ret;
+        };
+        this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
+            var lead = pad(depth, '    ');
+            var seFix = lead + sePrefix + ":";
+            var rsFix = lead + rsPrefix + ":";
+            var ret = '';
+            ret += this.nameClass.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
+            ret += this.valueClass.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
+            ret += ResourceShapeCardinality(this.min, this.max, sePrefix, rsPrefix, seFix, rsFix);
+            if (this.ruleID) // !!! some day this will be a bnode
+                for (var i = 0; i < db.triples.length; ++i) {
+                    var t = db.triples[i];
+                    if (t.s.toString() == this.ruleID.toString()) {
+                        ret += lead + defix(t.p, prefixes) + " " + defix(t.o, prefixes) + " ;\n";
+                        db.triples.splice(i, 1);
+                        --i;
+                    }
+                }
+            var AtomicRule = this;
+            Object.keys(this.codes).map(function (k) {
+                ret += AtomicRule.codes[k].toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
+            });
+            return ret;
+        };
+        this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
+            if (this.ruleID &&
+                (this.ruleID._ !== 'BNode' ||
+                db.triplesMatching(undefined, undefined, this.ruleID).length !== 0))
+                return rsPrefix + ":property " + this.ruleID.toString();
+            var lead = pad(depth, '    ');
+            var seFix = lead + sePrefix + ":";
+            var rsFix = lead + rsPrefix + ":";
+            var ret = '';
+            ret += rsPrefix + ":property " + "[\n";
+            ret += this.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth+1);
+            ret += lead + "]";
+            return ret;
+        };
+        this.toResourceShapes_standalone = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
+            if (!this.ruleID ||
+                (this.ruleID._ === 'BNode' &&
+                db.triplesMatching(undefined, undefined, this.ruleID).length === 0))
+                return '';
+            var lead = pad(depth, '    ');
+            var seFix = lead + sePrefix + ":";
+            var rsFix = lead + rsPrefix + ":";
+            var ret = '';
+            ret += this.ruleID.toString() + "\n";
+            ret += this.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
+            ret += ".\n";
+            return ret;
+        };
+        this.toSExpression = function (depth) {
+            var lead = pad(depth, '    ');
+            return lead + "(ArcRule " + this.min + " " + this.max +" " +
+                this.nameClass.toSExpression(depth+1) +" " +
+                this.valueClass.toSExpression(depth+1) +
+                codesToSExpression(this.codes, depth+1) + ")\n";
+        };
+        this.toHaskell = function (depth) {
+            var lead = pad(depth, '    ');
+            return lead + "(Arcrule " + this.min + " " + this.max +" " +
+                this.nameClass.toHaskell(depth+1) +" " +
+                this.valueClass.toHaskell(depth+1) +
+                codesToHaskell(this.codes, depth+1) + ")\n";
+        };
+    },
+>>>>>>> ccdfb1b... Updated a ton of stuff, improved the UI responsiveness, implemented resource shape mapping, updated authors text etc.
 
 Buffer.prototype.slice = function (start, end) {
   var len = this.length

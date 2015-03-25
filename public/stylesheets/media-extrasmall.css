@@ -3,65 +3,43 @@
     Basic page structure - 250px wide fixed left sidebar which disappears on extrasmall screens
 */
 
+html,body {
+    height: 100%;
+}
+
 #topNavbar {
     height: auto;
 }
 
-#wrapper {
-    padding-left: 0;
-    -webkit-transition: all 0.5s ease;
-    -moz-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
+#topNavbar h2 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 25px;
 }
 
-#wrapper.toggled {
-    padding-left: 250px;
-}
 
-#sidebar-wrapper {
-    z-index: 1000;
-    position: fixed;
-    left: 250px;
-    width: 0;
-    height: calc(100% - 140px);
-    margin-left: -250px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-transition: all 0.5s ease;
-    -moz-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
-}
-
-#wrapper.toggled #sidebar-wrapper {
-    width: 250px;
-}
-
-#page-content-wrapper {
-    width: 100%;
-    position: absolute;
+#pageContentWrapper {
+    position: relative;
     padding: 0 20px 0 20px;
 }
 
-#wrapper.toggled #page-content-wrapper {
-    position: absolute;
-    margin-right: -250px;
+#sidebarContentWrapper {
+    position: relative;
+    padding: 0 20px 0 20px;
 }
 
 /*
     Wizard Steps Sidebar list - clickable list of steps tracking "progress" without restricting user
 */
 
-ul.sidebar-nav {
-    width: 250px;
+ul#wizardSidebarStepsList {
     margin: 0;
-    padding: 0 20px 0 20px;
+    padding: 0;
     list-style: none;
     counter-reset: wizard-counter;
 }
 
-ul.sidebar-nav li.wizardSidebarStep {
+ul#wizardSidebarStepsList li.wizardSidebarStep {
     position: relative;
     margin: 0.5em 0 0.5em 2em;
     padding: 0.25em 0.75em;
@@ -69,7 +47,7 @@ ul.sidebar-nav li.wizardSidebarStep {
     cursor: pointer;
 }
 
-ul.sidebar-nav li.wizardSidebarStep:before {
+ul#wizardSidebarStepsList li.wizardSidebarStep:before {
     content: counter(wizard-counter);
     counter-increment: wizard-counter;
     position: absolute;
@@ -87,15 +65,15 @@ ul.sidebar-nav li.wizardSidebarStep:before {
     border-radius: 2em;
 }
 
-ul.sidebar-nav li.wizardSidebarStep:before {
+ul#wizardSidebarStepsList li.wizardSidebarStep:before {
     background: #333333;
 }
 
-ul.sidebar-nav li.wizardSidebarStep.wizard-active {
+ul#wizardSidebarStepsList li.wizardSidebarStep.wizard-active {
     color: #0088cc;
 }
 
-ul.sidebar-nav li.wizardSidebarStep.wizard-active:before {
+ul#wizardSidebarStepsList li.wizardSidebarStep.wizard-active:before {
     background: #0088cc;
 }
 
@@ -104,30 +82,46 @@ ul.sidebar-nav li.wizardSidebarStep.wizard-active:before {
 */
 
 div#demoPanel {
-    margin: 40px 0 40px 20px;
+    margin: 20px 0 0 0;
+    padding: 0;
 }
 
 div#demoPanel h4 {
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
+
+div#demoPanelButtonGroup button.demoButton {
+    padding-left: 28px;
+    text-align: left;
+}
+
+div.demoButtonIcon {
+    display: block;
+    position: absolute;
+    left: 8px;
+    width: 20px;
+    height: 24px;
+    margin: 0;
+    vertical-align: middle;
+
+    background-image: url('../components/material-design-icons/sprites/css-sprite/sprite-av-white.png');
+    background-position: -113px -142px;
+}
+
 
 /*
     Quick Summary Sidebar Panel - always visible display of current validation status
 */
 
+
 div#quickSummaryPanel {
-    position: absolute;
-    
-    bottom: 20px;
-    top: auto;
-    left: 20px;
-    right: auto;
+    margin: 20px;
 }
 
 div#quickSummaryPanelHeading h4 {
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 div#quickSummaryPanel tr.quickSummarySection {
@@ -135,8 +129,16 @@ div#quickSummaryPanel tr.quickSummarySection {
 }
 
 div#quickSummaryPanel tr.quickSummarySection th.quickSummarySectionTitle {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
     padding-left: 10px;
     vertical-align: middle;
+}
+
+
+div#quickSummaryPanel tr.quickSummarySection td {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 div.quickSummarySectionIcon {
@@ -188,6 +190,112 @@ div.quickSummarySectionIcon {
     background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
 }
 
+/* 
+    Material Design Loader
+*/
+
+.loader {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    width: 30px;
+    height: 30px;
+    zoom: 1.7;
+}
+
+.circular {
+    -webkit-animation: rotate 2s linear infinite;
+    animation: rotate 2s linear infinite;
+    position: relative;
+    height: 30px;
+    width: 30px;
+}
+
+.loader.hidden .circular,
+.loader.hidden .circular .path {
+    -webkit-animation: none !important;
+    animation: none !important;
+}
+
+.path {
+    stroke-dasharray: 1,200;
+    stroke-dashoffset: 0;
+    -webkit-animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
+    animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
+    stroke-linecap: round;
+}
+
+@-webkit-keyframes rotate {
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes rotate {
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+@-webkit-keyframes dash {
+    0% {
+        stroke-dasharray: 1,60;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 27,60;
+        stroke-dashoffset: -10;
+    }
+    100% {
+        stroke-dasharray: 27,60;
+        stroke-dashoffset: -37;
+    }
+}
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1,60;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 27,60;
+        stroke-dashoffset: -10;
+    }
+    100% {
+        stroke-dasharray: 27,60;
+        stroke-dashoffset: -37;
+    }
+}
+@-webkit-keyframes color {
+    100%, 0% {
+        stroke: #d62d20;
+    }
+    40% {
+        stroke: #0057e7;
+    }
+    66% {
+        stroke: #008744;
+    }
+    80%, 90% {
+        stroke: #dd9100;
+    }
+}
+@keyframes color {
+    100%, 0% {
+        stroke: #d62d20;
+    }
+    40% {
+        stroke: #0057e7;
+    }
+    66% {
+        stroke: #008744;
+    }
+    80%, 90% {
+        stroke: #be7d00;
+    }
+}
+
+
 
 /*
     Wide Modal - used for showing larger content to the user, e.g. ShEx source code
@@ -237,24 +345,6 @@ div.quickSummarySectionIcon {
 }
 
 
-div#demoPanelButtonGroup button.demoButton {
-    padding-left: 28px;
-    text-align: left;
-}
-
-div.demoButtonIcon {
-    display: block;
-    position: absolute;
-    left: 8px;
-    width: 20px;
-    height: 24px;
-    margin: 0;
-    vertical-align: middle;
-
-    background-image: url('../components/material-design-icons/sprites/css-sprite/sprite-av-white.png');
-    background-position: -113px -142px;
-}
-
 #schemaDescription {
   word-wrap: break-word;
   word-break: break-all;
@@ -266,3 +356,11 @@ div.demoButtonIcon {
     vertical-align: bottom;
 }
 
+
+#resourceShapeMapTable {
+    background: #f9f9f9;
+}
+
+#resourceShapeMapTable > tbody > tr:nth-of-type(odd) {
+    background: #ffffff;
+}

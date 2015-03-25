@@ -235,8 +235,6 @@ Util = {
     {
         try
         {
-            Log.v("Util." + Log.getInlineFunctionTrace(arguments, arguments.callee));
-
             if(!Util.isDefined(iterable))
             {
                 return 0;

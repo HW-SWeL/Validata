@@ -461,36 +461,7 @@ ShExValidataConfig = {
                     "    ex:birthmarks xsd:string *,\n" +
                     "    ex:biologicalParentName xsd:string {2}\n" +
                     "}\n",
-            dataDemos: [
-                {
-                    name: "Success Example",
-                    data:   "PREFIX ex: <http://ex.example/#>\n" +
-                            "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-                            "\n" +
-                            "<Somebody>\n" +
-                            "    ex:birthDate \"1980-04-27T17:23:31\"^^xsd:dateTime ;\n" +
-                            "    ex:givenName \"Sarah\", \"Ann\";\n" +
-                            "    ex:birthmarks \"posterior left shoulder\",\n" +
-                            "                  \"right cheek\",\n" +
-                            "                  \"left index finger\";\n" +
-                            "    ex:biologicalParentName \"Pat Jones\",\n" +
-                            "                            \"Gene Holmes\" .\n" +
-                            "\n"
-                },
-                {
-                    name: "Failure Example",
-                    data:   "PREFIX ex: <http://ex.example/#>\n" +
-                            "PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n" +
-                            "\n" +
-                            "<Somebody>\n" +
-                            "    # two recorded birthdates\n" +
-                            "    ex:birthDate \"1980-04-27T17:23:31\"^^xsd:dateTime,\n" +
-                            "                 \"1980-04-27T17:24:00\"^^xsd:dateTime ;\n" +
-                            "    # missing ex:givenName\n" +
-                            "    ex:biologicalParentName \"Pat Jones\" .\n" +
-                            "\n"
-                }
-            ]
+            dataDemos: []
         }
     ],
     
