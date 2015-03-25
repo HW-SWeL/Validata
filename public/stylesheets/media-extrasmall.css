@@ -156,6 +156,10 @@ div.quickSummarySectionIcon {
     background: #e3b5af;
 }
 
+.quickSummarySection.quickSummaryStatusWarning  {
+    background: #f7ecb5;
+}
+
 .quickSummarySection.quickSummaryStatusValid  {
     background: #bfe3b2;
 }
@@ -170,7 +174,8 @@ div.quickSummarySectionIcon {
     background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
 }
 
-.quickSummarySection.quickSummaryStatusInvalid div.quickSummarySectionIcon {
+.quickSummarySection.quickSummaryStatusInvalid div.quickSummarySectionIcon,
+.quickSummarySection.quickSummaryStatusWarning div.quickSummarySectionIcon {
     /*background-position: 0 0;
     background-repeat: no-repeat;
     background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-alert.svg);*/

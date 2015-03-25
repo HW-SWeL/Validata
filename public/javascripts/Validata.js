@@ -191,7 +191,7 @@ Validata = {
     {
         Log.v("Validation." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
-        var quickSummaryStatusClassesToRemove = 'quickSummaryStatusIncomplete quickSummaryStatusInvalid quickSummaryStatusValid';
+        var quickSummaryStatusClassesToRemove = 'quickSummaryStatusIncomplete quickSummaryStatusInvalid quickSummaryStatusValid quickSummaryStatusWarning';
         
         var schemaErrorAlertVisible = false;
         var dataErrorAlertVisible = false;
@@ -224,7 +224,7 @@ Validata = {
 							UI.reqLevelSelector.val() != "DEFAULT" && 
 							errorObject.req_lev !=null &&
 							UI.reqLevels.indexOf(reqLev) > -1){
-								if(UI.reqLevels.indexOf(reqLev) > UI.reqLevels.indexOf(errorObject.req_lev))
+								if(UI.reqLevels.indexOf(reqLev) > UI.reqLevels.indexOf(errorObject.req_lev.toUpperCase()))
 								{
 									$('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationWarningsList);
 								}
@@ -240,17 +240,17 @@ Validata = {
                 }
 
                 validationSuccessAlertVisible = false;
-                validationErrorAlertVisible = true;
-				
-				if(UI.validationWarningsList.children().length > 0){
+                
+				if(UI.validationErrorsList.children().length > 0)
+				{
+					UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
+					validationErrorAlertVisible = true;
+				}
+				else if (UI.validationWarningsList.children().length > 0)
+				{
+					UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusWarning');
 					validationWarningAlertVisible = true;
 				}
-				else
-				{
-					validationWarningAlertVisible = false;
-				}
-                
-                UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
             }
         }
         else
