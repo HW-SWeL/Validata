@@ -219,10 +219,11 @@ Validata = {
                 {
                     $.each(Validata.Validation.rawResponse['errors'], function (index, errorObject)
                     {
+						var reqLev = UI.reqLevelSelector.val();
 						if(UI.reqLevelSelector.val() != null && 
 							UI.reqLevelSelector.val() != "DEFAULT" && 
-							errorObject.req_lev !=null){
-								var reqLev = UI.reqLevelSelector.val();
+							errorObject.req_lev !=null &&
+							UI.reqLevels.indexOf(reqLev) > -1){
 								if(UI.reqLevels.indexOf(reqLev) > UI.reqLevels.indexOf(errorObject.req_lev))
 								{
 									$('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationWarningsList);
