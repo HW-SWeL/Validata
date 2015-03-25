@@ -261,12 +261,12 @@ UI = {
         var selectedSchemaIndex = UI.schemaSelector.val();
         
         Validata.Schema = ShExValidataConfig['schemas'][selectedSchemaIndex];
-		Validata.ReqLevels = ShExValidataConfig['schemas'][selectedSchemaIndex]['reqLevels'];
+		UI.reqLevels = ShExValidataConfig['schemas'][selectedSchemaIndex]['reqLevels'];
         
-		if(Validata.ReqLevels){
+		if(UI.reqLevels){
             UI.reqLevelSelector.empty();
             
-			Validata.ReqLevels.forEach(function(req){
+			UI.reqLevels.forEach(function(req){
 				UI.reqLevelSelector.append('<option>'+req+'</option>');
 			});
 			UI.reqLevelPanel.show();

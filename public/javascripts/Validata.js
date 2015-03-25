@@ -219,18 +219,35 @@ Validata = {
                 {
                     $.each(Validata.Validation.rawResponse['errors'], function (index, errorObject)
                     {
-                        //is validation strict?
-                        //warning or error?
-                        $('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
+						if(UI.reqLevelSelector.val() != null && 
+							UI.reqLevelSelector.val() != "DEFAULT" && 
+							errorObject.req_lev !=null){
+								var reqLev = UI.reqLevelSelector.val();
+								if(UI.reqLevels.indexOf(reqLev) > UI.reqLevels.indexOf(errorObject.req_lev))
+								{
+									$('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationWarningsList);
+								}
+								else{
+									$('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
+								}
+						}
+						else{
+							$('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
+						}
+                        
                     });
                 }
 
                 validationSuccessAlertVisible = false;
                 validationErrorAlertVisible = true;
-				//if warnings not empty 
-				// validationWarningAlertVisible = true;
-				//else
-				// validationWarningAlertVisible = false;
+				
+				if(UI.validationWarningsList.children().length > 0){
+					validationWarningAlertVisible = true;
+				}
+				else
+				{
+					validationWarningAlertVisible = false;
+				}
                 
                 UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
             }
