@@ -5958,6 +5958,7 @@ RDF = {
         } else {
             throw "no parser for media type \"" + mediaType + "\"";
         }
+<<<<<<< HEAD
     },
 
     QueryDB: function (sparqlInterface, slaveDB, cacheSize) {
@@ -6034,6 +6035,74 @@ RDF = {
                         results = r;
                     }});
                     var p2 = null;
+=======
+    }
+    else if (fail._ === "RuleFailTree") {
+        return "RuleFailTree - if you get this message contact someone";
+    }
+    else if (fail._ === "RuleFailValue") {
+        return "RuleFailValue - if you get this message contact someone";
+    }
+    else if (fail._ === "RuleFailExtra") {
+        return "RuleFailExtra - if you get this message contact someone";
+    }
+    else if (fail._ === "RuleFail") {
+        // Maybe replace this with the non expanded types - it's unclear
+        // which would be better
+        return "Property " + fail.rule.nameClass.term._pos._orig
+        + " has a value with type: " + fail.triple.o.datatype 
+        + " instead of the expected type: " + fail.rule.valueClass.toString();
+    }
+}
+
+
+module.exports = formatError;
+
+},{"../includes/Erics_RDF.js":1}],22:[function(require,module,exports){
+var RDF = require('../includes/Erics_RDF.js');
+var dataParser = require("./dataParser.js");
+var errorFormatter = require("./validationErrorFormatter.js");
+var Promise = require("promise");
+
+
+function validate(schema,
+                  schemaResolver,
+                  startingResources,
+                  db,
+                  dbResolver,
+                  closedShapes,
+                  validationResult) {
+
+
+    schema.alwaysInvoke = {};
+
+    var validationPromises = [];
+
+    for (var startingResource in startingResources) {
+
+        if(!startingResources.hasOwnProperty(startingResource) || !startingResources[startingResource]) continue;
+
+        var startingNode = dataParser.parseNode(startingResource, dbResolver.Prefixes);
+
+        var instSh = RDF.IRI("http://open-services.net/ns/core#instanceShape");
+
+        var validation = schema.validate(
+            startingNode,
+            startingResources[startingResource],
+            db,
+            RDF.ValidatorStuff(schemaResolver, closedShapes, true).push(startingNode, instSh),
+            true
+        );
+
+        validationPromises.push(cleanupValidation(validation, dbResolver, startingNode, validationResult));
+
+    }
+
+    return Promise.all(validationPromises);
+}
+
+function cleanupValidation(valRes, resolver, startingResource, cb) {
+>>>>>>> d8bd08c... Updated validator build
 
                     // gave up separating the sync from the async -- too hard.
                     if (validatorStuff.async) {
@@ -6134,6 +6203,7 @@ RDF = {
     // Schema-related stuff
     //
 
+<<<<<<< HEAD
     // ShEx types
     Code: function (label, code, _pos) {
         this._ = 'Code'; this.label = label; this.code = code; this._pos = _pos;
@@ -6156,6 +6226,17 @@ RDF = {
             return "(code \""+this.label+"\" \""+this.code+"\")";
         };
     },
+=======
+},{"../includes/Erics_RDF.js":1,"./dataParser.js":17,"./validationErrorFormatter.js":21,"promise":11}],23:[function(require,module,exports){
+/* 
+    Build ShExValidator.js client side bundle using browserify with the following commands:
+    cd /home/shex/ShExValidata
+    npm update
+    browserify public/javascripts/ShExValidator-browserify.js -o public/javascripts/ShExValidator.js
+ */
+
+ShExValidator = require('ShEx-validator');
+>>>>>>> d8bd08c... Updated validator build
 
     Comment: function (comment, _pos) {
         this._ = 'Comment'; this.comment = comment; this._pos = _pos;
