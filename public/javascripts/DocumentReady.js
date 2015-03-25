@@ -17,15 +17,15 @@ $(function globalDocumentReady()
         }
     };
 
-    if( Util.isDefined(ShExValidataConfig) )
+    if( Util.isDefined(ValidataConfig) )
     {
         UI.documentReady();
     }
     else
     {
         $('body').html('<div class="alert alert-danger" role="alert">' +
-            '<h4>ShExValidataConfig could not be loaded</h4>' +
-            '<h5>Please ensure ShExValidataConfig.js exists and is readable in the javascripts directory.</h5>' +
+            '<h4>ValidataConfig could not be loaded</h4>' +
+            '<h5>Please ensure ValidataConfig.json exists and is readable in the javascripts directory.</h5>' +
             '</div>');
     }
 

@@ -22,14 +22,12 @@ Validata = {
     },
 
     Validation: {
-        passed: false,
         options: {
             closedShapes: true,
             resourceShapeMap: {}
         },
         callbacks: {},
-        errors: [],
-        rawResponse: {}
+        rawResponses: []
     },
 
     initialize: function initialize()
@@ -37,9 +35,9 @@ Validata = {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         // If option is set, add entry for a "Custom" schema which has an empty string as data
-        if (ShExValidataConfig.options.allowCustomSchema)
+        if (ValidataConfig.options.allowCustomSchema)
         {
-            ShExValidataConfig.schemas.push({
+            ValidataConfig.schemas.push({
                 enabled: true,
                 name: "Custom Schema",
                 description: "Click the Show Source button and enter your own custom ShEx schema",
@@ -50,13 +48,13 @@ Validata = {
         }
 
         // If we have defined schemas in config , add all enabled schemas to select dropdown
-        if (Util.iterableLength(ShExValidataConfig.schemas))
+        if (Util.iterableLength(ValidataConfig.schemas))
         {
             // Remove the selected attribute from the placeholder option
             UI.schemaSelector.find('option').removeAttr('selected');
 
             // Add all enabled schemas, with selected if default set
-            $.each(ShExValidataConfig.schemas, function configSchemasIterator(index, schema)
+            $.each(ValidataConfig.schemas, function configSchemasIterator(index, schema)
             {
                 if (schema['enabled'] && Util.stringIsNotBlank(schema['name']))
                 {
@@ -156,6 +154,8 @@ Validata = {
 
         UI.initializeResourceShapeMapTable();
 
+        Validata.Validation.rawResponses = [];
+        
         Validata.validator.validate(Validata.Validation.options.resourceShapeMap);
     },
 
@@ -163,17 +163,8 @@ Validata = {
     {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
-        Validata.Validation.rawResponse = resultObject;
+        Validata.Validation.rawResponses.push(resultObject);
         
-        if( Validata.Validation.rawResponse['passed'] || Validata.Validation.rawResponse.errors.length == 0 )
-        {
-            Validata.Validation.passed = true;
-        }
-        else
-        {
-            Validata.Validation.passed = false;
-        }
-
         Validata.triggerValidationMessageUpdate();
     },
 
@@ -185,6 +176,20 @@ Validata = {
         {
             Validata.updateValidationMessages();
         }, 1000, "updateValidationMessages");
+    },
+    
+    getValidationErrors: function getValidationErrors()
+    {
+        var validationErrors = [];
+        
+        if( Util.iterableLength(Validata.Validation.rawResponses) )
+        {
+            $.each(Validata.Validation.rawResponses, function(index, rawResponse) {
+                validationErrors = $.extend(validationErrors, rawResponse['errors']);
+            });
+        }
+        
+        return validationErrors;
     },
     
     updateValidationMessages: function updateValidationMessages()
@@ -201,7 +206,9 @@ Validata = {
 
         if( Util.iterableLength( Validata.Validation ) )
         {
-            if( Validata.Validation.passed )
+            var validationErrors = Validata.getValidationErrors();
+            
+            if( ! Util.iterableLength(validationErrors) )
             {
                 validationSuccessAlertVisible = true;
                 validationErrorAlertVisible = false;
@@ -215,30 +222,27 @@ Validata = {
                 UI.validationErrorsList.empty();
 				UI.validationWarningsList.empty();
 				
-                if (Util.iterableLength( Validata.Validation.rawResponse['errors'] ))
+                $.each(validationErrors, function (index, errorObject)
                 {
-                    $.each(Validata.Validation.rawResponse['errors'], function (index, errorObject)
-                    {
-						var reqLev = UI.reqLevelSelector.val();
-						if(UI.reqLevelSelector.val() != null && 
-							UI.reqLevelSelector.val() != "DEFAULT" && 
-							errorObject.req_lev !=null &&
-							UI.reqLevels.indexOf(reqLev) > -1){
-								if(UI.reqLevels.indexOf(reqLev) > UI.reqLevels.indexOf(errorObject.req_lev.toUpperCase()))
-								{
-									$('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationWarningsList);
-								}
-								else{
-									$('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
-								}
-						}
-						else{
-							$('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
-						}
-                        
-                    });
-                }
-
+                    var reqLev = UI.reqLevelSelector.val();
+                    if(UI.reqLevelSelector.val() != null && 
+                        UI.reqLevelSelector.val() != "DEFAULT" && 
+                        errorObject.req_lev !=null &&
+                        UI.reqLevels.indexOf(reqLev) > -1){
+                            if(UI.reqLevels.indexOf(reqLev) > UI.reqLevels.indexOf(errorObject.req_lev.toUpperCase()))
+                            {
+                                $('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationWarningsList);
+                            }
+                            else{
+                                $('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
+                            }
+                    }
+                    else{
+                        $('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
+                    }
+                    
+                });
+                
                 validationSuccessAlertVisible = false;
                 validationErrorAlertVisible = UI.validationErrorsList.children().length > 0;
                 validationWarningAlertVisible = UI.validationWarningsList.children().length > 0;

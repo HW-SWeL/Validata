@@ -1,4 +1,4 @@
-ShExValidataConfig = {
+ValidataConfig = {
     schemas: [
         {
             enabled: true,
