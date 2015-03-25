@@ -105,9 +105,18 @@ UI = {
             UI.triggerStaggeredContentChange();
         });
 
-        UI.schemaSelector.on('change keyup', function wizardStepPanelsInputChange()
+        UI.schemaSelector.on('change keyup', function schemaSelectorChange()
         {
             UI.updateSelectedSchema();
+            
+            UI.triggerStaggeredContentChange();
+        });
+
+        UI.dataSourceText.on('change keyup', function dataSourceTextChange()
+        {
+            // Clear any resource / shape mappings which were set
+            UI.resourceShapeMapTableBody.empty();
+            Validata.Validation.options.resourceShapeMap = {};
             
             UI.triggerStaggeredContentChange();
         });
