@@ -5,7 +5,7 @@
 
         <meta name="viewport" content="width=device-width"/>
 
-        <title>ShEx Validata</title>
+        <title>Validata: RDF Validator</title>
 
         <link rel="icon" type="image/x-icon" href="images/favicon.ico"/>
 
@@ -90,6 +90,7 @@
                     <li id="wizardSidebarStepOptions" class="wizardSidebarStep">Configure Options</li>
                     <li id="wizardSidebarStepResults" class="wizardSidebarStep">Validation Results</li>
                 </ul>
+				
 
                 <div id="demoPanel" class="panel panel-info">
 
@@ -199,6 +200,15 @@
                                                 </div>
 
                                             </div>
+											
+											<div id="reqLevelPanel" class="panel panel-default">
+												<div id = reqLevelHeading" class="panel-heading">
+													<h4>Select Requirement Level</h4>
+													<select id="reqLevelSelector" class="form-control">
+														<option value="" disabled selected>Click here to select a validation strictness...</option>
+													</select>
+												</div> 
+											</div>
 
                                             <table id="schemaDetailsTable" class="table table-bordered table-striped">
 
@@ -275,20 +285,27 @@
 
                                                 <div class="sourceText"></div>
                                             </div>
-
-                                            <div class="alert alert-info" role="alert">
-                                                <p>The data to validate must be specified; the default selected value is simply the first shape found in your data.</p>
-                                                <br/>
-                                                <label for="dataStartNodesSelector">Data to Validate:</label>
-                                                <select id="dataStartNodesSelector" class="form-control" multiple="multiple"></select>
-                                            </div>
                                             
-                                            <!--<div class="alert alert-info" role="alert">
-                                                <p>The shape to start with during validation may be specified to overrule the start specified in the schema, allowing for validation of partial data.</p>
+                                            <div class="alert alert-info">
+                                                <p>The shape to start with during validation must be specified.</p>
                                                 <br/>
-                                                <label for="schemaStartShapeSelector">Starting Shape:</label>
-                                                <select id="schemaStartShapeSelector" class="form-control"></select>
-                                            </div>-->
+												<label for="shapeSelector">Shape to validate against:</label>
+                                                <select id="shapeSelector" class="form-control"></select>
+                                            </div>
+
+                                            <div class="alert alert-info">
+                                                <p>The resource to validate must be specified; the default selected value is simply the first resource found in your data.</p>
+                                                <br/>
+                                                <label for="resourceSelector">Resource(s) to validate:</label><br />
+                                                <select id="resourceSelector" class="form-control" multiple="multiple"></select>
+                                            </div>
+
+                                            <div class="alert alert-info">
+                                                <p>Validata uses the Closed World Assumption by default, meaning all used properties must be defined in the schema. Untick this box to validate in Open World mode.</p>
+                                                <br/>
+                                                <label for="closedShapesOption">Closed World validation:</label>
+                                                <input id="closedShapesOption" class="form-control" type="checkbox" checked />
+                                            </div>
                                             
                                         </form>
                                     </div>
@@ -312,6 +329,12 @@
 
                                             <ul id="validationErrorsList" class="list-group"></ul>
                                         </div>
+										
+										<div id="validationWarningAlert" class="alert alert-warning hiddenFadeIn" role="alert">
+                                            <h4>Validation Warnings:</h4>
+
+                                            <ul id="validationWarningsList" class="list-group"></ul>
+                                        </div>
 
                                     </div>
                                 </div>
@@ -325,13 +348,16 @@
 
         </div>
 
-        <script src="components/jquery/dist/jquery.js"></script>
-        <script src="components/bootstrap/dist/js/bootstrap.js"></script>
+        <script src="components/jquery/dist/jquery.min.js"></script>
+        <!--<script src="components/jqueryui/jquery-ui.min.js"></script>-->
+        <!--<script src="components/jquery-ui-touch-punch/jquery.ui.touch-punch.min.js"></script>-->
+        <script src="components/bootstrap/dist/js/bootstrap.min.js"></script>
         <script src="components/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
         <script src="components/moment/moment.js"></script>
+        <!--<script src="components/jsplumb/dist/js/jquery.jsPlumb-1.7.4.js"></script>-->
 
         <script src="javascripts/ShExValidator.js"></script>
-        <script src="javascripts/ShExValidataConfig.js"></script>
+        <script src="javascripts/ValidataConfig.js"></script>
         <script src="javascripts/Log.js"></script>
         <script src="javascripts/Util.js"></script>
         <script src="javascripts/Validata.js"></script>

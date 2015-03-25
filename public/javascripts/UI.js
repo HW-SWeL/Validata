@@ -30,6 +30,8 @@ UI = {
         UI.quickSummarySectionResults = $('#quickSummarySectionResults');
         
         UI.demoPanelButtonGroup = $('#demoPanelButtonGroup');
+		UI.reqLevelSelector = $('#reqLevelSelector');
+		UI.reqLevelPanel = $('#reqLevelPanel');
         
         UI.wizardStepsPanelGroup = $('#wizardStepsPanelGroup');
         UI.wizardStepPanels = UI.wizardStepsPanelGroup.find('div.wizardStepPanel');
@@ -49,8 +51,9 @@ UI = {
         UI.dataSourceFile = $('#dataSourceFile');
         UI.dataSourceText = $('#dataSourceText');
         
-        UI.dataStartNodesSelector = $('#dataStartNodesSelector');
-        UI.schemaStartShapeSelector = $('#schemaStartShapeSelector');
+        UI.closedShapesOption = $('#closedShapesOption');
+        UI.shapeSelector = $('#shapeSelector');
+        UI.resourceSelector = $('#resourceSelector');
         
         UI.schemaErrorAlert = $('#schemaErrorAlert');
         UI.dataErrorAlert = $('#dataErrorAlert');
@@ -58,9 +61,25 @@ UI = {
         
         UI.validationSuccessAlert = $('#validationSuccessAlert');
         UI.validationErrorAlert = $('#validationErrorAlert');
+		UI.validationWarningAlert = $('#validationWarningAlert');
         UI.validationErrorsList = $('#validationErrorsList');
+		UI.validationWarningsList = $('#validationWarningsList');
     },
 
+    updateResourceShapeMap: function ()
+    {
+        Validata.Validation.options.shapeSelection = [ Util.stringValue( UI.shapeSelector.val() ) ];
+
+        var resourceSelection = UI.resourceSelector.val();
+
+        if(resourceSelection == null)
+        {
+            resourceSelection = [];
+        }
+
+        Validata.Validation.options.resourceSelection = resourceSelection;
+    },
+    
     setupEventHandlers: function setupEventHandlers()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -93,6 +112,24 @@ UI = {
         UI.schemaSelector.on('change', function schemaSelectorChange()
         {
             UI.updateSelectedSchema();
+            UI.triggerStaggeredContentChange();
+        });
+
+        UI.shapeSelector.on('change', function shapeSelectorChange()
+        {
+            UI.updateResourceShapeMap();
+            UI.triggerStaggeredContentChange();
+        });
+
+        UI.closedShapesOption.on('change', function closedShapesOptionChange()
+        {
+            Validata.Validation.options.closedShapes = UI.closedShapesOption.prop('checked');
+            UI.triggerStaggeredContentChange();
+        });
+        
+        UI.resourceSelector.on('change', function resourceSelectorChange()
+        {
+            UI.updateResourceShapeMap();            
             UI.triggerStaggeredContentChange();
         });
 
@@ -173,6 +210,7 @@ UI = {
 
         UI.updateEnteredData();
         UI.updateEnteredSchema();
+        
         Validata.validate();
     },
     
@@ -219,7 +257,7 @@ UI = {
 
         Validata.Schema.data = UI.schemaSourceText.text();
     },
-    
+
     updateSelectedSchema: function updateSelectedSchema()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -227,6 +265,16 @@ UI = {
         var selectedSchemaIndex = UI.schemaSelector.val();
         
         Validata.Schema = ShExValidataConfig['schemas'][selectedSchemaIndex];
+		Validata.ReqLevels = ShExValidataConfig['schemas'][selectedSchemaIndex]['reqLevels'];
+		if(Validata.ReqLevels){
+			Validata.ReqLevels.forEach(function(req){
+				UI.reqLevelSelector.append('<option>'+req+'</option>');
+			})
+			UI.reqLevelPanel.show();
+		}
+		else{
+			UI.reqLevelPanel.hide();
+		}
 
         if( ! Util.iterableLength(Validata.Schema) )
         {

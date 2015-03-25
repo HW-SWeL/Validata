@@ -5,48 +5,368 @@
 
         <meta name="viewport" content="width=device-width"/>
 
-        <title>ShEx Validata Admin</title>
+        <title>Validata: Admin</title>
 
         <link rel="icon" type="image/png" href="components/material-design-icons/action/drawable-hdpi/ic_spellcheck_black_48dp.png"/>
         
         <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css"/>
         <link rel="stylesheet" href="components/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.min.css"/>
+        <link rel="stylesheet" href="components/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css" />
+
         <link rel="stylesheet" href="components/animate.css/animate.css"/>
+
+        <link rel="stylesheet" href="components/codemirror/lib/codemirror.css"/>
 
         <link rel="stylesheet" href="stylesheets/vendor/material-design-icons.css"/>
 
         <link rel="stylesheet" href="stylesheets/media-sizes.css"/>
+        <style>
+            .input-group {
+                margin-bottom: 10px;
+            }
+            /* these are special */
+            .slip-reordering {
+                box-shadow: 0 2px 10px rgba(0,0,0,0.45);
+            }
+
+            .slip-swiping-container {
+                overflow-x: hidden;
+            }
+
+            #slippylist li {
+                user-select: none;
+                -moz-user-select: none;
+                -webkit-user-select: none;
+                cursor: default;
+            }
+
+            #slippylist li:first-child {
+                border-top-left-radius: 5px;
+                border-top-right-radius: 5px;
+            }
+            #slippylist li:last-child {
+                border-bottom-left-radius: 5px;
+                border-bottom-right-radius: 5px;
+            }
+
+            /* the rest is junk for the demo page */
+            #slippylist li {
+                padding: 1em;
+                /*line-height: 1.3;*/
+                user-select: text;
+                -moz-user-select: text;
+                -webkit-user-select: text;
+            }
+            #slippylist span {
+                cursor: text;
+            }
+
+            #slippylist {
+                clear:left;
+                padding: 0 0 1px;
+            }
+
+            #slippylist li {
+                display:block;
+                border: 1px solid rgba(0,0,0,0.2);
+                background: white;
+                margin: 0;
+                border-radius: 0;
+                margin-bottom: -1px;
+                max-width: 100%;
+                /*line-height: 3;*/
+                vertical-align: middle;
+            }
+
+            /*#slippylist input {
+                vertical-align: middle;
+            }*/
+
+            #slippylist li.demo-allow-select {
+                padding: 1em;
+                /*line-height: 1.3;*/
+                user-select: text;
+                -moz-user-select: text;
+                -webkit-user-select: text;
+            }
+            #slippylist li.demo-allow-select span {
+                cursor: text;
+            }
+
+            .CodeMirror {
+                border: 1px solid rgba(0,0,0,0.2);
+            }
+
+            .schema-delete, .schema-reorder {
+                background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-action.svg);
+            }
+            .schema-default, .schema-enable, .config-showsource-toggle-icon {
+                background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
+            }
+            .download-icon {
+                display: inline-block;
+                margin-right: 10px;
+                width: 24px;
+                height: 24px;
+                vertical-align: middle;
+                background-position: 0 -192px;
+                background-image: url(../images/svg-sprite-file-white.svg);
+            }
+            .schema-default, .schema-delete, .schema-enable, .schema-reorder {
+                cursor: pointer;
+                background-repeat: no-repeat;
+            }
+
+            .schema-default {
+                display: inline-block;
+                width: 24px;
+                height: 24px;
+                vertical-align: middle;
+                background-position: 0 -144px;
+            }
+            .schema-enable {
+                display: inline-block;
+                width: 24px;
+                height: 24px;
+                vertical-align: middle;
+                background-position: 0 -24px;
+            }
+
+            .schema-is-default .schema-default {
+                background-position: 0 -96px;
+            }
+            .schema-is-enabled .schema-enable {
+                background-position: 0 0;
+            }
+            .schema {
+                opacity: 0.25;
+            }
+            .schema.schema-is-enabled {
+                opacity: 1;
+            }
+            .schema.schema-is-invalid {
+                background: #FBC2C4 !important;
+            }
+            .schema-name {
+                display: inline-block;
+            }
+            .schemas:empty:after {
+                width: 100px;
+                height: 100px;
+                content: "No Schemas defined.";
+            }
+            .schema-reorder {
+                float: right;
+                width: 24px;
+                height: 24px;
+                vertical-align: middle;
+                background-position: 0 -2208px;
+            }
+            .schema-delete {
+                margin-right: 20px;
+                float: right;
+                width: 24px;
+                height: 24px;
+                vertical-align: middle;
+                background-position: 0 -792px;
+            }
+            .schema-body {
+                width: 100%;
+                padding-top: 14px;
+                margin-top: 14px;
+                border-top: 1px solid rgba(0,0,0,0.2);
+                display: inline-block;
+            }
+
+            .CodeMirror-drag-handel {
+                position: absolute;
+                right:30px;
+                margin-top: -20px;
+                width: 20px;
+                height: 20px;
+                border-top: 10px solid rgba(0,0,0,0);
+                border-bottom: 10px solid rgba(0,0,0,0.2);
+                border-left: 10px solid rgba(0,0,0,0);
+                border-right: 10px solid rgba(0,0,0,0.2);
+                z-index: 3;
+                cursor: pointer;
+            }
+
+            .line-error {
+                background: #FBC2C4 !important;
+                color: #8a1f11 !important;
+            }
+
+            .schema-input-schema-results {
+                width: 100%;
+                border-left: 1px solid rgba(0,0,0,0.2);
+                border-right: 1px solid rgba(0,0,0,0.2);
+                border-bottom: 1px solid rgba(0,0,0,0.2);
+                padding: 8px;
+            }
+            .schema-input-schema-results.schema-input-schema-invalid {
+                display: none;
+            }
+            .schema-input-schema-results.schema-input-schema-invalid {
+                display: block;
+                background-color: #e3b5af;
+            }
+
+            .schema-input-schema-results.schema-input-schema-valid {
+                display: block;
+                background-color: #bfe3b2;
+            }
+
+            .config-showsource-toggle-icon {
+                float: right;
+                width: 24px;
+                height: 24px;
+                vertical-align: middle;
+                background-position: 0 -2208px;
+            }
+
+        </style>
     </head>
     <body>
 
         <div class="container-fluid">
             <div class="row">
                 <div class="lead well">
-                    <h2>ShEx Admin Panel</h2>
+                    <h2>Validata: Admin</h2>
                     <p>Create, modify and export config files for use with Validata</p>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="panel panel-default panel-success">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Import</h3>
+                        </div>
+                        <div class="panel-body">
+                            <p>Warning: Loading a new configuration will overwrite any existing data for this page.</p>
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="url">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default" type="button">Import</button>
+                                </span>
+                            </div>
+                            <hr/>
+                            <div>
+                                <input id="import-file" type="file" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Configuration Options</h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="config-showsource-toggle">
+                                <div class="config-showsource-toggle-icon"></div>
+                                Show Source Button
+                            </div>
+                            <div class="config-allowcustom-toggle">
+                                <div class="config-allowcustom-toggle-icon"></div>
+                                Allow Custom Schema
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default panel-info">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Export</h3>
+                        </div>
+                        <div class="panel-body">
+                            <button class="btn btn-primary"><div class="download-icon"></div>Download File</button>
+                            <button class="btn btn-primary">Show output</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                    <ol style="display:none;">
+                        <li class="list-group-item schema-demo schema-demo-template">
+                            <div class="input-group schema-demo-name">
+                                <span class="input-group-addon">Name</span>
+                                <input type="text" class="form-control schema-demo-name-input" placeholder="Untitled Demo">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-danger schema-demo-delete" type="button">Delete Demo</button>
+                                </span>
+                            </div>
+                            <div class="schema-input-demo-data">
+                                <textarea class="schema-demo-data-input"></textarea>
+                                <div class="CodeMirror-drag-handel"></div>
+                            </div>
+                        </li>
+                    </ol>
+                    <ol style="display:none;">
+                        <li class="schema schema-is-enabled schema-template">
+                            <div class="schema-header">
+                                <div class="schema-enable" title="Toggle visibility"></div>
+                                <div class="schema-default" title="Toggle Default"></div>
+                                <div class="schema-name">Untitled Schema</div>
+                                <div class="schema-reorder"></div>
+                                <div class="schema-delete"></div>
+                            </div>
+                            <div class="schema-body">
+                                <div class="input-group schema-input-name">
+                                    <span class="input-group-addon">Name</span>
+                                    <input type="text" class="form-control schema-input-name-input" placeholder="Untitled Schema">
+                                </div>
+                                <div class="input-group schema-input-description">
+                                    <span class="input-group-addon">Description</span>
+                                    <input type="text" class="form-control schema-input-description-input">
+                                </div>
+                                <div class="schema-input-creationdate">
+                                    <div class='input-group date datetimepicker'>
+                                        <span class="input-group-addon">Creation Date</span>
+                                        <input type='text' class="schema-input-creationdate-input form-control" />
+                                        <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                                    </div>
+                                </div>
+                                <div class="schema-input-creationdate" style="display:none;">
+                                    <div class='input-group date datetimepicker'>
+                                        <span class="input-group-addon">Upload Date</span>
+                                        <input type='text' class="schema-input-uploaddate-input form-control" />
+                                        <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                                    </div>
+                                </div>
+                                <div class="schema-input-schema">
+                                    <textarea class="schema-input-schema-input"></textarea>
+                                    <div class="CodeMirror-drag-handel"></div>
+                                    <div class="schema-input-schema-results"></div>
+                                </div>
+                                <h4>Demos</h4>
+                                <p>Add RDF files here that can be used to demonstrate that the validator works correctly.</p>
+                                <ul class="list-group schema-demos">
+                                </ul>
+                                <button class="btn btn-success schema-new-demo">Add New Demo</button>
+                            </div>
+                        </li>
+                    </ol>
+                    <ol id="slippylist" class="schemas"></ol>
+                    <button class="btn btn-success btn-md create-new-schema">Add New Schema</button>
+                </div>
+            </div>
 
-            <div class="col-md-9 row">
+            <div class="col-md-9 row" style="display:none;">
 
                 <div role="tabpanel">
 
                     <!-- Nav tabs -->
-                    <ul id="tabList" class="nav nav-pills" role="tablist">
+                    <ul id="tabList" class="nav nav-tabs" role="tablist">
                         <li role="presentation" class="active"><a href="#home" role="tab" data-toggle="tab">Add a schema</a></li>
                     </ul>
 
                     <!-- Tab panes -->
                     <div class="tab-content">
                         <div role="tabpanel" class="tab-pane fade in active" id="home">
-                            <div class="well schemaTab">
-
+                            <div class="schemaTab">
+                                <br/>
                                 <form class="form-horizontal">
 
                                     <div class="form-group">
                                         <label class="col-sm-1 control-label">Title</label>
                                         <div class="col-sm-10">
-                                            <input type="text" class="form-control titleInput" required />
+                                            <input type="text" class="form-control titleInput" placeholder="" required />
                                         </div>
                                     </div>
 
@@ -104,24 +424,20 @@
                                     </button>
 
                                 </form>
-
                             </div>
-
                         </div>
-
                     </div>
-
                 </div>
+            </div>
 
+            <div class="col-md-3" style="display:none;">
+                <h2>Export</h2>
                 <div class="col-md-12">
                     <a href="" id="download" class="btn btn-primary disabled" download="ShExValidataConfig.json">
                         <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Config
                     </a>
                 </div>
-
-            </div>
-
-            <div class="col-md-3 alert-warning pull-right">
+                <h2>Import</h2>
                 <p>Have a config file already?  Import it here
                     <div>
                         <input id="import" type="file" >
@@ -132,8 +448,12 @@
         </div>
         
         <script src="components/jquery/dist/jquery.js"></script>
+        <script src="components/moment/min/moment.min.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.js"></script>
         <script src="components/bootstrap-switch/dist/js/bootstrap-switch.min.js"></script>
+        <script src="components/slip/slip.js"></script>
+        <script src="components/codemirror/lib/codemirror.js"></script>
+        <script src="components/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
 
         <script src="javascripts/ShExValidator.js"></script>
         <script src="javascripts/Log.js"></script>
@@ -141,6 +461,205 @@
         <script src="javascripts/admin/UI.js"></script>
         <script src="javascripts/admin/Validata.js"></script>
         <script src="javascripts/admin/DocumentReady.js"></script>
+        <script>
+            var deleteSchema = function deleteSchema(schema){
+                $(schema).fadeOut(350,function(){
+                    $(this).remove();
+                    var schemas = getAllSchemas();
+                    if(schemas.length!=0){
+                        for(var i=schemas.length-1;i>=0;i--){
+                            defaultSchema(schemas[i]);
+                        }
+                    }
+                });
+            };
+            var enableSchema = function enableSchema(schema){
+                if($(schema).hasClass("schema-is-enabled") && !$(schema).hasClass("schema-is-default")){
+                    $(schema).removeClass("schema-is-enabled");
+                } else {
+                    $(schema).addClass("schema-is-enabled");
+                }
+            };
+            var defaultSchema = function defaultSchema(schema){
+                if($(schema).hasClass("schema-is-enabled")){
+                    getAllSchemas().each(function( index ) {
+                        $(this).removeClass("schema-is-default");
+                    });
+                    $(schema).addClass("schema-is-default");
+                }
+            };
+            var getAllSchemas = function getAllSchemas(){
+                return $(".schemas").find(".schema");
+            };
+            var addConfiguration = function addConfiguration(json){
+
+            };
+            var addSchema = function addSchema(schemajson){
+
+            };
+            var exportSchema = function exportSchema(schema){
+                s = {};
+                s.default = $(schema).hasClass("schema-is-default");
+                s.enabled = $(schema).hasClass("schema-is-enabled");
+                s.name = $(schema).find(".schema-name").text();
+                s.description = $(schema).find(".schema-input-description-input").val();
+                s.creationDate = $(schema).find(".schema-input-creationdate-input").val();
+                s.uploadDate = $(schema).find(".schema-input-uploaddate-input").val();
+                s.data = $.data( schema, "schemaInput").getValue();
+                s.dataDemos = [];
+                var demos = $(schema).find(".schema-demo");
+                for(var i=0;i<demos.length;i++){
+                    var d = {};
+                    d.name = $(demos[i]).find(".schema-demo-name-input").val();
+                    d.data = $.data( demos[i], "demoInput").getValue();
+                    s.dataDemos.push(d);
+                }
+                return s;
+            };
+            var exportConfiguration = function exportConfiguration(){
+                var json = {};
+
+                // Export schema data
+                json.schemas = [];
+                var schemas = getAllSchemas();
+                for(var i=0;i<schemas.length;i++){
+                    json.schemas.push(exportSchema(schemas[i]));
+                }
+
+                // Export option data
+                json.options = {};
+
+                return json;
+            };
+            var createNewSchema = function createNewSchema(){
+                var newSchema = $(".schema-template").clone();
+                newSchema.removeClass("schema-template");
+
+                // Set the schema as default if this is the first one added
+                if(getAllSchemas().length==0){
+                    newSchema.addClass("schema-is-default");
+                }
+
+                newSchema.find(".schema-delete").click(function(e){
+                    deleteSchema(newSchema);
+                    e.stopPropagation();
+                });
+                newSchema.find(".schema-enable").click(function(e){
+                    enableSchema(newSchema);
+                    e.stopPropagation();
+                });
+                newSchema.find(".schema-default").click(function(e){
+                    defaultSchema(newSchema);
+                    e.stopPropagation();
+                });
+                newSchema.find(".schema-reorder").click(function(e){
+                    e.stopPropagation();
+                });
+                newSchema.find(".schema-header").click(function(){
+                    $(this).parent().find(".schema-body").slideToggle();
+                });
+                newSchema.find(".schema-input-name-input").on("input propertychange paste",function(e){
+                    if($(this).val()!=""){
+                        $(this).parent().parent().parent().find(".schema-name").html($(this).val());
+                    } else {
+                        $(this).parent().parent().parent().find(".schema-name").html("Untitled Schema");
+                    }
+                });
+                newSchema.find(".schema-new-demo").click(function(){
+                    var newDemo = $(".schema-demo-template").clone();
+                    newDemo.find(".schema-demo-delete").click(function(e){
+                        $(this).parent().parent().parent().fadeOut(350,function(){$(this).remove();});
+                        e.stopPropagation();
+                    });
+                    newDemo.removeClass("schema-demo-template");
+                    newDemo.appendTo(newSchema.find(".schema-demos"));
+                    var demoInput = CodeMirror.fromTextArea(newDemo.find(".schema-demo-data-input").get(0), {
+                        lineNumbers: true
+                    });
+                    $(newDemo).data("demoInput",demoInput);
+                });
+                newSchema.find(".datetimepicker").datetimepicker();
+                newSchema.appendTo(".schemas");
+                var schemaInputField = newSchema.find(".schema-input-schema-input").get(0);
+                var schemaInput = CodeMirror.fromTextArea(schemaInputField, {
+                    lineNumbers: true
+                });
+                var schemaInputOutput = newSchema.find(".schema-input-schema-results");
+                var oldLine = undefined;
+
+                schemaInput.on("change", function() {
+                    var callbacks = {
+                        schemaParsed: function schemaParsedCallback(responseObject) {
+                            schemaInputOutput.removeClass("schema-input-schema-invalid");
+                            schemaInputOutput.addClass("schema-input-schema-valid");
+                            schemaInputOutput.text("Successfully parsed!");
+                            newSchema.removeClass("schema-is-invalid");
+                        },
+                        schemaParseError: function schemaParseErrorCallback(responseObject) {
+                            schemaInputOutput.removeClass("schema-input-schema-valid");
+                            schemaInputOutput.addClass("schema-input-schema-invalid");
+                            var errorMessage = 'Line '+responseObject.line+', Column '+responseObject.column+
+                                ' : '+responseObject.message;
+                            schemaInputOutput.text(errorMessage);
+                            schemaInput.addLineClass(responseObject.line-1, 'background', 'line-error');
+                            oldLine = responseObject.line-1;
+                            newSchema.addClass("schema-is-invalid");
+                        }
+                    };
+                    Util.waitForFinalEvent(function waitForFinalEventCallback() {
+                        if(oldLine!=undefined) {
+                            schemaInput.removeLineClass(oldLine, 'background', 'line-error');
+                        }
+                        var validator = new ShExValidator.validate(schemaInput.getValue(), "", callbacks, {});
+                    }, 500, "schemaValidator");
+                });
+                $(newSchema).data("schemaInput",schemaInput);
+                return newSchema;
+            };
+
+            var ol = document.getElementById('slippylist');
+            ol.addEventListener('slip:beforereorder', function(e){
+                console.log($(this));
+                console.log($(e));
+                $(".schemas .schema-body").hide();
+                if (/demo-no-reorder/.test(e.target.className)) {
+                    e.preventDefault();
+                }
+            }, false);
+
+            ol.addEventListener('slip:beforeswipe', function(e){
+                e.preventDefault();
+            }, false);
+
+            ol.addEventListener('slip:beforewait', function(e){
+                if (e.target.className.indexOf('schema-reorder') > -1) e.preventDefault();
+            }, false);
+
+            ol.addEventListener('slip:afterswipe', function(e){
+                //e.target.parentNode.appendChild(e.target);
+            }, false);
+
+            ol.addEventListener('slip:reorder', function(e){
+                e.target.parentNode.insertBefore(e.target, e.detail.insertBefore);
+                return false;
+            }, false);
+
+            new Slip(ol);
+
+            $(".create-new-schema").click(function(){
+                createNewSchema();
+            });
+
+
+            /*$(".CodeMirror-drag-handel").click {
+
+            }*/
+
+            $(function () {
+                $('.datetimepicker').datetimepicker();
+            });
+
+        </script>
 
     </body>
 </html>

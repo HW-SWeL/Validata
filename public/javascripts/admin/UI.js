@@ -196,7 +196,8 @@ UI = {
 
             Util.waitForFinalEvent(function waitForFinalEventCallback()
             {
-                ShExValidator.validate(UI.schemaSourceText.val(), "", Validata.callbacks, {});
+
+                new ShExValidator.validate(UI.schemaSourceText.val(), "", Validata.callbacks, {});
             }, 500, "schemaValidator");
 
         }),

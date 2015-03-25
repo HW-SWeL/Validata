@@ -33,19 +33,23 @@ Validata = {
 
         if( !Validata.schemaValid )
         {
-            UI.checkSubmitButton();
+            // Sunil code
+            /*UI.checkSubmitButton();
             var errorMessage = 'Line '+responseObject.line+', Column '+responseObject.column+
                 ' : '+responseObject.message;
             UI.schemaErrorAlert.find('.sourceText').text(errorMessage);
-            UI.schemaErrorAlert.fadeIn('slow');
+            UI.schemaErrorAlert.fadeIn('slow');*/
+            console.log(this.schema);
         }
         else
         {
-            UI.checkSubmitButton();
+            // sunil code
+            /*UI.checkSubmitButton();
             UI.schemaErrorAlert.fadeOut('slow').find('.sourceText').empty();
             if(UI.schemaSourceText.val()){
                 UI.schemaSuccessAlert.fadeIn('slow').delay(500).fadeOut('slow');
-            }
+            }*/
+            console.log(validator.schema);
         }
 
     }

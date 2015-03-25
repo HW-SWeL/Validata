@@ -259,3 +259,10 @@ div.demoButtonIcon {
   word-wrap: break-word;
   word-break: break-all;
 }
+
+#closedShapesOption {
+    width: 30px;
+    height: 30px;
+    vertical-align: bottom;
+}
+
