@@ -15,9 +15,9 @@ $(function globalDocumentReady() {
 
     // Loads in json object which contains all the schema data
     $.get("javascripts/ValidataConfig.json", "", function (data) {
-        ShExValidataConfig = JSON.parse(data);
+        ValidataConfig = JSON.parse(data);
 
-        if (Util.isDefined(ShExValidataConfig)) {
+        if (Util.isDefined(ValidataConfig)) {
             UI.documentReady();
         }
         else {
