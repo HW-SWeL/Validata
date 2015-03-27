@@ -26,6 +26,7 @@
     "moment": "~2.9.0",
     "bootstrap-switch": "~3.3.2",
     "eonasdan-bootstrap-datetimepicker": "~4.7.14",
-    "slip": "~1.2.0"
+    "slip": "~1.2.0",
+    "bootstrap-tagsinput": "~0.4.2"
   }
 }

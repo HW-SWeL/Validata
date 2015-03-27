@@ -12,6 +12,7 @@
         <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css"/>
         <link rel="stylesheet" href="components/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.min.css"/>
         <link rel="stylesheet" href="components/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css" />
+        <!--<link rel="stylesheet" href="components/bootstrap-tagsinput/dist/bootstrap-tagsinput.css"/>-->
 
         <link rel="stylesheet" href="components/animate.css/animate.css"/>
 
@@ -33,25 +34,34 @@
                 overflow-x: hidden;
             }
 
-            #slippylist li {
+            #slippylist > li {
                 user-select: none;
                 -moz-user-select: none;
                 -webkit-user-select: none;
                 cursor: default;
+                display:block;
+                border: 1px solid rgba(0,0,0,0.2);
+                background: white;
+                margin: 0;
+                border-radius: 0;
+                margin-bottom: -1px;
+                max-width: 100%;
+                /*line-height: 3;*/
+                vertical-align: middle;
             }
 
-            #slippylist li:first-child {
+            #slippylist > li:first-child {
                 border-top-left-radius: 5px;
                 border-top-right-radius: 5px;
             }
-            #slippylist li:last-child {
+            #slippylist > li:last-child {
                 border-bottom-left-radius: 5px;
                 border-bottom-right-radius: 5px;
             }
 
             /* the rest is junk for the demo page */
-            #slippylist li {
-                padding: 1em;
+            #slippylist > li {
+                padding: 0;
                 /*line-height: 1.3;*/
                 user-select: text;
                 -moz-user-select: text;
@@ -66,30 +76,18 @@
                 padding: 0 0 1px;
             }
 
-            #slippylist li {
-                display:block;
-                border: 1px solid rgba(0,0,0,0.2);
-                background: white;
-                margin: 0;
-                border-radius: 0;
-                margin-bottom: -1px;
-                max-width: 100%;
-                /*line-height: 3;*/
-                vertical-align: middle;
-            }
-
             /*#slippylist input {
                 vertical-align: middle;
             }*/
 
-            #slippylist li.demo-allow-select {
+            #slippylist > li.demo-allow-select {
                 padding: 1em;
                 /*line-height: 1.3;*/
                 user-select: text;
                 -moz-user-select: text;
                 -webkit-user-select: text;
             }
-            #slippylist li.demo-allow-select span {
+            #slippylist > li.demo-allow-select span {
                 cursor: text;
             }
 
@@ -170,12 +168,18 @@
                 vertical-align: middle;
                 background-position: 0 -792px;
             }
+            .schema-name{
+                cursor: pointer;
+            }
+            .schema-header{
+                padding: 1em;
+            }
             .schema-body {
                 width: 100%;
-                padding-top: 14px;
-                margin-top: 14px;
+                padding: 1em;
                 border-top: 1px solid rgba(0,0,0,0.2);
                 display: inline-block;
+                background: rgba(0,0,0,0.01);
             }
 
             .CodeMirror-drag-handel {
@@ -234,6 +238,25 @@
                 background-position: 0 0;
             }
 
+            .bootstrap-tagsinput {
+                margin:0px;
+                border-top-left-radius: 0 px;
+                border-bottom-left-radius: 0 px;
+            }
+            .bootstrap-tagsinput .tag.big{
+                background: #0088cc;
+                padding: 2px;
+                border-radius: 3px;
+            }
+            .bootstrap-tagsinput .tag.big{
+                border-radius: 3px;
+            }
+            h2 {
+                margin-top: 10px;
+                margin-bottom: 5px;
+                font-size: 25px;
+            }
+
         </style>
     </head>
     <body>
@@ -242,7 +265,6 @@
             <div class="row">
                 <div class="lead well">
                     <h2>Validata: Admin</h2>
-                    <p>Create, modify and export config files for use with Validata</p>
                 </div>
             </div>
             <div class="row">
@@ -253,16 +275,7 @@
                         </div>
                         <div class="panel-body">
                             <p>Warning: Loading a new configuration will overwrite any existing data for this page.</p>
-                            <div class="input-group">
-                                <input type="text" class="form-control" placeholder="url">
-                                <span class="input-group-btn">
-                                    <button class="btn btn-default" type="button">Import</button>
-                                </span>
-                            </div>
-                            <hr/>
-                            <div>
-                                <input id="import-file" type="file" />
-                            </div>
+                            <input id="import-file" type="file" />
                         </div>
                     </div>
                     <div class="panel panel-default panel-default">
@@ -285,7 +298,7 @@
                             <h3 class="panel-title">Export</h3>
                         </div>
                         <div class="panel-body">
-                            <button class="btn btn-primary"><div class="download-icon"></div>Download File</button>
+                            <a class="btn btn-primary download-file"><div class="download-icon"></div>Download File</a>
                             <button class="btn btn-primary">Show output</button>
                         </div>
                     </div>
@@ -329,6 +342,12 @@
                                         <span class="input-group-addon">Creation Date</span>
                                         <input type='text' class="schema-input-creationdate-input form-control" />
                                         <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                                    </div>
+                                </div>
+                                <div class="schema-input-requirementlevels">
+                                    <div class='input-group'>
+                                        <span class="input-group-addon">Requirement Levels</span>
+                                        <input type="text" value="" class="schema-input-requirementlevels-input form-control"/>
                                     </div>
                                 </div>
                                 <div class="schema-input-creationdate" style="display:none;">
@@ -463,6 +482,7 @@
         <script src="components/slip/slip.js"></script>
         <script src="components/codemirror/lib/codemirror.js"></script>
         <script src="components/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
+        <!--<script src="components/bootstrap-tagsinput/dist/bootstrap-tagsinput.js"></script>-->
 
         <script src="javascripts/ShExValidator.js"></script>
         <script src="javascripts/Log.js"></script>
@@ -548,15 +568,19 @@
                 $(schema).find(".schema-input-description-input").val(description).trigger("input");
             };
             var setSchemaCreationDate = function setSchemaCreationdate(schema,creationDate){
-                $(schema).find(".schema-input-creationdate-input").val(creationDate).trigger("input");
+                $(schema).find(".schema-input-creationdate-input").val(moment.unix(creationDate).format()).trigger("input");
             };
             var setSchemaUploadDate = function setSchemaUploaddate(schema,uploadDate){
-                $(schema).find(".schema-input-uploaddate-input").val(uploadDate).trigger("input");
+                $(schema).find(".schema-input-uploaddate-input").val(moment.unix(uploadDate).format()).trigger("input");
+            };
+            var setRequirementLevels = function setRequirementLevels(schema,data){
+                if(data!=undefined){
+                    $(schema).data(".schema-input-requirementlevels-input").setValue(data.join());
+                }
             };
             var setSchemaData = function setSchemaData(schema,data){
                 $(schema).data("schemaInput").setValue(data);
             };
-
             var setDemoName = function setSchemaName(demo,name){
                 $(demo).find(".schema-demo-name-input").val(name);
             };
@@ -570,10 +594,14 @@
                 return $(".schemas").find(".schema");
             };
             var addConfiguration = function addConfiguration(json){
-                setAllowCustom(json.allowCustomSchema);
-                setShowSource(json.showSourceButton);
-                for(var i=0;i<json.schemas.length;i++){
-                    addSchema(json.schemas[i]);
+                if("options" in json){
+                    setAllowCustom(json.options.allowCustomSchema);
+                    setShowSource(json.options.showSourceButton);
+                }
+                if("schemas" in json){
+                    for(var i=0;i<json.schemas.length;i++){
+                        addSchema(json.schemas[i]);
+                    }
                 }
             };
             var addSchema = function addSchema(schemajson){
@@ -584,6 +612,7 @@
                 setSchemaDescription(newSchema,schemajson.description);
                 setSchemaCreationDate(newSchema,schemajson.creationDate);
                 setSchemaUploadDate(newSchema,schemajson.uploadDate);
+                setRequirementLevels(newSchema,schemajson.reqLevels);
                 setSchemaData(newSchema,schemajson.data);
                 for(var i=0;i<schemajson.dataDemos.length;i++){
                     addDemo(newSchema,schemajson.dataDemos[i]);
@@ -598,14 +627,17 @@
             };
             var exportSchema = function exportSchema(schema){
                 s = {};
-                s.default = $(schema).hasClass("schema-is-default");
-                s.enabled = $(schema).hasClass("schema-is-enabled");
-                s.name = $(schema).find(".schema-name").text();
-                s.description = $(schema).find(".schema-input-description-input").val();
-                s.creationDate = $(schema).find(".schema-input-creationdate-input").val();
-                s.uploadDate = $(schema).find(".schema-input-uploaddate-input").val();
-                s.data = $.data( schema, "schemaInput").getValue();
-                s.dataDemos = [];
+                s.default =         $(schema).hasClass("schema-is-default");
+                s.enabled =         $(schema).hasClass("schema-is-enabled");
+                s.name =            $(schema).find(".schema-name").text();
+                s.description =     $(schema).find(".schema-input-description-input").val();
+                s.creationDate =    moment($(schema).find(".schema-input-creationdate-input").val()).unix();
+                s.uploadDate =      moment($(schema).find(".schema-input-uploaddate-input").val()).unix();
+                if($(schema).find("schema-input-requirementlevels-input").val()!=undefined){
+                    s.reqLevels =   $(schema).find("schema-input-requirementlevels-input").val().split(",");
+                }
+                s.data =            $.data( schema, "schemaInput").getValue();
+                s.dataDemos =       [];
                 var demos = $(schema).find(".schema-demo");
                 for(var i=0;i<demos.length;i++){
                     var d = {};
@@ -682,7 +714,9 @@
                 newSchema.find(".schema-new-demo").click(function(){
                     createNewDemo(newSchema);
                 });
-                newSchema.find(".datetimepicker").datetimepicker();
+                newSchema.find(".datetimepicker").datetimepicker({
+                    format: 'YYYY-MM-DDTHH:mm:ssZ'
+                });
                 newSchema.appendTo(".schemas");
                 var schemaInputField = newSchema.find(".schema-input-schema-input").get(0);
                 var schemaInput = CodeMirror.fromTextArea(schemaInputField, {
@@ -758,6 +792,43 @@
             $(function () {
                 $('.datetimepicker').datetimepicker();
             });
+
+            // Selecting a file using the file chooser should cause the content of that file to be loaded into the data source div as text
+            $("#import-file").change(function() {
+
+                console.log("hei");
+
+                var inputFiles = this.files;
+
+                if (inputFiles == undefined || inputFiles.length == 0) {
+                    return;
+                }
+                var inputFile = inputFiles[0];
+
+                var reader = new FileReader();
+
+                reader.onload = function (event) {
+                    console.log(event.target.result);
+                    addConfiguration(JSON.parse(event.target.result));
+                };
+
+                reader.onerror = function (event) {
+                    console.log("he3");
+                    var errorMessage = "Selected file could not be uploaded. Error: " + event.target.error.code;
+                    alert(errorMessage);
+                };
+
+                reader.readAsText(inputFile);
+            });
+
+            $(".download-file").on('click', function(){
+
+                // create json object from schema array
+                var config = exportConfiguration();
+                var data = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config));
+                $(this).attr('href',data);
+                $(this).attr('download',"ValidataConfig.json");
+            })
 
         </script>
 
