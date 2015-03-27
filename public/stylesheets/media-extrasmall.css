@@ -1,9 +1,8 @@
-
 /* 
     Basic page structure - 250px wide fixed left sidebar which disappears on extrasmall screens
 */
 
-html,body {
+html, body {
     height: 100%;
 }
 
@@ -17,7 +16,6 @@ html,body {
     font-size: 25px;
 }
 
-
 #pageContentWrapper {
     position: relative;
     padding: 0 20px 0 20px;
@@ -27,8 +25,6 @@ html,body {
     position: relative;
     padding: 0 20px 0 20px;
 }
-
-
 
 /*
     Wizard Steps Sidebar list - clickable list of steps tracking "progress" without restricting user
@@ -111,11 +107,9 @@ div.demoButtonIcon {
     background-position: -113px -142px;
 }
 
-
 /*
     Quick Summary Sidebar Panel - always visible display of current validation status
 */
-
 
 div#quickSummaryPanel {
     margin: 20px;
@@ -137,7 +131,6 @@ div#quickSummaryPanel tr.quickSummarySection th.quickSummarySectionTitle {
     vertical-align: middle;
 }
 
-
 div#quickSummaryPanel tr.quickSummarySection td {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
@@ -150,51 +143,39 @@ div.quickSummarySectionIcon {
     margin: 8px 0 8px 0;
 }
 
-.quickSummarySection.quickSummaryStatusIncomplete  {
+.quickSummarySection.quickSummaryStatusIncomplete {
     background: #e3e3e3;
 }
 
-.quickSummarySection.quickSummaryStatusInvalid  {
+.quickSummarySection.quickSummaryStatusInvalid {
     background: #e3b5af;
 }
 
-.quickSummarySection.quickSummaryStatusWarning  {
+.quickSummarySection.quickSummaryStatusWarning {
     background: #f7ecb5;
 }
 
-.quickSummarySection.quickSummaryStatusValid  {
+.quickSummarySection.quickSummaryStatusValid {
     background: #bfe3b2;
 }
 
 .quickSummarySection.quickSummaryStatusIncomplete div.quickSummarySectionIcon {
-    /*background-position: 0 -264px;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-content.svg);*/
-
     background-position: 0 -24px;
     background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
+    background-image: url(/images/svg-sprites-black/svg-sprite-toggle.svg);
 }
 
 .quickSummarySection.quickSummaryStatusInvalid div.quickSummarySectionIcon,
 .quickSummarySection.quickSummaryStatusWarning div.quickSummarySectionIcon {
-    /*background-position: 0 0;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-alert.svg);*/
-
     background-position: 0 -648px;
     background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-content.svg);
+    background-image: url(/images/svg-sprites-black/svg-sprite-content.svg);
 }
 
 .quickSummarySection.quickSummaryStatusValid div.quickSummarySectionIcon {
-    /*background-position: 0 -3480px;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-action.svg);*/
-    
     background-position: 0 0;
     background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
+    background-image: url(/images/svg-sprites-black/svg-sprite-toggle.svg);
 }
 
 /* 
@@ -209,7 +190,7 @@ div.quickSummarySectionIcon {
     height: 30px;
     zoom: 1.7;
     z-index: 10;
-    
+
     overflow: hidden;
     background: #ffffff;
 
@@ -233,7 +214,7 @@ div.quickSummarySectionIcon {
 }
 
 .path {
-    stroke-dasharray: 1,200;
+    stroke-dasharray: 1, 200;
     stroke-dashoffset: 0;
     -webkit-animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
     animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
@@ -253,34 +234,37 @@ div.quickSummarySectionIcon {
         transform: rotate(360deg);
     }
 }
+
 @-webkit-keyframes dash {
     0% {
-        stroke-dasharray: 1,60;
+        stroke-dasharray: 1, 60;
         stroke-dashoffset: 0;
     }
     50% {
-        stroke-dasharray: 27,60;
+        stroke-dasharray: 27, 60;
         stroke-dashoffset: -10;
     }
     100% {
-        stroke-dasharray: 27,60;
+        stroke-dasharray: 27, 60;
         stroke-dashoffset: -37;
     }
 }
+
 @keyframes dash {
     0% {
-        stroke-dasharray: 1,60;
+        stroke-dasharray: 1, 60;
         stroke-dashoffset: 0;
     }
     50% {
-        stroke-dasharray: 27,60;
+        stroke-dasharray: 27, 60;
         stroke-dashoffset: -10;
     }
     100% {
-        stroke-dasharray: 27,60;
+        stroke-dasharray: 27, 60;
         stroke-dashoffset: -37;
     }
 }
+
 @-webkit-keyframes color {
     100%, 0% {
         stroke: #d62d20;
@@ -295,6 +279,7 @@ div.quickSummarySectionIcon {
         stroke: #dd9100;
     }
 }
+
 @keyframes color {
     100%, 0% {
         stroke: #d62d20;
@@ -309,8 +294,6 @@ div.quickSummarySectionIcon {
         stroke: #be7d00;
     }
 }
-
-
 
 /*
     Wide Modal - used for showing larger content to the user, e.g. ShEx source code
@@ -359,10 +342,9 @@ div.quickSummarySectionIcon {
     display: none;
 }
 
-
 #schemaDescription {
-  word-wrap: break-word;
-  word-break: break-all;
+    word-wrap: break-word;
+    word-break: break-all;
 }
 
 #closedShapesOption {
@@ -371,11 +353,69 @@ div.quickSummarySectionIcon {
     vertical-align: bottom;
 }
 
-
 #resourceShapeMapTable {
     background: #f9f9f9;
 }
 
 #resourceShapeMapTable > tbody > tr:nth-of-type(odd) {
     background: #ffffff;
+}
+
+/*
+    Validation results error list
+*/
+
+#accordion .glyphicon {
+    margin-right: 10px;
+}
+
+.panel-collapse > .list-group .list-group-item:first-child {
+    border-top-right-radius: 0;
+    border-top-left-radius: 0;
+}
+
+.panel-collapse > .list-group > .list-group-item:first-child {
+    padding-bottom: 0;
+}
+
+.panel-collapse > .list-group .list-group-item {
+    border-width: 1px 0;
+}
+
+.panel-collapse > .list-group {
+    margin-bottom: 0;
+}
+
+.panel-collapse .list-group-item {
+    border-radius: 0;
+}
+
+.panel-collapse .list-group .list-group {
+    margin: 0;
+    margin-top: 10px;
+}
+
+.panel-collapse .list-group-item li.list-group-item {
+    margin: 0 -15px;
+    border-top: 1px solid #ddd !important;
+    border-bottom: 0;
+    padding-left: 30px;
+}
+
+.panel-collapse .list-group-item li.list-group-item:last-child {
+    padding-bottom: 10px;
+}
+
+.panel-collapse div.list-group div.list-group {
+    margin: 0;
+}
+
+.panel-collapse div.list-group .list-group a.list-group-item {
+    border-top: 1px solid #ddd !important;
+    border-bottom: 0;
+    padding-left: 30px;
+}
+
+.panel-collapse .list-group-item li.list-group-item {
+    border-top: 1px solid #DDD !important;
 }

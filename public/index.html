@@ -32,42 +32,54 @@
                             </div>
                             <div class="modal-body">
                                 <p>
-                                    Validata was developed as part of a group project for students on the <a href="http://www.undergraduate.hw.ac.uk/programmes/G601/">Software Engineering MEng</a> course at Heriot-Watt University led by <a href="http://www.macs.hw.ac.uk/~ajg33/">Alasdair J G Gray</a>.<br />
+                                    Validata was developed as part of a group project for students on the
+                                    <a href="http://www.undergraduate.hw.ac.uk/programmes/G601/">Software Engineering MEng</a> course at Heriot-Watt University led by
+                                    <a href="http://www.macs.hw.ac.uk/~ajg33/">Alasdair J G Gray</a>.<br/>
                                     Building upon previous work, the group developed this tool to demonstrate real-world usage of Shape Expressions with a simple, intuitive interface.
                                 </p>
+
                                 <p>
-                                    All code and resources are licensed under the free and permissive MIT license.<br />
-                                    Code for both the validator (NodeJS module) and Validata (this web interface) is available on <a href="https://github.com/HeriotWattMEng2015">GitHub</a>
+                                    All code and resources are licensed under the free and permissive MIT license.<br/>
+                                    Code for both the validator (NodeJS module) and Validata (this web interface) is available on
+                                    <a href="https://github.com/HeriotWattMEng2015">GitHub</a>
                                 </p>
-                                <br />
-                                
+                                <br/>
+
                                 <h4>Development Team</h4>
+
                                 <p>
                                     <a href="http://andrewbeveridge.co.uk">Andrew Beveridge</a>
                                 </p>
+
                                 <p>
                                     <a href="https://www.linkedin.com/profile/view?id=35338396">Jacob Baungard Hansen</a>
                                 </p>
+
                                 <p>
                                     <a href="https://github.com/Doix">Johnny Val</a>
                                 </p>
+
                                 <p>
                                     <a href="http://leifgehrmann.co.uk">Leif Gehrmann</a>
                                 </p>
+
                                 <p>
                                     <a href="https://www.linkedin.com/profile/view?id=229423071">Roisin Farmer</a>
                                 </p>
+
                                 <p>
                                     <a href="https://www.linkedin.com/profile/view?id=212871327">Sunil Khutan</a>
                                 </p>
+
                                 <p>
                                     <a href="https://www.linkedin.com/in/tomasrobertson">Tomas Robertson</a>
                                 </p>
-                                
-                                <br />
+
+                                <br/>
                                 <h4>Contributing Authors</h4>
+
                                 <p>
-                                    <a href="http://www.w3.org/People/Eric/">Eric Prud'Hommeaux</a><br />
+                                    <a href="http://www.w3.org/People/Eric/">Eric Prud'Hommeaux</a><br/>
                                 </p>
                             </div>
                             <div class="modal-footer">
@@ -76,16 +88,19 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <h2>Validata: RDF Validator using Shape Expressions</h2>
 
                 <p>
                     Validata is an intuitive, standalone web-based tool to help building valid RDF documents by validating against preset schemas written in the Shape Expressions (ShEx) language.
                 </p>
+
                 <p>
-                    All work is licensed under the permissive <a href="http://opensource.org/licenses/MIT">MIT license</a> by <a href="#" data-toggle="modal" data-target="#contributorsModal">various authors</a>.
+                    All work is licensed under the permissive
+                    <a href="http://opensource.org/licenses/MIT">MIT license</a> by
+                    <a href="#" data-toggle="modal" data-target="#contributorsModal">various authors</a>.
                 </p>
-                
+
             </div>
         </nav>
 
@@ -97,7 +112,7 @@
                 <li id="wizardSidebarStepOptions" class="wizardSidebarStep">Configure Options</li>
                 <li id="wizardSidebarStepResults" class="wizardSidebarStep">Validation Results</li>
             </ul>
-            
+
             <div id="demoPanel" class="panel panel-info">
 
                 <div id="demoPanelHeading" class="panel-heading">
@@ -106,18 +121,19 @@
 
                 <div id="demoPanelContent" class="panel-body">
                     <div id="demoPanelButtonGroup" class="btn-group-vertical btn-block" role="group">
-                        
+
                     </div>
                 </div>
 
             </div>
 
         </div>
-        
+
         <div id="quickSummaryPanel" class="panel panel-default">
 
             <div id="quickSummaryPanelHeading" class="panel-heading">
                 <h4>Status Summary</h4>
+
                 <div id="quickSummaryPanelLoader" class="loader hidden">
                     <svg class="circular">
                         <circle class="path" cx="15" cy="15" r="6" fill="none" stroke-width="0.6" stroke-miterlimit="3"/>
@@ -281,7 +297,7 @@
                             <div class="panel-collapse collapse in">
                                 <div class="panel-body">
                                     <form id="form-validationoptions">
-                                        
+
                                         <div class="alert alert-info">
                                             <p>The resource(s) to validate and shape(s) to validate against must be specified.</p>
                                             <br/>
@@ -293,7 +309,7 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody id="resourceShapeMapTableBody">
-                                                    
+
                                                 </tbody>
                                                 <tfoot>
                                                     <tr>
@@ -310,7 +326,7 @@
                                             <p>Validata uses the Closed World Assumption by default, meaning all used properties must be defined in the schema. Untick this box to validate in Open World mode.</p>
                                             <br/>
                                             <label for="closedShapesOption">Closed World validation:</label>
-                                            <input id="closedShapesOption" class="form-control" type="checkbox" checked />
+                                            <input id="closedShapesOption" class="form-control" type="checkbox" checked/>
                                         </div>
 
                                         <div id="reqLevelPanel" class="alert alert-info">
@@ -318,11 +334,11 @@
                                                 <label for="reqLevelSelector">Select Requirement Level</label>
                                                 <select id="reqLevelSelector" class="form-control">
                                                     <option value="" disabled selected>Click here to select a validation strictness...</option>
-													<option value="DEFAULT">DEFAULT</option>
+                                                    <option value="DEFAULT">DEFAULT</option>
                                                 </select>
                                             </div>
                                         </div>
-                                        
+
                                     </form>
                                 </div>
                             </div>
@@ -336,20 +352,106 @@
                             <div class="panel-collapse collapse in">
                                 <div class="panel-body">
 
-                                    <div id="validationSuccessAlert" class="alert alert-success hiddenFadeIn" role="alert">
-                                        <h4>Validation Succeeded!</h4>
-                                    </div>
+                                    <div class="panel-group" id="accordion">
+                                        <div class="panel panel-default">
+                                            <div class="panel-heading">
+                                                <h4 class="panel-title">
+                                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseErrors"><span class="glyphicon glyphicon-exclamation-sign"></span>Errors</a>
+                                                </h4>
+                                            </div>
+                                            <div id="collapseErrors" class="panel-collapse collapse in">
+                                                <ul class="list-group">
+                                                    <li class="list-group-item">
+                                                        <span class="glyphicon glyphicon-"></span>Validation failed for thing: thing!
+                                                        <ul class="list-group">
+                                                            <li class="list-group-item list-group-item-warning">
+                                                                <span class="glyphicon glyphicon-warning-sign"></span>Warning Message: No thing should exist in the thing!
+                                                            </li>
 
-                                    <div id="validationErrorAlert" class="alert alert-danger hiddenFadeIn" role="alert">
-                                        <h4>Validation Failed:</h4>
+                                                            <li class="list-group-item list-group-item-danger">
+                                                                <span class="glyphicon glyphicon-exclamation-sign"></span>Error Message: Thing 1 is broken!
+                                                            </li>
 
-                                        <ul id="validationErrorsList" class="list-group"></ul>
-                                    </div>
-                                    
-                                    <div id="validationWarningAlert" class="alert alert-warning hiddenFadeIn" role="alert">
-                                        <h4>Validation Warnings:</h4>
+                                                            <li class="list-group-item list-group-item-danger">
+                                                                <span class="glyphicon glyphicon-exclamation-sign"></span>Error Message: Thing 1 is broken!
+                                                            </li>
 
-                                        <ul id="validationWarningsList" class="list-group"></ul>
+                                                        </ul>
+                                                    </li>
+
+                                                    <li class="list-group-item">
+                                                        <span class="glyphicon glyphicon-exclamation-sign text-danger"></span><a href="http://fb.com/moinakbarali">News</a>
+                                                    </li>
+
+                                                    <li class="list-group-item">
+                                                        <span class="glyphicon glyphicon-file text-info"></span><a href="http://fb.com/moinakbarali">Newsletters</a>
+                                                    </li>
+
+                                                    <li class="list-group-item">
+                                                        <span class="glyphicon glyphicon-comment text-danger"></span><a href="http://fb.com/moinakbarali">Comments</a><span class="badge">42</span>
+                                                    </li>
+
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="panel panel-default">
+                                            <div class="panel-heading">
+                                                <h4 class="panel-title">
+                                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseFour"><span class="glyphicon glyphicon-file"></span>Reports</a>
+                                                </h4>
+                                            </div>
+                                            <div id="collapseFour" class="panel-collapse collapse">
+                                                <div class="list-group">
+                                                    <a href="#" class="list-group-item">
+                                                        Cras justo odio
+                                                    </a>
+
+                                                    <div class="list-group">
+                                                        <a href="#" class="list-group-item">
+                                                            Cras justo odio
+                                                        </a>
+                                                        <a href="#" class="list-group-item">Dapibus ac facilisis in</a>
+                                                        <a href="#" class="list-group-item">Morbi leo risus</a>
+                                                        <a href="#" class="list-group-item">Porta ac consectetur ac</a>
+                                                        <a href="#" class="list-group-item">Vestibulum at eros</a>
+                                                    </div>
+                                                    <a href="#" class="list-group-item">Dapibus ac facilisis in</a>
+                                                    <a href="#" class="list-group-item">Morbi leo risus</a>
+                                                    <a href="#" class="list-group-item">Porta ac consectetur ac</a>
+                                                    <a href="#" class="list-group-item">Vestibulum at eros</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="panel panel-default">
+                                            <div class="panel-heading">
+                                                <h4 class="panel-title">
+                                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseFive"><span class="glyphicon glyphicon-heart"></span>Reports</a>
+                                                </h4>
+                                            </div>
+                                            <div id="collapseFive" class="panel-collapse collapse">
+                                                <div class="list-group">
+                                                    <a href="#" class="list-group-item">
+                                                        <h4 class="list-group-item-heading">List group item heading</h4>
+
+                                                        <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+                                                    </a>
+                                                </div>
+                                                <div class="list-group">
+                                                    <a href="#" class="list-group-item active">
+                                                        <h4 class="list-group-item-heading">List group item heading</h4>
+
+                                                        <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+                                                    </a>
+                                                </div>
+                                                <div class="list-group">
+                                                    <a href="#" class="list-group-item">
+                                                        <h4 class="list-group-item-heading">List group item heading</h4>
+
+                                                        <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                 </div>
