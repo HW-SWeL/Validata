@@ -358,8 +358,6 @@ UI = {
             resourceShapeMap[resource] = row.find('select.shapeSelector').val();
         });
 
-        Log.i("resourceShapeMap returned by buildResourceShapeMapFromTable:");
-        Log.i(resourceShapeMap);
         return resourceShapeMap;
     },
 
@@ -412,13 +410,6 @@ UI = {
         {
             $.each(Validata.Validation.options.resourceShapeMap, function(resource, shape) {
                 var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
-
-                Log.i("resource: ");
-                Log.i(resource);
-                
-                
-                Log.i("resourceShapeSelectorRow: ");
-                Log.i(resourceShapeSelectorRow);
                 
                 resourceShapeSelectorRow
                     .find('select.resourceSelector')
@@ -490,8 +481,6 @@ UI = {
             return false;
         });
         
-        Log.i("Validata.Validation.options.resourceShapeMap at end of updateResourceShapeMapTable:");
-        Log.i(Validata.Validation.options.resourceShapeMap);
     }
     
 };

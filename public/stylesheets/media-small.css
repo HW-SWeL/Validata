@@ -6,6 +6,7 @@
 #topNavbar {
     height: 120px;
     overflow: hidden;
+    overflow-y: auto;
 }
 
 /*
