@@ -56,7 +56,7 @@ ul#wizardSidebarStepsList li.wizardSidebarStep:before {
     width: 2em;
     line-height: 2em;
     border: none;
-    background: #0088cc;
+    background: #337ab7;
     text-align: center;
     font-weight: bold;
     color: white;
@@ -68,11 +68,11 @@ ul#wizardSidebarStepsList li.wizardSidebarStep:before {
 }
 
 ul#wizardSidebarStepsList li.wizardSidebarStep.wizard-active {
-    color: #0088cc;
+    color: #337ab7;
 }
 
 ul#wizardSidebarStepsList li.wizardSidebarStep.wizard-active:before {
-    background: #0088cc;
+    background: #337ab7;
 }
 
 /*
@@ -94,17 +94,13 @@ div#demoPanelButtonGroup button.demoButton {
     text-align: left;
 }
 
-div.demoButtonIcon {
+.demoButtonIcon {
     display: block;
     position: absolute;
-    left: 8px;
-    width: 20px;
-    height: 24px;
+    top: 4px;
+    left: 2px;
     margin: 0;
     vertical-align: middle;
-
-    background-image: url('../components/material-design-icons/sprites/css-sprite/sprite-av-white.png');
-    background-position: -113px -142px;
 }
 
 /*
@@ -136,10 +132,7 @@ div#quickSummaryPanel tr.quickSummarySection td {
     padding-bottom: 0 !important;
 }
 
-div.quickSummarySectionIcon {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
+.quickSummarySectionIcon {
     margin: 8px 0 8px 0;
 }
 
@@ -159,24 +152,83 @@ div.quickSummarySectionIcon {
     background: #bfe3b2;
 }
 
-.quickSummarySection.quickSummaryStatusIncomplete div.quickSummarySectionIcon {
-    background-position: 0 -24px;
-    background-repeat: no-repeat;
-    background-image: url(/images/svg-sprites-black/svg-sprite-toggle.svg);
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconIncomplete {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconWarning,
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconInvalid {
+    display: none;
 }
 
-.quickSummarySection.quickSummaryStatusInvalid div.quickSummarySectionIcon,
-.quickSummarySection.quickSummaryStatusWarning div.quickSummarySectionIcon {
-    background-position: 0 -648px;
-    background-repeat: no-repeat;
-    background-image: url(/images/svg-sprites-black/svg-sprite-content.svg);
+
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconWarning {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconInvalid {
+    display: none;
 }
 
-.quickSummarySection.quickSummaryStatusValid div.quickSummarySectionIcon {
-    background-position: 0 0;
-    background-repeat: no-repeat;
-    background-image: url(/images/svg-sprites-black/svg-sprite-toggle.svg);
+
+
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconInvalid {
+    display: inline-block;
 }
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconWarning {
+    display: none;
+}
+
+
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconValid {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconWarning,
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconInvalid {
+    display: none;
+}
+
+
+.svg-size-24px {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+.svg-size-20px {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+}
+
+.svg-path-white {
+    fill: #ffffff;
+}
+
+.svg-path-primary {
+    fill: #337ab7;
+}
+
+.svg-path-success {
+    fill: #5cb85c;
+}
+
+.svg-path-info {
+    fill: #5bc0de;
+}
+
+.svg-path-warning {
+    fill: #f0ad4e;
+}
+
+.svg-path-danger {
+    fill: #d9534f;
+}
+
 
 /* 
     Material Design Loader
@@ -361,61 +413,49 @@ div.quickSummarySectionIcon {
     background: #ffffff;
 }
 
-/*
-    Validation results error list
-*/
 
-#accordion .glyphicon {
-    margin-right: 10px;
-}
 
-.panel-collapse > .list-group .list-group-item:first-child {
-    border-top-right-radius: 0;
-    border-top-left-radius: 0;
-}
-
-.panel-collapse > .list-group > .list-group-item:first-child {
-    padding-bottom: 0;
-}
-
-.panel-collapse > .list-group .list-group-item {
-    border-width: 1px 0;
-}
-
-.panel-collapse > .list-group {
+.validationResultsAccordion div.panel-group,
+.validationResultsAccordion ul.list-group {
     margin-bottom: 0;
 }
 
-.panel-collapse .list-group-item {
-    border-radius: 0;
+.panel-heading {
+    padding: 0;
 }
 
-.panel-collapse .list-group .list-group {
+.panel-title {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    padding: 10px 15px;
+}
+
+a.panel-title {
+    color: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
     margin: 0;
-    margin-top: 10px;
+    text-decoration: none;
+    vertical-align: bottom;
+    line-height: 23px;
 }
 
-.panel-collapse .list-group-item li.list-group-item {
-    margin: 0 -15px;
-    border-top: 1px solid #ddd !important;
-    border-bottom: 0;
+
+.resourceShapeErrorsListGroup li,
+.resourceShapeWarningsListGroup li,
+.resourceShapeMatchesListGroup li {
     padding-left: 30px;
 }
 
-.panel-collapse .list-group-item li.list-group-item:last-child {
-    padding-bottom: 10px;
+.validationResultsErrorMessageBody {
+    cursor: pointer;
 }
 
-.panel-collapse div.list-group div.list-group {
-    margin: 0;
+.validationResultsAccordion .panel-heading span {
+    vertical-align: bottom;
+    font-weight: bold;
 }
 
-.panel-collapse div.list-group .list-group a.list-group-item {
-    border-top: 1px solid #ddd !important;
-    border-bottom: 0;
-    padding-left: 30px;
-}
 
-.panel-collapse .list-group-item li.list-group-item {
-    border-top: 1px solid #DDD !important;
-}

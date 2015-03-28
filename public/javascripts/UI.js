@@ -60,12 +60,17 @@ UI = {
         
         UI.schemaErrorAlert = $('#schemaErrorAlert');
         UI.dataErrorAlert = $('#dataErrorAlert');
+
+        UI.validationResultsByErrorLevelAccordion = $('#validationResultsByErrorLevelAccordion');
         
-        UI.validationSuccessAlert = $('#validationSuccessAlert');
-        UI.validationErrorAlert = $('#validationErrorAlert');
-		UI.validationWarningAlert = $('#validationWarningAlert');
-        UI.validationErrorsList = $('#validationErrorsList');
-		UI.validationWarningsList = $('#validationWarningsList');
+        UI.validationResultsErrorsResourceShapesPanel = $('#validationResultsErrorsResourceShapesPanel');
+        UI.validationResultsWarningsResourceShapesPanel = $('#validationResultsWarningsResourceShapesPanel');
+        UI.validationResultsMatchesResourceShapesPanel = $('#validationResultsMatchesResourceShapesPanel');
+        
+        UI.validationResultsErrorsCount = $('#validationResultsErrorsCount');
+        UI.validationResultsWarningsCount = $('#validationResultsWarningsCount');
+        UI.validationResultsMatchesCount = $('#validationResultsMatchesCount');
+        
     },
     
     setupEventHandlers: function setupEventHandlers()
@@ -182,15 +187,19 @@ UI = {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         UI.quickSummaryPanelLoader.removeClass('hidden');
-
-        UI.validationSuccessAlert.fadeOut('fast');
         
-        UI.validationErrorAlert.fadeOut('fast');
-        UI.validationErrorsList.empty();
-        
-        UI.validationWarningAlert.fadeOut('fast');
-        UI.validationWarningsList.empty();
+        var quickSummaryStatusClassesToRemove = 'quickSummaryStatusIncomplete quickSummaryStatusInvalid quickSummaryStatusValid quickSummaryStatusWarning';
 
+        UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+        UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+        UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+        
+        UI.validationResultsByErrorLevelAccordion.fadeOut('fast');
+
+        UI.validationResultsErrorsResourceShapesPanel.empty().addClass('in');
+        UI.validationResultsWarningsResourceShapesPanel.empty().addClass('in');
+        UI.validationResultsMatchesResourceShapesPanel.empty().removeClass('in');
+        
         Util.waitForFinalEvent(function waitForFinalEventCallback()
         {
             UI.staggeredContentChange();
@@ -322,7 +331,9 @@ UI = {
             
             $.each(Validata.Schema.dataDemos, function schemaDataDemosIterator(index, dataDemoObject)
             {
-                $('<button type="button" class="btn btn-block btn-success demoButton"><div class="demoButtonIcon"></div>' + dataDemoObject['name'] + '</button>').on('click', function dataDemoButtonClick() {
+                var demoButtonIcon = '<svg viewBox="0 552 24 24" class="demoButtonIcon svg-path-white svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="/images/svg-sprite/svg-sprite-av.svg#ic_play_arrow_24px"></use></svg>';
+                
+                $('<button type="button" class="btn btn-block btn-success demoButton">' + demoButtonIcon + dataDemoObject['name'] + '</button>').on('click', function dataDemoButtonClick() {
                     Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
                     
                     UI.activateWizardStep("Data", true);
