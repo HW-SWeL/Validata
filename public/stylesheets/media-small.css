@@ -91,3 +91,15 @@ body.topNavbarInvisible #sidebarContentWrapper {
     -moz-border-radius-bottomleft: 0;
     border-bottom-left-radius: 0;
 }
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+    .loader {
+        -ms-zoom: 1;
+        
+        background: url(/images/material-spinner-50px.gif) center center no-repeat !important;
+        background-size: 30px !important;
+        
+        top: 3px;
+        right: 3px;
+    }
+}

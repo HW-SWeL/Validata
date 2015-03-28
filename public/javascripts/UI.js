@@ -164,14 +164,15 @@ UI = {
             reader.readAsText(inputFile);
         });
 
-        var body = $("body");        
+        var $window = $(window);
+        var body = $("body");
         var sidebarContentWrapper = $("#sidebarContentWrapper");
 
-        $(window).scroll(function(){
-            if (body[0].scrollTop > 125) {
+        $window.scroll(function(){
+            if ( $window.scrollTop() > 125) {
                 body.removeClass("topNavbarVisible").addClass("topNavbarInvisible");
             } else {
-                sidebarContentWrapper.css('max-height', body.height() - 360 + body[0].scrollTop);
+                sidebarContentWrapper.css('max-height', body.height() - 360 + $window.scrollTop());
                 body.removeClass("topNavbarInvisible").addClass("topNavbarVisible");
             }
         });

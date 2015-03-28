@@ -13421,7 +13421,7 @@ exports.parseSchema = function parseSchema(schemaText) {
         var resolver = RDF.createIRIResolver();
         var schema;
         try {
-            schema = shexSchemaParser.parse(schemaText, {iriResolver: resolver});
+            schema = shexSchemaParser.parse(schemaText, {iriResolver: resolver, bnodeScope:RDF.createBNodeScope()});
         }
         catch (e) {
             reject(e);
@@ -13538,8 +13538,21 @@ function errorToString(fail) {
             //when there are less failures than disjoints, that means that
             //there are failures-disjoints violations of the or rule (maybe)
             else if (fail.failures.length < fail.rule.disjoints.length) {
+                var retString = "Can have either:\n ";
+                fail.rule.disjoints.forEach(function(d){
+                    //dont show all possible values, only ones which are present
+                    //in the data
+                    if (!disjointInFailures(d,this.fail.failures)){
+                        retString += "\t Property " + d.nameClass.term._pos._orig
+                        + " with type " + d.valueClass._pos._orig +" or \n";
+                    }
+                }.bind({fail: fail}));
+                // remove last occurence of or
+                var n = retString.lastIndexOf('or');
+                return retString.substring(0,n);
                 
             }
+            
         }
 
         else {
@@ -13553,7 +13566,13 @@ function errorToString(fail) {
         return "RuleFailValue - if you get this message contact someone";
     }
     else if (fail._ === "RuleFailExtra") {
-        return "RuleFailExtra - if you get this message contact someone";
+        //this is wrong
+        var retString = "";
+        fail.triples.forEach(function(t){
+           retString += t.p.lex + " is not a valid property \n";
+        });
+        return retString;
+        //return fail.triples[0].p.lex.split('/').slice(-2).join(":") + " is not a valid property";
     }
     else if (fail._ === "RuleFail") {
         // Maybe replace this with the non expanded types - it's unclear
@@ -13562,6 +13581,19 @@ function errorToString(fail) {
         + " has a value with type: " + fail.triple.o.datatype 
         + " instead of the expected type: " + fail.rule.valueClass.toString();
     }
+}
+
+function disjointInFailures(disjoint,failures){
+    var contains = false;
+    failures.forEach(function(f){
+        f.errors.forEach(function(e){
+            console.log(e.rule.nameClass.term._pos._orig);
+            if (disjoint.nameClass.term._pos._orig === 
+                e.rule.nameClass.term._pos._orig)
+                contains = true;
+        });
+    });
+    return contains;
 }
 
 function getLine(fail) {

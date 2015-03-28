@@ -65,9 +65,15 @@ Log = {
             inlineTraceString += inputArguments.callee.name;
         }
 
-        if(inputCallee.caller)
+        
+        try {
+            if(inputCallee.caller)
+            {
+                inlineTraceString += " called by " + inputCallee.caller.name;
+            }
+        }
+        catch(e)
         {
-            inlineTraceString += " called by " + inputCallee.caller.name;
         }
 
         if(inputArguments.length)

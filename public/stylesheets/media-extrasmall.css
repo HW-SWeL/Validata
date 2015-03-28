@@ -1,3 +1,82 @@
+/* Keyframes for animations to work in IE */
+
+
+@-webkit-keyframes rotate {
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes rotate {
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@-webkit-keyframes dash {
+    0% {
+        stroke-dasharray: 1, 60;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -10;
+    }
+    100% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -37;
+    }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 60;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -10;
+    }
+    100% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -37;
+    }
+}
+
+@-webkit-keyframes color {
+    100%, 0% {
+        stroke: #d62d20;
+    }
+    40% {
+        stroke: #0057e7;
+    }
+    66% {
+        stroke: #008744;
+    }
+    80%, 90% {
+        stroke: #dd9100;
+    }
+}
+
+@keyframes color {
+    100%, 0% {
+        stroke: #d62d20;
+    }
+    40% {
+        stroke: #0057e7;
+    }
+    66% {
+        stroke: #008744;
+    }
+    80%, 90% {
+        stroke: #be7d00;
+    }
+}
+
+
+
 /* 
     Basic page structure - 250px wide fixed left sidebar which disappears on extrasmall screens
 */
@@ -240,7 +319,12 @@ div#quickSummaryPanel tr.quickSummarySection td {
     right: 2px;
     width: 30px;
     height: 30px;
+    
     zoom: 1.7;
+    -webkit-zoom: 1.7;
+    -moz-transform:  scale(1.7, 1.7);
+    -moz-transform-origin: right top;
+    
     z-index: 10;
 
     overflow: hidden;
@@ -271,80 +355,6 @@ div#quickSummaryPanel tr.quickSummarySection td {
     -webkit-animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
     animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
     stroke-linecap: round;
-}
-
-@-webkit-keyframes rotate {
-    100% {
-        -webkit-transform: rotate(360deg);
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes rotate {
-    100% {
-        -webkit-transform: rotate(360deg);
-        transform: rotate(360deg);
-    }
-}
-
-@-webkit-keyframes dash {
-    0% {
-        stroke-dasharray: 1, 60;
-        stroke-dashoffset: 0;
-    }
-    50% {
-        stroke-dasharray: 27, 60;
-        stroke-dashoffset: -10;
-    }
-    100% {
-        stroke-dasharray: 27, 60;
-        stroke-dashoffset: -37;
-    }
-}
-
-@keyframes dash {
-    0% {
-        stroke-dasharray: 1, 60;
-        stroke-dashoffset: 0;
-    }
-    50% {
-        stroke-dasharray: 27, 60;
-        stroke-dashoffset: -10;
-    }
-    100% {
-        stroke-dasharray: 27, 60;
-        stroke-dashoffset: -37;
-    }
-}
-
-@-webkit-keyframes color {
-    100%, 0% {
-        stroke: #d62d20;
-    }
-    40% {
-        stroke: #0057e7;
-    }
-    66% {
-        stroke: #008744;
-    }
-    80%, 90% {
-        stroke: #dd9100;
-    }
-}
-
-@keyframes color {
-    100%, 0% {
-        stroke: #d62d20;
-    }
-    40% {
-        stroke: #0057e7;
-    }
-    66% {
-        stroke: #008744;
-    }
-    80%, 90% {
-        stroke: #be7d00;
-    }
 }
 
 /*
