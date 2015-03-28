@@ -178,92 +178,228 @@ Validata = {
         }, 1000, "updateValidationMessages");
     },
     
-    getValidationErrors: function getValidationErrors()
-    {
-        var validationErrors = [];
-        
-        if( Util.iterableLength(Validata.Validation.rawResponses) )
-        {
-            $.each(Validata.Validation.rawResponses, function(index, rawResponse) {
-                validationErrors = $.extend(validationErrors, rawResponse['errors']);
-            });
-        }
-        
-        return validationErrors;
-    },
-    
     updateValidationMessages: function updateValidationMessages()
     {
         Log.v("Validation." + Log.getInlineFunctionTrace(arguments, arguments.callee));
-
-        var quickSummaryStatusClassesToRemove = 'quickSummaryStatusIncomplete quickSummaryStatusInvalid quickSummaryStatusValid quickSummaryStatusWarning';
         
         var schemaErrorAlertVisible = false;
         var dataErrorAlertVisible = false;
-        var validationSuccessAlertVisible = false;
-        var validationErrorAlertVisible = false;
-		var validationWarningAlertVisible = false;
-
+        var validationMessagesVisible = true;
+        
+        var quickSummaryStatusSchema = "Incomplete";
+        var quickSummaryStatusData = "Incomplete";
+        var quickSummaryStatusResults = "Incomplete";
+        
         if( Util.iterableLength( Validata.Validation ) )
         {
-            var validationErrors = Validata.getValidationErrors();
-            
-            if( ! Util.iterableLength(validationErrors) )
+            // Iterate through validation responses and build array of messages arranged by resource and error level
+            var validationMessagesByResourceShape = {};
+            var errorCount = 0;
+            var warningCount = 0;
+            var matchesCount = 0;
+
+            if( Util.iterableLength(Validata.Validation.rawResponses) )
             {
-                validationSuccessAlertVisible = true;
-                validationErrorAlertVisible = false;
-				validationWarningAlertVisible = false;
-                
-                UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusValid');
+                $.each(Validata.Validation.rawResponses, function(rawResponseIndex, rawResponse) 
+                {
+                    var rawResponseStartingResourceString = Util.stringValue( rawResponse['startingResource'].toString() );
+                    
+                    validationMessagesByResourceShape[rawResponseStartingResourceString] = {
+                        'errors': [],
+                        'warnings': [],
+                        'matches': []
+                    };
+
+                    if( Util.iterableLength(rawResponse['errors']) )
+                    {
+                        $.each(rawResponse['errors'], function(index, rawError) 
+                        {
+                            rawError['startingResource'] = rawResponse['startingResource'];
+
+                            var errorLevel = "error";
+                            
+                            var reqLevel = UI.reqLevelSelector.val();
+                            
+                            if(reqLevel != null && reqLevel != "DEFAULT" && rawError.req_lev != null && UI.reqLevels.indexOf(reqLevel) > -1)
+                            {
+                                if(UI.reqLevels.indexOf(reqLevel) > UI.reqLevels.indexOf(rawError.req_lev.toUpperCase()))
+                                {
+                                    errorLevel = "warning";
+                                }
+                            }
+                            
+                            if(errorLevel == "error")
+                            {
+                                validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'].push(rawError);
+                                errorCount++;
+                            }
+                            else if(errorLevel == "warning")
+                            {
+                                validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings'].push(rawError);
+                                warningCount++;
+                            }
+                            
+                        });
+                    }
+                    
+                    if( Util.iterableLength(rawResponse['matches']) )
+                    {
+                        $.each(rawResponse['matches'], function(index, rawMatch) 
+                        {
+                            rawMatch['startingResource'] = rawResponse['startingResource'];
+                            validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'].push(rawMatch);
+                            matchesCount++;
+                        });
+                    }
+                    
+                    
+                    // Add this resource to the errors panel and actually print the errors if we have some
+                    if( Util.iterableLength(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors']) )
+                    {
+                        var errorsResourceSectionHTMLString = 
+                            '<div class="panel-heading">' +
+                            '    <a data-toggle="collapse" href="#errorsResourceShape' + rawResponseIndex + '" class="panel-title">' +
+                            '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+                            '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
+                            '        </svg>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + '</span>' +
+                            '    </a>' +
+                            '</div>' +
+                            '<div id="errorsResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
+                            '    <ul class="list-group resourceShapeErrorsListGroup">';
+
+                        
+                        $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'], function(index, rawError)
+                        {
+                            var messageBody = '<span class="validationResultsErrorMessageBody" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
+                            
+                            errorsResourceSectionHTMLString +=
+                                '        <li class="list-group-item">' +
+                                '            <svg viewBox="0 648 24 24" class="svg-size-20px svg-path-danger" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+                                '                <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_report_24px"></use>' +
+                                '            </svg>' +
+                                            messageBody +
+                                '        </li>';
+                        });
+
+                        errorsResourceSectionHTMLString +=
+                            '    </ul>' +
+                            '</div>';
+                        
+                        $(errorsResourceSectionHTMLString).appendTo( UI.validationResultsErrorsResourceShapesPanel );
+                    }
+                    
+                    
+                    // Add this resource to the warnings panel and actually print the warnings if we have some
+                    if( Util.iterableLength(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings']) )
+                    {
+                        var warningsResourceSectionHTMLString = 
+                            '<div class="panel-heading">' +
+                            '    <a data-toggle="collapse" href="#warningsResourceShape' + rawResponseIndex + '" class="panel-title">' +
+                            '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+                            '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
+                            '        </svg>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + '</span>' +
+                            '    </a>' +
+                            '</div>' +
+                            '<div id="warningsResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
+                            '    <ul class="list-group resourceShapeWarningsListGroup">';
+
+                        
+                        $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings'], function(index, rawError)
+                        {
+                            var messageBody = '<span class="validationResultsErrorMessageBody" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
+
+                            warningsResourceSectionHTMLString +=
+                                '        <li class="list-group-item">' +
+                                '            <svg viewBox="0 24 24 24" class="svg-size-20px svg-path-warning" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+                                '                <use xlink:href="/images/svg-sprite/svg-sprite-alert.svg#ic_warning_24px"></use>' +
+                                '            </svg>' +
+                                            messageBody +
+                                '        </li>';
+                        });
+
+                        warningsResourceSectionHTMLString +=
+                            '    </ul>' +
+                            '</div>';
+
+
+                        $(warningsResourceSectionHTMLString).appendTo( UI.validationResultsWarningsResourceShapesPanel);
+                    }
+                    
+                    
+                    // Add this resource to the matches panel and actually print the matched rules if we have some
+                    if( Util.iterableLength(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches']) )
+                    {
+                        var matchesResourceSectionHTMLString = 
+                            '<div class="panel-heading">' +
+                            '    <a data-toggle="collapse" href="#matchesResourceShape' + rawResponseIndex + '" class="panel-title">' +
+                            '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+                            '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
+                            '        </svg>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + '</span>' +
+                            '    </a>' +
+                            '</div>' +
+                            '<div id="matchesResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
+                            '    <ul class="list-group resourceShapeMatchesListGroup">';
+                        
+                        $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'], function(index, rawMatch)
+                        {
+                            matchesResourceSectionHTMLString +=
+                                '        <li class="list-group-item">' +
+                                '            <svg viewBox="0 1368 24 24" class="svg-size-20px svg-path-success" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+                                '                <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_info_24px"></use>' +
+                                '            </svg>' +
+                                '            <span class="validationResultsMatchMessageBody">' + Util.escapeHtml( rawMatch.toString() ) + '</span>' +
+                                '        </li>';
+                        });
+
+                        matchesResourceSectionHTMLString +=
+                            '    </ul>' +
+                            '</div>';
+
+                        $(matchesResourceSectionHTMLString).appendTo( UI.validationResultsMatchesResourceShapesPanel);
+                    }
+                    
+                    
+                });
+            }
+            
+            // Add event handlers to errors if they have line numbers
+            UI.validationResultsByErrorLevelAccordion.find('.validationResultsErrorMessageBody').on('click', function() {
+                var lineNumber = $(this).data('linenumber');
+                if( Util.stringIsNotBlank(lineNumber) )
+                {
+                    alert("Scrolling to lineNumber: " + lineNumber);
+                }
+            });
+
+            UI.validationResultsErrorsCount.text(errorCount);
+            UI.validationResultsWarningsCount.text(warningCount);
+            UI.validationResultsMatchesCount.text(matchesCount);
+            
+            if( errorCount )
+            {
+                quickSummaryStatusResults = "Invalid";
+            }
+            else if( warningCount )
+            {
+                quickSummaryStatusResults = "Warning";
+            }
+            else if( matchesCount == 0 )
+            {
+                quickSummaryStatusResults = "Incomplete";
             }
             else
             {
-
-                UI.validationErrorsList.empty();
-				UI.validationWarningsList.empty();
-				
-                $.each(validationErrors, function (index, errorObject)
-                {
-                    var reqLev = UI.reqLevelSelector.val();
-                    if(UI.reqLevelSelector.val() != null && 
-                        UI.reqLevelSelector.val() != "DEFAULT" && 
-                        errorObject.req_lev !=null &&
-                        UI.reqLevels.indexOf(reqLev) > -1){
-                            if(UI.reqLevels.indexOf(reqLev) > UI.reqLevels.indexOf(errorObject.req_lev.toUpperCase()))
-                            {
-                                $('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationWarningsList);
-                            }
-                            else{
-                                $('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
-                            }
-                    }
-                    else{
-                        $('<li class="list-group-item">' + errorObject.description.replace("contact someone", "blame johnny") /* errorObject['name'] + ': ' + Util.escapeHtml(errorObject['triple'].toString())*/ + '</li>').appendTo(UI.validationErrorsList);
-                    }
-                    
-                });
-                
-                validationSuccessAlertVisible = false;
-                validationErrorAlertVisible = UI.validationErrorsList.children().length > 0;
-                validationWarningAlertVisible = UI.validationWarningsList.children().length > 0;
-                
-				if(validationErrorAlertVisible)
-				{
-					UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
-				}
-				else if (validationWarningAlertVisible)
-				{
-					UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusWarning');
-				}
+                quickSummaryStatusResults = "Valid";
             }
+            
         }
         else
         {
-            validationSuccessAlertVisible = false;
-            validationErrorAlertVisible = false;
-			validationWarningAlertVisible = false;
-            
-            UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+            validationMessagesVisible = false;
+            quickSummaryStatusResults = "Incomplete";
         }
 
 
@@ -275,47 +411,36 @@ Validata = {
                 if( Validata.Schema.parsed )
                 {
                     schemaErrorAlertVisible = false;
-                    
-                    UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusValid');
+                    quickSummaryStatusSchema = "Valid";
                 }
                 else
                 {
                     UI.schemaErrorAlert.find('.sourceText').text( Validata.Schema.rawResponse );
 
                     schemaErrorAlertVisible = true;
-                    
-                    validationSuccessAlertVisible = false;
-                    validationErrorAlertVisible = false;
-                    validationWarningAlertVisible = false;
+                    validationMessagesVisible = false;
 
-                    UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
-                    UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
-                    
+                    quickSummaryStatusSchema = "Invalid";
+                    quickSummaryStatusResults = "Incomplete";
                 }
 
             }
             else
             {
                 schemaErrorAlertVisible = false;
+                validationMessagesVisible = false;
 
-                validationSuccessAlertVisible = false;
-                validationErrorAlertVisible = false;
-				validationWarningAlertVisible = false;
-                
-                UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
-                UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+                quickSummaryStatusSchema = "Incomplete";
+                quickSummaryStatusResults = "Incomplete";
             }
         }
         else
         {
-            UI.schemaErrorAlert.fadeOut('fast');
-            
-            validationSuccessAlertVisible = false;
-            validationErrorAlertVisible = false;
-			validationWarningAlertVisible = false;
-            
-            UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
-            UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+            schemaErrorAlertVisible = false;
+            validationMessagesVisible = false;
+
+            quickSummaryStatusSchema = "Incomplete";
+            quickSummaryStatusResults = "Incomplete";
         }
 
 
@@ -327,76 +452,46 @@ Validata = {
                 if( Validata.Data.parsed )
                 {
                     dataErrorAlertVisible = false;
-                    
-                    UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusValid');
+                    quickSummaryStatusData = "Valid";
                 }
                 else
                 {
                     UI.dataErrorAlert.find('.sourceText').text( Validata.Data.rawResponse );
 
                     dataErrorAlertVisible = true;
-
-                    validationSuccessAlertVisible = false;
-                    validationErrorAlertVisible = false;
-                    validationWarningAlertVisible = false;
+                    validationMessagesVisible = false;
                     
-                    UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusInvalid');
-                    UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+                    quickSummaryStatusData = "Invalid";
+                    quickSummaryStatusResults = "Incomplete";
                 }
 
             }
             else
             {
                 dataErrorAlertVisible = false;
-                
-                validationSuccessAlertVisible = false;
-                validationErrorAlertVisible = false;
-				validationWarningAlertVisible = false;
-                
-                UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
-                UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+                validationMessagesVisible = false;
+
+                quickSummaryStatusData = "Incomplete";
+                quickSummaryStatusResults = "Incomplete";
             }
         }
         else
         {
             dataErrorAlertVisible = false;
+            validationMessagesVisible = false;
 
-            validationSuccessAlertVisible = false;
-            validationErrorAlertVisible = false;
-			validationWarningAlertVisible = false;
-            
-            UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
-            UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatusIncomplete');
+            quickSummaryStatusData = "Incomplete";
+            quickSummaryStatusResults = "Incomplete";
         }
         
         
-        if( validationSuccessAlertVisible )
+        if( validationMessagesVisible )
         {
-            UI.validationSuccessAlert.fadeIn('fast');
+            UI.validationResultsByErrorLevelAccordion.fadeIn('fast');
         }
         else
         {
-            UI.validationSuccessAlert.fadeOut('fast');
-        }
-        
-        if( validationErrorAlertVisible )
-        {
-            UI.validationErrorAlert.fadeIn('fast');
-        }
-        else
-        {
-            UI.validationErrorAlert.fadeOut('fast');
-            UI.validationErrorsList.empty();
-        }
-		
-		if( validationWarningAlertVisible )
-        {
-            UI.validationWarningAlert.fadeIn('fast');
-        }
-        else
-        {
-            UI.validationWarningAlert.fadeOut('fast');
-            UI.validationWarningsList.empty();
+            UI.validationResultsByErrorLevelAccordion.fadeOut('fast');
         }
         
         if( schemaErrorAlertVisible )
@@ -417,6 +512,14 @@ Validata = {
             UI.dataErrorAlert.fadeOut('fast').find('.sourceText').empty();
         }
 
+
+        var quickSummaryStatusClassesToRemove = 'quickSummaryStatusIncomplete quickSummaryStatusInvalid quickSummaryStatusValid quickSummaryStatusWarning';
+        
+        UI.quickSummarySectionSchema.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatus' + quickSummaryStatusSchema);
+        UI.quickSummarySectionData.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatus' + quickSummaryStatusData);
+        UI.quickSummarySectionResults.removeClass(quickSummaryStatusClassesToRemove).addClass('quickSummaryStatus' + quickSummaryStatusResults);
+        
+        
         UI.quickSummaryPanelLoader.addClass('hidden');
 
         UI.schemaSelector.removeAttr('disabled');

@@ -116,7 +116,7 @@
             <div id="demoPanel" class="panel panel-info">
 
                 <div id="demoPanelHeading" class="panel-heading">
-                    <h4>Load Demo Data</h4>
+                    <h4 class="panel-title">Load Demo Data</h4>
                 </div>
 
                 <div id="demoPanelContent" class="panel-body">
@@ -132,7 +132,7 @@
         <div id="quickSummaryPanel" class="panel panel-default">
 
             <div id="quickSummaryPanelHeading" class="panel-heading">
-                <h4>Status Summary</h4>
+                <h4 class="panel-title">Status Summary</h4>
 
                 <div id="quickSummaryPanelLoader" class="loader hidden">
                     <svg class="circular">
@@ -152,19 +152,53 @@
                     <tr id="quickSummarySectionSchema" class="quickSummarySection quickSummaryStatusIncomplete">
                         <th scope="row" class="quickSummarySectionTitle">Schema</th>
                         <td>
-                            <div class="quickSummarySectionIcon"></div>
+                            <svg viewBox="0 24 24 24" class="quickSummarySectionIcon quickSummarySectionIconIncomplete svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-toggle.svg#ic_check_box_outline_blank_24px"></use>
+                            </svg>
+
+                            <svg viewBox="0 648 24 24" class="quickSummarySectionIcon quickSummarySectionIconWarning svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_report_24px"></use>
+                            </svg>
+                            
+                            <svg viewBox="0 0 24 24" class="quickSummarySectionIcon quickSummarySectionIconValid svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-toggle.svg#ic_check_box_24px"></use>
+                            </svg>
                         </td>
                     </tr>
                     <tr id="quickSummarySectionData" class="quickSummarySection quickSummaryStatusIncomplete">
                         <th scope="row" class="quickSummarySectionTitle">Data</th>
                         <td>
-                            <div class="quickSummarySectionIcon"></div>
+                            <svg viewBox="0 24 24 24" class="quickSummarySectionIcon quickSummarySectionIconIncomplete svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-toggle.svg#ic_check_box_outline_blank_24px"></use>
+                            </svg>
+
+                            <svg viewBox="0 648 24 24" class="quickSummarySectionIcon quickSummarySectionIconWarning svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_report_24px"></use>
+                            </svg>
+
+                            <svg viewBox="0 0 24 24" class="quickSummarySectionIcon quickSummarySectionIconValid svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-toggle.svg#ic_check_box_24px"></use>
+                            </svg>
                         </td>
                     </tr>
                     <tr id="quickSummarySectionResults" class="quickSummarySection quickSummaryStatusIncomplete">
                         <th scope="row" class="quickSummarySectionTitle">Validation</th>
                         <td>
-                            <div class="quickSummarySectionIcon"></div>
+                            <svg viewBox="0 24 24 24" class="quickSummarySectionIcon quickSummarySectionIconIncomplete svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-toggle.svg#ic_check_box_outline_blank_24px"></use>
+                            </svg>
+
+                            <svg viewBox="0 648 24 24" class="quickSummarySectionIcon quickSummarySectionIconInvalid svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_report_24px"></use>
+                            </svg>
+
+                            <svg viewBox="0 24 24 24" class="quickSummarySectionIcon quickSummarySectionIconWarning svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-alert.svg#ic_warning_24px"></use>
+                            </svg>
+
+                            <svg viewBox="0 0 24 24" class="quickSummarySectionIcon quickSummarySectionIconValid svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                <use xlink:href="/images/svg-sprite/svg-sprite-toggle.svg#ic_check_box_24px"></use>
+                            </svg>
                         </td>
                     </tr>
                 </tbody>
@@ -351,107 +385,51 @@
 
                             <div class="panel-collapse collapse in">
                                 <div class="panel-body">
-
-                                    <div class="panel-group" id="accordion">
-                                        <div class="panel panel-default">
+                                    
+                                    <div id="validationResultsByErrorLevelAccordion" class="panel-group validationResultsAccordion">
+                                        
+                                        <div id="validationResultsErrorsPanel" class="panel panel-danger">
+                                            
                                             <div class="panel-heading">
-                                                <h4 class="panel-title">
-                                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseErrors"><span class="glyphicon glyphicon-exclamation-sign"></span>Errors</a>
-                                                </h4>
+                                                <a data-toggle="collapse" href="#validationResultsErrorsResourceShapesPanel" class="panel-title">
+                                                    <svg viewBox="0 648 24 24" class="svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                                        <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_report_24px"></use>
+                                                    </svg>
+                                                    Errors: <span id="validationResultsErrorsCount">0</span>
+                                                </a>
                                             </div>
-                                            <div id="collapseErrors" class="panel-collapse collapse in">
-                                                <ul class="list-group">
-                                                    <li class="list-group-item">
-                                                        <span class="glyphicon glyphicon-"></span>Validation failed for thing: thing!
-                                                        <ul class="list-group">
-                                                            <li class="list-group-item list-group-item-warning">
-                                                                <span class="glyphicon glyphicon-warning-sign"></span>Warning Message: No thing should exist in the thing!
-                                                            </li>
-
-                                                            <li class="list-group-item list-group-item-danger">
-                                                                <span class="glyphicon glyphicon-exclamation-sign"></span>Error Message: Thing 1 is broken!
-                                                            </li>
-
-                                                            <li class="list-group-item list-group-item-danger">
-                                                                <span class="glyphicon glyphicon-exclamation-sign"></span>Error Message: Thing 1 is broken!
-                                                            </li>
-
-                                                        </ul>
-                                                    </li>
-
-                                                    <li class="list-group-item">
-                                                        <span class="glyphicon glyphicon-exclamation-sign text-danger"></span><a href="http://fb.com/moinakbarali">News</a>
-                                                    </li>
-
-                                                    <li class="list-group-item">
-                                                        <span class="glyphicon glyphicon-file text-info"></span><a href="http://fb.com/moinakbarali">Newsletters</a>
-                                                    </li>
-
-                                                    <li class="list-group-item">
-                                                        <span class="glyphicon glyphicon-comment text-danger"></span><a href="http://fb.com/moinakbarali">Comments</a><span class="badge">42</span>
-                                                    </li>
-
-                                                </ul>
-                                            </div>
+                                            
+                                            <div id="validationResultsErrorsResourceShapesPanel" class="panel-collapse collapse in"></div>
                                         </div>
-                                        <div class="panel panel-default">
+                                        
+                                        <div id="validationResultsWarningsPanel" class="panel panel-warning">
+                                            
                                             <div class="panel-heading">
-                                                <h4 class="panel-title">
-                                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseFour"><span class="glyphicon glyphicon-file"></span>Reports</a>
-                                                </h4>
+                                                <a data-toggle="collapse" href="#validationResultsWarningsResourceShapesPanel" class="panel-title">
+                                                    <svg viewBox="0 24 24 24" class="svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                                        <use xlink:href="/images/svg-sprite/svg-sprite-alert.svg#ic_warning_24px"></use>
+                                                    </svg>
+                                                    Warnings: <span id="validationResultsWarningsCount">0</span>
+                                                </a>
                                             </div>
-                                            <div id="collapseFour" class="panel-collapse collapse">
-                                                <div class="list-group">
-                                                    <a href="#" class="list-group-item">
-                                                        Cras justo odio
-                                                    </a>
-
-                                                    <div class="list-group">
-                                                        <a href="#" class="list-group-item">
-                                                            Cras justo odio
-                                                        </a>
-                                                        <a href="#" class="list-group-item">Dapibus ac facilisis in</a>
-                                                        <a href="#" class="list-group-item">Morbi leo risus</a>
-                                                        <a href="#" class="list-group-item">Porta ac consectetur ac</a>
-                                                        <a href="#" class="list-group-item">Vestibulum at eros</a>
-                                                    </div>
-                                                    <a href="#" class="list-group-item">Dapibus ac facilisis in</a>
-                                                    <a href="#" class="list-group-item">Morbi leo risus</a>
-                                                    <a href="#" class="list-group-item">Porta ac consectetur ac</a>
-                                                    <a href="#" class="list-group-item">Vestibulum at eros</a>
-                                                </div>
-                                            </div>
+                                            
+                                            <div id="validationResultsWarningsResourceShapesPanel" class="panel-collapse collapse in"></div>
                                         </div>
-                                        <div class="panel panel-default">
+                                        
+                                        <div id="validationResultsMatchesPanel" class="panel panel-success">
+                                            
                                             <div class="panel-heading">
-                                                <h4 class="panel-title">
-                                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseFive"><span class="glyphicon glyphicon-heart"></span>Reports</a>
-                                                </h4>
+                                                <a data-toggle="collapse" href="#validationResultsMatchesResourceShapesPanel" class="panel-title">
+                                                    <svg viewBox="0 1368 24 24" class="svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                                        <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_info_24px"></use>
+                                                    </svg>
+                                                    Matches: <span id="validationResultsMatchesCount">0</span>
+                                                </a>
                                             </div>
-                                            <div id="collapseFive" class="panel-collapse collapse">
-                                                <div class="list-group">
-                                                    <a href="#" class="list-group-item">
-                                                        <h4 class="list-group-item-heading">List group item heading</h4>
-
-                                                        <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
-                                                    </a>
-                                                </div>
-                                                <div class="list-group">
-                                                    <a href="#" class="list-group-item active">
-                                                        <h4 class="list-group-item-heading">List group item heading</h4>
-
-                                                        <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
-                                                    </a>
-                                                </div>
-                                                <div class="list-group">
-                                                    <a href="#" class="list-group-item">
-                                                        <h4 class="list-group-item-heading">List group item heading</h4>
-
-                                                        <p class="list-group-item-text">Donec id elit non mi porta gravida at eget metus. Maecenas sed diam eget risus varius blandit.</p>
-                                                    </a>
-                                                </div>
-                                            </div>
+                                            
+                                            <div id="validationResultsMatchesResourceShapesPanel" class="panel-collapse collapse"></div>
                                         </div>
+                                        
                                     </div>
 
                                 </div>

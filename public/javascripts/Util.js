@@ -284,7 +284,7 @@ Util = {
     },
 
     escapeHtml: function escapeHtml(string) {
-        return String(string).replace(/[&<>"'\/]/g, function (s) {
+        return Util.stringValue(string).replace(/[&<>"'\/]/g, function (s) {
             return Util.entityMap[s];
         });
     },
