@@ -282,8 +282,8 @@ UI = {
 		if(UI.reqLevels){
             UI.reqLevelSelector.empty();
             
-			UI.reqLevels.forEach(function(req){
-				UI.reqLevelSelector.append('<option>'+req+'</option>');
+			UI.reqLevels.forEach(function(reqLevel){
+				UI.reqLevelSelector.append('<option>'+Util.stringValue(reqLevel).toUpperCase()+'</option>');
 			});
 			UI.reqLevelPanel.show();
 		}

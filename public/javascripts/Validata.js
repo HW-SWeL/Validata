@@ -218,11 +218,21 @@ Validata = {
 
                             var errorLevel = "error";
                             
-                            var reqLevel = UI.reqLevelSelector.val();
+                            var selectedReqLevel = Util.stringValue( UI.reqLevelSelector.val() ).toUpperCase();
+                            var errorReqLevel = Util.stringValue( rawError.req_lev).toUpperCase().replace(' NOT', '');
                             
-                            if(reqLevel != null && reqLevel != "DEFAULT" && rawError.req_lev != null && UI.reqLevels.indexOf(reqLevel) > -1)
+                            Log.i("selectedReqLevel: " + selectedReqLevel + ", errorReqLevel: " + errorReqLevel);
+                            
+                            if(
+                                Util.stringIsNotBlank(selectedReqLevel) && 
+                                Util.stringIsNotBlank(errorReqLevel) &&
+                                selectedReqLevel != "DEFAULT" &&
+                                UI.reqLevels.indexOf(errorReqLevel) > -1
+                            )
                             {
-                                if(UI.reqLevels.indexOf(reqLevel) > UI.reqLevels.indexOf(rawError.req_lev.toUpperCase()))
+                                Log.i("selectedReqLevel index: " + UI.reqLevels.indexOf(selectedReqLevel) + ", errorReqLevel index: " + UI.reqLevels.indexOf(errorReqLevel));
+                                
+                                if( UI.reqLevels.indexOf(selectedReqLevel) > UI.reqLevels.indexOf(errorReqLevel) )
                                 {
                                     errorLevel = "warning";
                                 }
