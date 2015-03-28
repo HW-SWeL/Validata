@@ -262,7 +262,7 @@ Validata = {
                             '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
                             '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
                             '        </svg>' +
-                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + '</span>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[rawResponse.startingResource.lex]) + '</span>' +
                             '    </a>' +
                             '</div>' +
                             '<div id="errorsResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
@@ -299,7 +299,7 @@ Validata = {
                             '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
                             '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
                             '        </svg>' +
-                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + '</span>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[rawResponse.startingResource.lex]) + '</span>' +
                             '    </a>' +
                             '</div>' +
                             '<div id="warningsResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
@@ -337,7 +337,7 @@ Validata = {
                             '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
                             '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
                             '        </svg>' +
-                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + '</span>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[rawResponse.startingResource.lex]) + '</span>' +
                             '    </a>' +
                             '</div>' +
                             '<div id="matchesResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
