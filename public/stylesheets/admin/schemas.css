@@ -1,0 +1,152 @@
+/* these are special */
+.slip-reordering {
+    box-shadow: 0 2px 10px rgba(0,0,0,0.45);
+}
+
+.slip-swiping-container {
+    overflow-x: hidden;
+}
+
+/*
+    Schema list styles
+*/
+#slippylist {
+    clear:left;
+    padding: 0 0 1px;
+}
+#slippylist > li {
+    user-select: text;
+    -moz-user-select: text;
+    -webkit-user-select: text;
+    cursor: default;
+    display:block;
+    border: 1px solid rgba(0,0,0,0.2);
+    background: white;
+    margin: 0;
+    border-radius: 0;
+    margin-bottom: -1px;
+    max-width: 100%;
+    vertical-align: middle;
+    padding: 0;
+}
+
+#slippylist > li:first-child {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+#slippylist > li:last-child {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+/*
+    Styles for the buttons within the schema
+*/
+.schema-delete, .schema-reorder {
+    width: 24px;
+    height: 24px;
+    background-image: url(../../images/svg-sprite/svg-sprite-action.svg);
+}
+.schema-default, .schema-enable, .config-showsource-toggle-icon, .config-allowcustom-toggle-icon {
+    width: 24px;
+    height: 24px;
+    background-image: url(../../images/svg-sprite/svg-sprite-toggle.svg);
+}
+
+.schema-default, .schema-delete, .schema-enable, .schema-reorder {
+    cursor: pointer;
+    background-repeat: no-repeat;
+}
+
+.schema-default {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    background-position: 0 -144px;
+}
+.schema-enable {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    background-position: 0 -24px;
+}
+
+.schema-is-default .schema-default {
+    background-position: 0 -96px;
+}
+.schema-is-enabled .schema-enable {
+    background-position: 0 0;
+}
+.schema {
+    opacity: 0.25;
+}
+.schema.schema-is-enabled {
+    opacity: 1;
+}
+.schema.schema-is-invalid {
+    background: #FBC2C4 !important;
+}
+.schema-name {
+    display: inline-block;
+}
+.schemas:empty:after {
+    width: 100px;
+    height: 100px;
+    content: "No Schemas defined.";
+}
+.schema-reorder {
+    float: right;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    background-position: 0 -2208px;
+}
+.schema-delete {
+    margin-right: 20px;
+    float: right;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    background-position: 0 -792px;
+}
+.schema-name{
+    cursor: pointer;
+}
+.schema-header{
+    -webkit-user-select: none;  /* Chrome all / Safari all */
+    -moz-user-select: none;     /* Firefox all */
+    -ms-user-select: none;      /* IE 10+ */
+    padding: 1em;
+}
+.schema-body {
+    width: 100%;
+    padding: 1em;
+    border-top: 1px solid rgba(0,0,0,0.2);
+    display: inline-block;
+    background: rgba(0,0,0,0.01);
+}
+
+.schema-input-schema-results {
+    width: 100%;
+    border-left: 1px solid rgba(0,0,0,0.2);
+    border-right: 1px solid rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(0,0,0,0.2);
+    padding: 8px;
+}
+
+/*
+    Validation Results highlighting
+*/
+.schema-input-schema-results.schema-input-schema-invalid {
+    display: none;
+}
+.schema-input-schema-results.schema-input-schema-invalid {
+    display: block;
+    background-color: #e3b5af;
+}
+.schema-input-schema-results.schema-input-schema-valid {
+    display: block;
+    background-color: #bfe3b2;
+}
