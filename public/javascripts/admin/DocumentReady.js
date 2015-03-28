@@ -10,7 +10,7 @@ $(function documentReady()
     pageInitialized = true;
 
 
-    UI.documentReady();
+    //UI.documentReady();
 
     window.onerror = function onerror(message, file, line, col, e)
     {

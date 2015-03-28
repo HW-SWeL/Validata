@@ -95,10 +95,13 @@
                 border: 1px solid rgba(0,0,0,0.2);
             }
 
-            .schema-delete, .schema-reorder {
-                background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-action.svg);
+            .schema-delete svg, .schema-reorder svg {
+                width: 24px;
+                height: 24px;
             }
             .schema-default, .schema-enable, .config-showsource-toggle-icon, .config-allowcustom-toggle-icon {
+                width: 24px;
+                height: 24px;
                 background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
             }
             .download-icon {
@@ -107,8 +110,18 @@
                 width: 24px;
                 height: 24px;
                 vertical-align: middle;
-                background-position: 0 -192px;
-                background-image: url(../images/svg-sprite-file-white.svg);
+            }
+            .download-icon svg{
+                fill: #FFF;
+            }
+            .date-icon {
+                display: inline-block;
+                margin-right: 10px;
+                width: 24px;
+                height: 24px;
+                vertical-align: middle;
+                background-position: 0 -912px;
+                background-image: url(../images/svg-sprite-action-black.svg);
             }
             .schema-default, .schema-delete, .schema-enable, .schema-reorder {
                 cursor: pointer;
@@ -172,6 +185,9 @@
                 cursor: pointer;
             }
             .schema-header{
+                -webkit-user-select: none;  /* Chrome all / Safari all */
+                -moz-user-select: none;     /* Firefox all */
+                -ms-user-select: none;      /* IE 10+ */
                 padding: 1em;
             }
             .schema-body {
@@ -194,6 +210,11 @@
                 border-right: 10px solid rgba(0,0,0,0.2);
                 z-index: 3;
                 cursor: pointer;
+            }
+
+            .datetimepicker svg {
+                width: 16px;
+                height: 16px;
             }
 
             .line-error {
@@ -298,8 +319,80 @@
                             <h3 class="panel-title">Export</h3>
                         </div>
                         <div class="panel-body">
-                            <a class="btn btn-primary download-file"><div class="download-icon"></div>Download File</a>
-                            <button class="btn btn-primary">Show output</button>
+                            <a class="btn btn-primary download-file">
+                                <div class="download-icon">
+                                    <svg viewBox="0 192 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <use xlink:href="/images/svg-sprite/svg-sprite-file.svg#ic_file_download_24px"></use>
+                                    </svg>
+                                </div>
+                                Download File
+                            </a>
+                        </div>
+                    </div>
+                    <div class="panel panel-default panel-default panel-help">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">Help</h3>
+                        </div>
+                        <div class="panel-body">
+                            ShEx documentation
+                        </div>
+                        <div class="panel-body">
+                            <table class="table table-condensed">
+                                <tr>
+                                    <td>Name Term</td>
+                                    <td><code>ex:state</code></td>
+                                </tr>
+                                <tr>
+                                    <th colspan="2">Rules</th>
+                                </tr>
+                                <tr>
+                                    <td>Arc Rule</td>
+                                    <td><code>foaf:givenName xsd:string+</code></td>
+                                </tr>
+                                <tr>
+                                    <td>And Rule</td>
+                                    <td><samp>foaf:givenName xsd:string<code>,</code><br>
+                                        foaf:familyName xsd:string</samp></td>
+                                </tr>
+                                <tr>
+                                    <td>Or rule</td>
+                                    <td><code>(</code><samp>foaf:givenName xsd:string </samp><code>|</code><samp><br>
+                                        foaf:name xsd:string </samp><code>)</code></td>
+                                </tr>
+                                <tr>
+                                    <td>Group Rule</td>
+                                    <td><samp><code>(</code> foaf:givenName xsd:string<code>,</code><br>
+                                        foaf:familyName xsd:string <code>)</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <th colspan="2">Cardinality</th>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">Applying no cardinality constraint means a rule must exist once.</td>
+                                </tr>
+                                <tr>
+                                    <td>x∈{0,1}</td>
+                                    <td><samp>foaf:givenName xsd:string<code>?</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td>x≥1</td>
+                                    <td><samp>foaf:givenName xsd:string<code>+</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td>x≥0</td>
+                                    <td><samp>foaf:givenName xsd:string<code>*</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td>x=n</td>
+                                    <td><samp>foaf:givenName xsd:string<code>{</code>n<code>}</code></samp><br>
+                                        <samp>foaf:givenName xsd:string<code>{3}</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td>n≥x≥m</td>
+                                    <td><samp>foaf:givenName xsd:string<code>{</code>n<code>,</code>m<code>}</code></samp>
+                                        <samp>foaf:givenName xsd:string<code>{3,6}</code></samp></td>
+                                </tr>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -325,8 +418,16 @@
                                 <div class="schema-enable" title="Toggle visibility"></div>
                                 <div class="schema-default" title="Toggle Default"></div>
                                 <div class="schema-name">Untitled Schema</div>
-                                <div class="schema-reorder"></div>
-                                <div class="schema-delete"></div>
+                                <div class="schema-reorder">
+                                    <svg viewBox="0 2208 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_reorder_24px"></use>
+                                    </svg>
+                                </div>
+                                <div class="schema-delete">
+                                    <svg viewBox="0 792 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_delete_24px"></use>
+                                    </svg>
+                                </div>
                             </div>
                             <div class="schema-body">
                                 <div class="input-group schema-input-name">
@@ -341,7 +442,22 @@
                                     <div class='input-group date datetimepicker'>
                                         <span class="input-group-addon">Creation Date</span>
                                         <input type='text' class="schema-input-creationdate-input form-control" />
-                                        <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
+                                        <span class="input-group-addon">
+                                            <svg viewBox="0 912 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                                <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_event_24px"></use>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="schema-input-modificationdate">
+                                    <div class='input-group date datetimepicker'>
+                                        <span class="input-group-addon">Modification Date</span>
+                                        <input type='text' class="schema-input-modificationdate-input form-control" />
+                                        <span class="input-group-addon">
+                                            <svg viewBox="0 912 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                                <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_event_24px"></use>
+                                            </svg>
+                                        </span>
                                     </div>
                                 </div>
                                 <div class="schema-input-requirementlevels">
@@ -350,20 +466,13 @@
                                         <input type="text" value="" class="schema-input-requirementlevels-input form-control"/>
                                     </div>
                                 </div>
-                                <div class="schema-input-creationdate" style="display:none;">
-                                    <div class='input-group date datetimepicker'>
-                                        <span class="input-group-addon">Upload Date</span>
-                                        <input type='text' class="schema-input-uploaddate-input form-control" />
-                                        <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
-                                    </div>
-                                </div>
                                 <div class="schema-input-schema">
                                     <textarea class="schema-input-schema-input"></textarea>
                                     <div class="CodeMirror-drag-handel"></div>
                                     <div class="schema-input-schema-results"></div>
                                 </div>
-                                <h4>Demos</h4>
-                                <p>Add RDF files here that can be used to demonstrate that the validator works correctly.</p>
+                                <h4>Demos (Turtle, TriG, N-Triples or N-Quads)</h4>
+                                <p>Add RDF data here that can be used to demonstrate that the validator works correctly.</p>
                                 <ul class="list-group schema-demos">
                                 </ul>
                                 <button class="btn btn-success schema-new-demo">Add New Demo</button>
@@ -373,104 +482,6 @@
                     <ol id="slippylist" class="schemas"></ol>
                     <button class="btn btn-success btn-md create-new-schema">Add New Schema</button>
                 </div>
-            </div>
-
-            <div class="col-md-9 row" style="display:none;">
-
-                <div role="tabpanel">
-
-                    <!-- Nav tabs -->
-                    <ul id="tabList" class="nav nav-tabs" role="tablist">
-                        <li role="presentation" class="active"><a href="#home" role="tab" data-toggle="tab">Add a schema</a></li>
-                    </ul>
-
-                    <!-- Tab panes -->
-                    <div class="tab-content">
-                        <div role="tabpanel" class="tab-pane fade in active" id="home">
-                            <div class="schemaTab">
-                                <br/>
-                                <form class="form-horizontal">
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Title</label>
-                                        <div class="col-sm-10">
-                                            <input type="text" class="form-control titleInput" placeholder="" required />
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Description</label>
-                                        <div class="col-sm-10">
-                                            <input type="text" class="form-control descriptionInput" required />
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Enabled? </label>
-                                        <div class="col-sm-10">
-                                            <input type="checkbox" class="enabledInput" checked="checked" data-off-text="No" data-on-text="Yes">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Default? </label>
-                                        <div class="col-sm-10">
-                                            <input type="checkbox" class="defaultInput" data-off-text="No" data-on-text="Yes">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Upload Schema</label>
-                                        <div class="col-sm-10">
-                                            <input type="file" class="schemaSourceFile">
-                                        </div>
-                                    </div>
-
-                                    <div class="schemaErrorAlert hiddenFadeIn col-sm-12">
-                                        <div class="alert alert-danger col-sm-offset-1 col-sm-10" role="alert">
-                                            <h4>An error occurred while parsing the schema:</h4>
-
-                                            <div class="sourceText"></div>
-                                        </div>
-                                    </div>
-
-                                    <div class="schemaSuccessAlert hiddenFadeIn col-sm-12">
-                                        <div class="alert alert-success col-sm-offset-1 col-sm-10" role="alert">
-                                            <h5>Schema Parsed Successfully</h5>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Schema Text</label>
-                                        <div class="col-sm-10">
-                                            <textarea cols="30" rows="10" class="form-control schemaSourceText" required></textarea>
-                                        </div>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-success addSchema disabled">
-                                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add to config
-                                    </button>
-
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3" style="display:none;">
-                <h2>Export</h2>
-                <div class="col-md-12">
-                    <a href="" id="download" class="btn btn-primary disabled" download="ShExValidataConfig.json">
-                        <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Config
-                    </a>
-                </div>
-                <h2>Import</h2>
-                <p>Have a config file already?  Import it here
-                    <div>
-                        <input id="import" type="file" >
-                    </div>
-                </p>
             </div>
 
         </div>
@@ -491,6 +502,12 @@
         <script src="javascripts/admin/Validata.js"></script>
         <script src="javascripts/admin/DocumentReady.js"></script>
         <script>
+            $(document).ready(function(){
+                $(".panel-help").find(".panel-body").hide();
+            });
+            $(".panel").find(".panel-heading").click(function(){
+                $(this).parent().find(".panel-body").slideToggle();
+            });
             var setAllowCustom = function setAllowCustom(t){
                 if(t)
                     $(".config-allowcustom-toggle").addClass("config-allowcustom");
@@ -570,12 +587,12 @@
             var setSchemaCreationDate = function setSchemaCreationdate(schema,creationDate){
                 $(schema).find(".schema-input-creationdate-input").val(moment.unix(creationDate).format()).trigger("input");
             };
-            var setSchemaUploadDate = function setSchemaUploaddate(schema,uploadDate){
-                $(schema).find(".schema-input-uploaddate-input").val(moment.unix(uploadDate).format()).trigger("input");
+            var setSchemaModificationDate = function setSchemaModifieddate(schema,modifiedDate){
+                $(schema).find(".schema-input-modifieddata-input").val(moment.unix(modifiedDate).format()).trigger("input");
             };
             var setRequirementLevels = function setRequirementLevels(schema,data){
                 if(data!=undefined){
-                    $(schema).data(".schema-input-requirementlevels-input").setValue(data.join());
+                    $(schema).find(".schema-input-requirementlevels-input").val(data.join());
                 }
             };
             var setSchemaData = function setSchemaData(schema,data){
@@ -585,8 +602,6 @@
                 $(demo).find(".schema-demo-name-input").val(name);
             };
             var setDemoData = function setDemoData(demo,data){
-                console.log(demo);
-                console.log($(demo).data("demoInput"));
                 $(demo).data("demoInput").setValue(data);
             };
 
@@ -611,7 +626,7 @@
                 setSchemaName(newSchema,schemajson.name);
                 setSchemaDescription(newSchema,schemajson.description);
                 setSchemaCreationDate(newSchema,schemajson.creationDate);
-                setSchemaUploadDate(newSchema,schemajson.uploadDate);
+                setSchemaModificationDate(newSchema,schemajson.modificationDate);
                 setRequirementLevels(newSchema,schemajson.reqLevels);
                 setSchemaData(newSchema,schemajson.data);
                 for(var i=0;i<schemajson.dataDemos.length;i++){
@@ -627,13 +642,13 @@
             };
             var exportSchema = function exportSchema(schema){
                 s = {};
-                s.default =         $(schema).hasClass("schema-is-default");
+                s.default = $(schema).hasClass("schema-is-default");
                 s.enabled =         $(schema).hasClass("schema-is-enabled");
                 s.name =            $(schema).find(".schema-name").text();
                 s.description =     $(schema).find(".schema-input-description-input").val();
                 s.creationDate =    moment($(schema).find(".schema-input-creationdate-input").val()).unix();
-                s.uploadDate =      moment($(schema).find(".schema-input-uploaddate-input").val()).unix();
-                if($(schema).find("schema-input-requirementlevels-input").val()!=undefined){
+                s.modificationDate =moment($(schema).find(".schema-input-modificationdate-input").val()).unix();
+                if($(schema).find("schema-input-requirementlevels-input").val()!=""){
                     s.reqLevels =   $(schema).find("schema-input-requirementlevels-input").val().split(",");
                 }
                 s.data =            $.data( schema, "schemaInput").getValue();
@@ -711,6 +726,15 @@
                         $(this).parent().parent().parent().find(".schema-name").html("Untitled Schema");
                     }
                 });
+                newSchema.find(".schema-input-name-input").on("input propertychange paste", function(e){
+                    if(moment($(this).val()).isValid()){
+                        $(this).parent().parent().addClass("has-error");
+                    } else {
+                        $(this).parent().parent().removeClass("has-error");
+                    }
+                });
+                newSchema.find(".schema-input-creationdate-input").val(moment().format());
+                newSchema.find(".schema-input-modificationdate-input").val(moment().format());
                 newSchema.find(".schema-new-demo").click(function(){
                     createNewDemo(newSchema);
                 });
@@ -771,7 +795,10 @@
             }, false);
 
             ol.addEventListener('slip:beforewait', function(e){
-                if (e.target.className.indexOf('schema-reorder') > -1) e.preventDefault();
+                var a = $(e.target).hasClass('schema-reorder');
+                var b = $(e.target).parent().hasClass('schema-reorder');
+                var c = $(e.target).parent().parent().hasClass('schema-reorder');
+                if ( a || b || c) e.preventDefault();
             }, false);
 
             ol.addEventListener('slip:afterswipe', function(e){

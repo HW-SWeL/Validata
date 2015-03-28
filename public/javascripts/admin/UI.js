@@ -1,6 +1,6 @@
 UI = {
 
-    documentReady: function documentReady()
+    /*documentReady: function documentReady()
     {
         UI.initialiseElements();
         UI.refreshCurrentTab();
@@ -275,5 +275,5 @@ UI = {
 
             reader.readAsText(inputFile);
         });
-    }
+    }*/
 };
