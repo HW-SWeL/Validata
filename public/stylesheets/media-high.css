@@ -36,3 +36,10 @@ body.topNavbarVisible #sidebarContentWrapper {
     top: 0;
     right: 2px;
 }
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+    .loader {
+        top: 8px;
+        right: 8px;
+    }
+}
