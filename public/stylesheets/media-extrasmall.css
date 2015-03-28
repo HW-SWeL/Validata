@@ -453,7 +453,9 @@ a.panel-title {
     cursor: pointer;
 }
 
-.validationResultsAccordion .panel-heading span {
+#validationResultsErrorsCount,
+#validationResultsWarningsCount,
+#validationResultsMatchesCount {
     vertical-align: bottom;
     font-weight: bold;
 }
