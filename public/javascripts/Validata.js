@@ -152,7 +152,7 @@ Validata = {
 
         Validata.Data.shapesResponse = shapesResponse;
 
-        UI.initializeResourceShapeMapTable();
+        UI.updateResourceShapeMapTable();
 
         Validata.Validation.rawResponses = [];
         
