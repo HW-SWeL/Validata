@@ -21,264 +21,9 @@
         <link rel="stylesheet" href="stylesheets/vendor/material-design-icons.css"/>
 
         <link rel="stylesheet" href="stylesheets/media-sizes.css"/>
-        <style>
-            .input-group {
-                margin-bottom: 10px;
-            }
-            /* these are special */
-            .slip-reordering {
-                box-shadow: 0 2px 10px rgba(0,0,0,0.45);
-            }
-
-            .slip-swiping-container {
-                overflow-x: hidden;
-            }
-
-            #slippylist > li {
-                user-select: none;
-                -moz-user-select: none;
-                -webkit-user-select: none;
-                cursor: default;
-                display:block;
-                border: 1px solid rgba(0,0,0,0.2);
-                background: white;
-                margin: 0;
-                border-radius: 0;
-                margin-bottom: -1px;
-                max-width: 100%;
-                /*line-height: 3;*/
-                vertical-align: middle;
-            }
-
-            #slippylist > li:first-child {
-                border-top-left-radius: 5px;
-                border-top-right-radius: 5px;
-            }
-            #slippylist > li:last-child {
-                border-bottom-left-radius: 5px;
-                border-bottom-right-radius: 5px;
-            }
-
-            /* the rest is junk for the demo page */
-            #slippylist > li {
-                padding: 0;
-                /*line-height: 1.3;*/
-                user-select: text;
-                -moz-user-select: text;
-                -webkit-user-select: text;
-            }
-            #slippylist span {
-                cursor: text;
-            }
-
-            #slippylist {
-                clear:left;
-                padding: 0 0 1px;
-            }
-
-            /*#slippylist input {
-                vertical-align: middle;
-            }*/
-
-            #slippylist > li.demo-allow-select {
-                padding: 1em;
-                /*line-height: 1.3;*/
-                user-select: text;
-                -moz-user-select: text;
-                -webkit-user-select: text;
-            }
-            #slippylist > li.demo-allow-select span {
-                cursor: text;
-            }
-
-            .CodeMirror {
-                border: 1px solid rgba(0,0,0,0.2);
-            }
-
-            .schema-delete svg, .schema-reorder svg {
-                width: 24px;
-                height: 24px;
-            }
-            .schema-default, .schema-enable, .config-showsource-toggle-icon, .config-allowcustom-toggle-icon {
-                width: 24px;
-                height: 24px;
-                background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
-            }
-            .download-icon {
-                display: inline-block;
-                margin-right: 10px;
-                width: 24px;
-                height: 24px;
-                vertical-align: middle;
-            }
-            .download-icon svg{
-                fill: #FFF;
-            }
-            .date-icon {
-                display: inline-block;
-                margin-right: 10px;
-                width: 24px;
-                height: 24px;
-                vertical-align: middle;
-                background-position: 0 -912px;
-                background-image: url(../images/svg-sprite-action-black.svg);
-            }
-            .schema-default, .schema-delete, .schema-enable, .schema-reorder {
-                cursor: pointer;
-                background-repeat: no-repeat;
-            }
-
-            .schema-default {
-                display: inline-block;
-                width: 24px;
-                height: 24px;
-                vertical-align: middle;
-                background-position: 0 -144px;
-            }
-            .schema-enable {
-                display: inline-block;
-                width: 24px;
-                height: 24px;
-                vertical-align: middle;
-                background-position: 0 -24px;
-            }
-
-            .schema-is-default .schema-default {
-                background-position: 0 -96px;
-            }
-            .schema-is-enabled .schema-enable {
-                background-position: 0 0;
-            }
-            .schema {
-                opacity: 0.25;
-            }
-            .schema.schema-is-enabled {
-                opacity: 1;
-            }
-            .schema.schema-is-invalid {
-                background: #FBC2C4 !important;
-            }
-            .schema-name {
-                display: inline-block;
-            }
-            .schemas:empty:after {
-                width: 100px;
-                height: 100px;
-                content: "No Schemas defined.";
-            }
-            .schema-reorder {
-                float: right;
-                width: 24px;
-                height: 24px;
-                vertical-align: middle;
-                background-position: 0 -2208px;
-            }
-            .schema-delete {
-                margin-right: 20px;
-                float: right;
-                width: 24px;
-                height: 24px;
-                vertical-align: middle;
-                background-position: 0 -792px;
-            }
-            .schema-name{
-                cursor: pointer;
-            }
-            .schema-header{
-                -webkit-user-select: none;  /* Chrome all / Safari all */
-                -moz-user-select: none;     /* Firefox all */
-                -ms-user-select: none;      /* IE 10+ */
-                padding: 1em;
-            }
-            .schema-body {
-                width: 100%;
-                padding: 1em;
-                border-top: 1px solid rgba(0,0,0,0.2);
-                display: inline-block;
-                background: rgba(0,0,0,0.01);
-            }
-
-            .CodeMirror-drag-handel {
-                position: absolute;
-                right:30px;
-                margin-top: -20px;
-                width: 20px;
-                height: 20px;
-                border-top: 10px solid rgba(0,0,0,0);
-                border-bottom: 10px solid rgba(0,0,0,0.2);
-                border-left: 10px solid rgba(0,0,0,0);
-                border-right: 10px solid rgba(0,0,0,0.2);
-                z-index: 3;
-                cursor: pointer;
-            }
-
-            .datetimepicker svg {
-                width: 16px;
-                height: 16px;
-            }
-
-            .line-error {
-                background: #FBC2C4 !important;
-                color: #8a1f11 !important;
-            }
-
-            .schema-input-schema-results {
-                width: 100%;
-                border-left: 1px solid rgba(0,0,0,0.2);
-                border-right: 1px solid rgba(0,0,0,0.2);
-                border-bottom: 1px solid rgba(0,0,0,0.2);
-                padding: 8px;
-            }
-            .schema-input-schema-results.schema-input-schema-invalid {
-                display: none;
-            }
-            .schema-input-schema-results.schema-input-schema-invalid {
-                display: block;
-                background-color: #e3b5af;
-            }
-
-            .schema-input-schema-results.schema-input-schema-valid {
-                display: block;
-                background-color: #bfe3b2;
-            }
-
-            .config-showsource-toggle, .config-allowcustom-toggle {
-                cursor: pointer;
-                padding: 4px;
-            }
-
-            .config-showsource-toggle-icon, .config-allowcustom-toggle-icon {
-                margin-right: 10px;
-                display: inline-block;
-                width: 24px;
-                height: 24px;
-                vertical-align: middle;
-                background-position: 0 -2208px;
-            }
-            .config-showsource .config-showsource-toggle-icon, .config-allowcustom .config-allowcustom-toggle-icon{
-                background-position: 0 0;
-            }
-
-            .bootstrap-tagsinput {
-                margin:0px;
-                border-top-left-radius: 0 px;
-                border-bottom-left-radius: 0 px;
-            }
-            .bootstrap-tagsinput .tag.big{
-                background: #0088cc;
-                padding: 2px;
-                border-radius: 3px;
-            }
-            .bootstrap-tagsinput .tag.big{
-                border-radius: 3px;
-            }
-            h2 {
-                margin-top: 10px;
-                margin-bottom: 5px;
-                font-size: 25px;
-            }
-
-        </style>
+        <link rel="stylesheet" href="stylesheets/admin/ui.css"/>
+        <link rel="stylesheet" href="stylesheets/admin/schemas.css"/>
+        <link rel="stylesheet" href="stylesheets/admin/codemirror.css"/>
     </head>
     <body>
 
@@ -290,18 +35,27 @@
             </div>
             <div class="row">
                 <div class="col-md-3">
-                    <div class="panel panel-default panel-success">
+                    <div class="panel panel-success">
                         <div class="panel-heading">
-                            <h3 class="panel-title">Import</h3>
+                            <h3 class="panel-title">
+                                <svg viewBox="0 216 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <use xlink:href="/images/svg-sprite/svg-sprite-file.svg#ic_file_upload_24px"></use>
+                                </svg>
+                                Import</h3>
                         </div>
                         <div class="panel-body">
-                            <p>Warning: Loading a new configuration will overwrite any existing data for this page.</p>
+                            <p>Warning: Loading a configuration will overwrite the configuration options below.</p>
                             <input id="import-file" type="file" />
                         </div>
                     </div>
-                    <div class="panel panel-default panel-default">
+                    <div class="panel panel-default">
                         <div class="panel-heading">
-                            <h3 class="panel-title">Configuration Options</h3>
+                            <h3 class="panel-title">
+                                <svg viewBox="0 2352 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_settings_24px"></use>
+                                </svg>
+                                Configuration Options
+                            </h3>
                         </div>
                         <div class="panel-body">
                             <div class="config-showsource-toggle">
@@ -314,24 +68,34 @@
                             </div>
                         </div>
                     </div>
-                    <div class="panel panel-default panel-info">
+                    <div class="panel panel-info">
                         <div class="panel-heading">
-                            <h3 class="panel-title">Export</h3>
+                            <h3 class="panel-title">
+                                <svg viewBox="0 192 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <use xlink:href="/images/svg-sprite/svg-sprite-file.svg#ic_file_download_24px"></use>
+                                </svg>
+                                Export
+                            </h3>
                         </div>
                         <div class="panel-body">
                             <a class="btn btn-primary download-file">
                                 <div class="download-icon">
-                                    <svg viewBox="0 192 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-                                        <use xlink:href="/images/svg-sprite/svg-sprite-file.svg#ic_file_download_24px"></use>
+                                    <svg viewBox="0 672 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_save_24px"></use>
                                     </svg>
                                 </div>
                                 Download File
                             </a>
                         </div>
                     </div>
-                    <div class="panel panel-default panel-default panel-help">
+                    <div class="panel panel-default panel-help">
                         <div class="panel-heading">
-                            <h3 class="panel-title">Help</h3>
+                            <h3 class="panel-title">
+                                <svg viewBox="0 1248 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_help_24px"></use>
+                                </svg>
+                                Help
+                            </h3>
                         </div>
                         <div class="panel-body">
                             ShEx documentation
@@ -408,7 +172,8 @@
                             </div>
                             <div class="schema-input-demo-data">
                                 <textarea class="schema-demo-data-input"></textarea>
-                                <div class="CodeMirror-drag-handel"></div>
+                                <div class="CodeMirror-resize-inc-300" title="Increase textarea size"></div>
+                                <div class="CodeMirror-resize-sub-300" title="Reduce textarea size"></div>
                             </div>
                         </li>
                     </ol>
@@ -468,7 +233,8 @@
                                 </div>
                                 <div class="schema-input-schema">
                                     <textarea class="schema-input-schema-input"></textarea>
-                                    <div class="CodeMirror-drag-handel"></div>
+                                    <div class="CodeMirror-resize-inc-300" title="Increase textarea size"></div>
+                                    <div class="CodeMirror-resize-sub-300" title="Reduce textarea size"></div>
                                     <div class="schema-input-schema-results"></div>
                                 </div>
                                 <h4>Demos (Turtle, TriG, N-Triples or N-Quads)</h4>
@@ -541,15 +307,18 @@
                 }
             });
             var deleteSchema = function deleteSchema(schema){
-                $(schema).fadeOut(350,function(){
-                    $(this).remove();
-                    var schemas = getAllSchemas();
-                    if(schemas.length!=0){
-                        for(var i=schemas.length-1;i>=0;i--){
-                            defaultSchema(schemas[i]);
+                var really = confirm("Delete this Schema?");
+                if(really){
+                    $(schema).fadeOut(350,function(){
+                        $(this).remove();
+                        var schemas = getAllSchemas();
+                        if(schemas.length!=0){
+                            for(var i=schemas.length-1;i>=0;i--){
+                                defaultSchema(schemas[i]);
+                            }
                         }
-                    }
-                });
+                    });
+                }
             };
             var enableSchema = function enableSchema(schema){
                 if($(schema).hasClass("schema-is-enabled") && !$(schema).hasClass("schema-is-default")){
@@ -597,6 +366,7 @@
             };
             var setSchemaData = function setSchemaData(schema,data){
                 $(schema).data("schemaInput").setValue(data);
+                $($(schema).data("schemaInput")).trigger("change");
             };
             var setDemoName = function setSchemaName(demo,name){
                 $(demo).find(".schema-demo-name-input").val(name);
@@ -648,8 +418,8 @@
                 s.description =     $(schema).find(".schema-input-description-input").val();
                 s.creationDate =    moment($(schema).find(".schema-input-creationdate-input").val()).unix();
                 s.modificationDate =moment($(schema).find(".schema-input-modificationdate-input").val()).unix();
-                if($(schema).find("schema-input-requirementlevels-input").val()!=""){
-                    s.reqLevels =   $(schema).find("schema-input-requirementlevels-input").val().split(",");
+                if($(schema).find(".schema-input-requirementlevels-input").val()!=""){
+                    s.reqLevels =   $(schema).find(".schema-input-requirementlevels-input").val().split(",");
                 }
                 s.data =            $.data( schema, "schemaInput").getValue();
                 s.dataDemos =       [];
@@ -681,7 +451,10 @@
             var createNewDemo = function createNewDemo(schema){
                 var newDemo = $(".schema-demo-template").clone();
                 newDemo.find(".schema-demo-delete").click(function(e){
-                    $(this).parent().parent().parent().fadeOut(350,function(){$(this).remove();});
+                    var really = confirm("Delete this Demo?");
+                    if(really){
+                        $(this).parent().parent().parent().fadeOut(350,function(){$(this).remove();});
+                    }
                     e.stopPropagation();
                 });
                 newDemo.removeClass("schema-demo-template");
@@ -690,6 +463,16 @@
                     lineNumbers: true
                 });
                 $(newDemo).data("demoInput",demoInput);
+                newDemo.find(".CodeMirror-resize-sub-300").click(function(e) {
+                    var old_height = $(newDemo.data("demoInput").getWrapperElement()).height();
+                    if(old_height>300){
+                        newDemo.data("demoInput").setSize("100%",old_height-300);
+                    }
+                });
+                newDemo.find(".CodeMirror-resize-inc-300").click(function(e) {
+                    var old_height = $(newDemo.data("demoInput").getWrapperElement()).height();
+                    newDemo.data("demoInput").setSize("100%",old_height+300);
+                });
                 return newDemo;
             };
             var createNewSchema = function createNewSchema(){
@@ -718,6 +501,7 @@
                 });
                 newSchema.find(".schema-header").click(function(){
                     $(this).parent().find(".schema-body").slideToggle();
+                    e.stopPropagation();
                 });
                 newSchema.find(".schema-input-name-input").on("input propertychange paste",function(e){
                     if($(this).val()!=""){
@@ -747,9 +531,19 @@
                     lineNumbers: true
                 });
                 $(newSchema).data("schemaInput",schemaInput);
-                console.log($(newSchema).data("schemaInput"));
                 var schemaInputOutput = newSchema.find(".schema-input-schema-results");
                 var oldLine = undefined;
+
+                newSchema.find(".CodeMirror-resize-sub-300").click(function(e) {
+                    var old_height = $(newSchema.data("schemaInput").getWrapperElement()).height();
+                    if(old_height>300){
+                        newSchema.data("schemaInput").setSize("100%",old_height-300);
+                    }
+                });
+                newSchema.find(".CodeMirror-resize-inc-300").click(function(e) {
+                    var old_height = $(newSchema.data("schemaInput").getWrapperElement()).height();
+                    newSchema.data("schemaInput").setSize("100%",old_height+300);
+                });
 
                 schemaInput.on("change", function() {
                     var callbacks = {
@@ -775,7 +569,7 @@
                             schemaInput.removeLineClass(oldLine, 'background', 'line-error');
                         }
                         var validator = new ShExValidator.Validator(schemaInput.getValue(), "", callbacks, {});
-                    }, 500, "schemaValidator");
+                    }, 500, "schemaValidator"+Math.random());
                 });
                 return newSchema;
             };
@@ -798,6 +592,7 @@
                 var a = $(e.target).hasClass('schema-reorder');
                 var b = $(e.target).parent().hasClass('schema-reorder');
                 var c = $(e.target).parent().parent().hasClass('schema-reorder');
+                var d = $(e.target).hasClass("CodeMirror-drag-handel");
                 if ( a || b || c) e.preventDefault();
             }, false);
 
@@ -823,8 +618,6 @@
             // Selecting a file using the file chooser should cause the content of that file to be loaded into the data source div as text
             $("#import-file").change(function() {
 
-                console.log("hei");
-
                 var inputFiles = this.files;
 
                 if (inputFiles == undefined || inputFiles.length == 0) {
@@ -835,7 +628,6 @@
                 var reader = new FileReader();
 
                 reader.onload = function (event) {
-                    console.log(event.target.result);
                     addConfiguration(JSON.parse(event.target.result));
                 };
 
