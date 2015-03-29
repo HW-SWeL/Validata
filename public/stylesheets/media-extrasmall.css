@@ -459,7 +459,7 @@ a.panel-title {
     padding-left: 30px;
 }
 
-.validationResultsErrorMessageBody {
+.clickableError {
     cursor: pointer;
 }
 
@@ -471,3 +471,50 @@ a.panel-title {
 }
 
 
+.CodeMirror {
+    border: 1px solid rgba(0,0,0,0.2);
+}
+
+/*
+    Resize Codemirror buttons
+*/
+.CodeMirror-resize-inc-300, .CodeMirror-resize-sub-300 {
+    position: absolute;
+    margin-top: -48px;
+    width: 24px;
+    height: 24px;
+    z-index: 3;
+    cursor: pointer;
+    -webkit-user-select: none;  /* Chrome all / Safari all */
+    -moz-user-select: none;     /* Firefox all */
+    -ms-user-select: none;      /* IE 10+ */
+}
+.CodeMirror-resize-inc-300:before, .CodeMirror-resize-sub-300:before {
+    color: #FFF;
+    font-weight: 700;
+    font-size: 19px;
+}
+.CodeMirror-resize-inc-300 {
+    background: #5cb85c;
+    right:82px;
+}
+.CodeMirror-resize-sub-300 {
+    background: #d9534f;
+    right:58px;
+}
+.CodeMirror-resize-inc-300:before {
+    margin-left: 7px;
+    content: "+";
+}
+.CodeMirror-resize-sub-300:before {
+    margin-left: 8px;
+    top: -2px;
+    position: relative;
+    content: "-";
+}
+
+/* Displays where the errors in the shex file are */
+.line-error {
+    background: #FBC2C4 !important;
+    color: #8a1f11 !important;
+}

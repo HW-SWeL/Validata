@@ -221,8 +221,6 @@ Validata = {
                             var selectedReqLevel = Util.stringValue( UI.reqLevelSelector.val() ).toUpperCase();
                             var errorReqLevel = Util.stringValue( rawError.req_lev).toUpperCase().replace(' NOT', '');
                             
-                            Log.i("selectedReqLevel: " + selectedReqLevel + ", errorReqLevel: " + errorReqLevel);
-                            
                             if(
                                 Util.stringIsNotBlank(selectedReqLevel) && 
                                 Util.stringIsNotBlank(errorReqLevel) &&
@@ -230,8 +228,6 @@ Validata = {
                                 UI.reqLevels.indexOf(errorReqLevel) > -1
                             )
                             {
-                                Log.i("selectedReqLevel index: " + UI.reqLevels.indexOf(selectedReqLevel) + ", errorReqLevel index: " + UI.reqLevels.indexOf(errorReqLevel));
-                                
                                 if( UI.reqLevels.indexOf(selectedReqLevel) > UI.reqLevels.indexOf(errorReqLevel) )
                                 {
                                     errorLevel = "warning";
@@ -281,7 +277,8 @@ Validata = {
                         
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'], function(index, rawError)
                         {
-                            var messageBody = '<span class="validationResultsErrorMessageBody" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
+                            var clickableClass = Util.stringIsNotBlank( Util.stringValue(rawError.line) ) ? "clickableError" : "";
+                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
                             
                             errorsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
@@ -318,7 +315,8 @@ Validata = {
                         
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings'], function(index, rawError)
                         {
-                            var messageBody = '<span class="validationResultsErrorMessageBody" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
+                            var clickableClass = Util.stringIsNotBlank( Util.stringValue(rawError.line) ) ? "clickableError" : "";
+                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
 
                             warningsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
@@ -380,7 +378,20 @@ Validata = {
                 var lineNumber = $(this).data('linenumber');
                 if( Util.stringIsNotBlank(lineNumber) )
                 {
-                    alert("Scrolling to lineNumber: " + lineNumber);
+                    if(UI.highlightedLineNumber)
+                    {
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
+                        UI.highlightedLineNumber = false;
+                    }
+                    
+                    UI.dataSourceText.addLineClass(lineNumber-1, 'background', 'line-error');
+                    UI.highlightedLineNumber = lineNumber-1;
+
+                    var lineCoords = UI.dataSourceText.charCoords({line: lineNumber, ch: 0}, "local").top;
+                    var middleHeight = UI.dataSourceText.getScrollerElement().offsetHeight / 2;
+                    UI.dataSourceText.scrollTo(null, lineCoords - middleHeight - 5);
+
+                    UI.activateWizardStep("Data", true);
                 }
             });
 

@@ -13,6 +13,7 @@
         <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css"/>
         <link rel="stylesheet" href="components/bootstrap-multiselect/dist/css/bootstrap-multiselect.css"/>
         <link rel="stylesheet" href="components/animate.css/animate.css"/>
+        <link rel="stylesheet" href="components/codemirror/lib/codemirror.css"/>
 
         <link rel="stylesheet" href="stylesheets/vendor/material-design-icons.css"/>
 
@@ -157,7 +158,7 @@
                                 <use xlink:href="/images/svg-sprite/svg-sprite-toggle.svg#ic_check_box_outline_blank_24px"></use>
                             </svg>
 
-                            <svg viewBox="0 648 24 24" class="quickSummarySectionIcon quickSummarySectionIconWarning svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                            <svg viewBox="0 648 24 24" class="quickSummarySectionIcon quickSummarySectionIconInvalid svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                                 <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_report_24px"></use>
                             </svg>
                             
@@ -173,7 +174,7 @@
                                 <use xlink:href="/images/svg-sprite/svg-sprite-toggle.svg#ic_check_box_outline_blank_24px"></use>
                             </svg>
 
-                            <svg viewBox="0 648 24 24" class="quickSummarySectionIcon quickSummarySectionIconWarning svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                            <svg viewBox="0 648 24 24" class="quickSummarySectionIcon quickSummarySectionIconInvalid svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
                                 <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_report_24px"></use>
                             </svg>
 
@@ -221,7 +222,9 @@
                                     <h4 class="modal-title" id="schemaSourceModalLabel">Schema Source (ShEx)</h4>
                                 </div>
                                 <div class="modal-body">
-                                    <div id="schemaSourceText" class="editableSourceText" contenteditable="true"></div>
+                                    <textarea id="schemaSourceText"></textarea>
+                                    <div class="CodeMirror-resize-inc-300" title="Increase textarea size"></div>
+                                    <div class="CodeMirror-resize-sub-300" title="Reduce textarea size"></div>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -313,9 +316,11 @@
                                         </div>
 
                                         <div class="form-group">
-                                            <label for="dataSourceText">Directly Input Data</label>
+                                            <label for="dataSourceText">Directly Input Data</label><br />
 
-                                            <div id="dataSourceText" class="editableSourceText" contenteditable="true"></div>
+                                            <textarea id="dataSourceText"></textarea>
+                                            <div class="CodeMirror-resize-inc-300" title="Increase textarea size"></div>
+                                            <div class="CodeMirror-resize-sub-300" title="Reduce textarea size"></div>
                                         </div>
 
                                     </form>
@@ -448,6 +453,8 @@
         <script src="components/bootstrap/dist/js/bootstrap.min.js"></script>
         <script src="components/bootstrap-multiselect/dist/js/bootstrap-multiselect.js"></script>
         <script src="components/moment/moment.js"></script>
+        <script src="components/codemirror/lib/codemirror.js"></script>
+
 
         <script src="javascripts/ShExValidator.js"></script>
         <script src="javascripts/Log.js"></script>
