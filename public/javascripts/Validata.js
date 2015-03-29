@@ -275,8 +275,9 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'], function (index, rawError)
                         {
-                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawError.line)) ? "clickable" : "";
-                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.nl2br( Util.escapeHtml(rawError.description) ) + '</span>';
+                            var line = Util.isDefined(rawError.line) ? rawError.line : "";
+                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
+                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + Util.nl2br( Util.escapeHtml(rawError.description) ) + '</span>';
 
                             errorsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
@@ -311,8 +312,9 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings'], function (index, rawError)
                         {
-                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawError.line)) ? "clickable" : "";
-                            var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.nl2br( Util.escapeHtml(rawError.description) ) + '</span>';
+                            var line = Util.isDefined(rawError.line) ? rawError.line : "";
+                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
+                            var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + Util.nl2br( Util.escapeHtml(rawError.description) ) + '</span>';
 
                             warningsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
@@ -347,8 +349,9 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'], function (index, rawMatch)
                         {
-                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawMatch.triple.line)) ? "clickable" : "";
-                            var messageBody = '<span class="validationResultsMatchMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawMatch.triple.line) + '">' + Util.nl2br( Util.escapeHtml(rawMatch.toString()) ) + '</span>';
+                            var line = Util.isDefined(rawMatch.triple) ? rawMatch.triple.line : "";
+                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
+                            var messageBody = '<span class="validationResultsMatchMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + Util.nl2br( Util.escapeHtml(rawMatch.toString()) ) + '</span>';
                             
                             matchesResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
