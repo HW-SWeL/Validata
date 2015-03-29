@@ -2,6 +2,9 @@
  * Created by Home on 28/03/2015.
  */
 $(document).ready(function(){
+
+    $('[data-toggle="tooltip"]').tooltip();
+
     $(".panel-help").find(".panel-body").hide();
 
     $(".panel").find(".panel-heading").click(function(){
@@ -231,6 +234,7 @@ $(document).ready(function(){
         newSchema.find(".schema-reorder").click(function(e){
             e.stopPropagation();
         });
+        newSchema.find(".schema-body").off();
         newSchema.find(".schema-header").click(function(e){
             $(this).parent().find(".schema-body").slideToggle();
             e.stopPropagation();
@@ -307,11 +311,13 @@ $(document).ready(function(){
 
     var ol = document.getElementById('slippylist');
     ol.addEventListener('slip:beforereorder', function(e){
-        console.log($(this));
-        console.log($(e));
-        $(".schemas .schema-body").hide();
-        if (/demo-no-reorder/.test(e.target.className)) {
-            e.preventDefault();
+        var a = $(e.target).hasClass('schema-reorder');
+        var b = $(e.target).parent().hasClass('schema-reorder');
+        var c = $(e.target).parent().parent().hasClass('schema-reorder');
+        if(a || b || c){
+            $(".schemas .schema-body").hide();
+        } else {
+            return false;
         }
     }, false);
 
@@ -323,7 +329,6 @@ $(document).ready(function(){
         var a = $(e.target).hasClass('schema-reorder');
         var b = $(e.target).parent().hasClass('schema-reorder');
         var c = $(e.target).parent().parent().hasClass('schema-reorder');
-        var d = $(e.target).hasClass("CodeMirror-drag-handel");
         if ( a || b || c) e.preventDefault();
     }, false);
 

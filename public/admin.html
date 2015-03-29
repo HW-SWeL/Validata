@@ -102,11 +102,11 @@
                                     <th colspan="2">Name</th>
                                 </tr>
                                 <tr>
-                                    <td>Name Term</td>
+                                    <td><span data-toggle="tooltip" data-title="The predicate of any matching triple is the same as the NameTerm IRI." data-placement="right">Name Term</span></td>
                                     <td><code>ex:state</code></td>
                                 </tr>
                                 <tr>
-                                    <td>Name Stem</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The predicate of any matching triple starts with the IRI.">Name Stem</span></td>
                                     <td><samp>ex:<code>~</code></samp></td>
                                 </tr>
                             </table>
@@ -115,19 +115,19 @@
                                     <th colspan="2">Value</th>
                                 </tr>
                                 <tr>
-                                    <td>Value Type</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The object of any matching triple is the same as the ValueType IRI.">Value Type</span></td>
                                     <td><code>ex:state</code></td>
                                 </tr>
                                 <tr>
-                                    <td>Value Set</td>
-                                    <td><samp><code>(</code>xsd:string xsd:positiveInteger<code>)</code></samp></td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The object of any matching triple is one of the list of triples in the ValueSet.">Value Set</span></td>
+                                    <td><samp><code>(</code>ex:assigned ex:unassigned<code>)</code></samp></td>
                                 </tr>
                                 <tr>
-                                    <td>Value Stem</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The object of any matching triple starts with the IRI.">Value Stem</span></td>
                                     <td><samp>ex:<code>~</code></samp></td>
                                 </tr>
                                 <tr>
-                                    <td>Value Reference</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The object of a matching triple is an IRI or blank node and the that node is the subject of triples matching the referenced shape expression.">Value Reference</span></td>
                                     <td><samp><code>@&lt;UserShape&gt;</code></samp></td>
                                 </tr>
                             </table>
@@ -136,27 +136,36 @@
                                     <th colspan="2">Rules</th>
                                 </tr>
                                 <tr>
-                                    <td>Arc Rule</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="A matching triple matches the NameTerm and the ValueTerm. Cardinality constraints apply.">Arc Rule</span></td>
                                     <td><code>foaf:givenName xsd:string+</code></td>
                                 </tr>
                                 <tr>
-                                    <td>And Rule</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="Each conjoint matches the input graph.">And Rule</span></td>
                                     <td><samp>foaf:givenName xsd:string<code>,</code><br>
                                         foaf:familyName xsd:string</samp></td>
                                 </tr>
                                 <tr>
-                                    <td>Or rule</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="Exactly one disjoint matches the input graph.">Or rule</span></td>
                                     <td><code>(</code><samp>foaf:givenName xsd:string </samp><code>|</code><samp><br>
                                         foaf:name xsd:string </samp><code>)</code></td>
                                 </tr>
                                 <tr>
-                                    <td>Group Rule</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="A matching triple matches the enclosed rule (here an AndRule). Cardinality constraints apply.">Group Rule</span></td>
                                     <td><samp><code>(</code> foaf:givenName xsd:string<code>,</code><br>
                                         foaf:familyName xsd:string <code>)</code></samp></td>
                                 </tr>
                                 <tr>
-                                    <td>Rule Inclusions</td>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="Include the referenced rule in place of the include directive.">Rule Inclusions</span></td>
                                     <td><samp><code>&amp;&nbsp;&lt;PersonShape&gt;</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="Negates arc-rules, and-rules and or-rules">Rule Negation</span></td>
+                                    <td><samp><code>!</code>foaf:givenName xsd:string</samp></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td><samp><code>!</code>( foaf:givenName xsd:string,<br>
+                                        foaf:familyName xsd:string )</samp></td>
                                 </tr>
                             </table>
                             <table class="table table-condensed">
