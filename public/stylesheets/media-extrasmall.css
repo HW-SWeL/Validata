@@ -103,6 +103,7 @@ html, body {
 #sidebarContentWrapper {
     position: relative;
     padding: 0 20px 0 20px;
+    max-height: none !important;
 }
 
 /*
