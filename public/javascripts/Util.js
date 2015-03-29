@@ -17,14 +17,15 @@ Util = {
         };
     }(),
 
-    animateOnce: function(elem, animClass){
+    animateOnce: function (elem, animClass)
+    {
         elem.addClass('animated ' + animClass)
-            .one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function(){
+            .one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function ()
+            {
                 $(this).removeClass('animated ' + animClass)
-        });
+            });
     },
 
-    
     // This will return true for a non-empty string, number or boolean value
     // It will return false for undefined itself
     isDefined: function isDefined(value)
@@ -156,7 +157,7 @@ Util = {
     {
         try
         {
-            if(!Util.isDefined(obj))
+            if (!Util.isDefined(obj))
             {
                 return false;
             }
@@ -171,7 +172,7 @@ Util = {
 
     intValue: function intValue(obj)
     {
-        if( Util.stringIsEmpty(obj) )
+        if (Util.stringIsEmpty(obj))
         {
             return 0;
         }
@@ -183,7 +184,7 @@ Util = {
 
     floatValue: function floatValue(obj)
     {
-        if( Util.stringIsEmpty(obj) )
+        if (Util.stringIsEmpty(obj))
         {
             return 0.000;
         }
@@ -195,7 +196,7 @@ Util = {
 
     stringValue: function stringValue(obj)
     {
-        if( Util.stringIsEmpty(obj) )
+        if (Util.stringIsEmpty(obj))
         {
             return "";
         }
@@ -207,7 +208,7 @@ Util = {
 
     stringValueNoBlank: function stringValueNoBlank(obj, blankSpacer)
     {
-        if( Util.stringIsEmpty(obj) )
+        if (Util.stringIsEmpty(obj))
         {
             return blankSpacer;
         }
@@ -235,7 +236,7 @@ Util = {
     {
         try
         {
-            if(!Util.isDefined(iterable))
+            if (!Util.isDefined(iterable))
             {
                 return 0;
             }
@@ -283,12 +284,14 @@ Util = {
         "/": '&#x2F;'
     },
 
-    escapeHtml: function escapeHtml(string) {
-        return Util.stringValue(string).replace(/[&<>"'\/]/g, function (s) {
+    escapeHtml: function escapeHtml(string)
+    {
+        return Util.stringValue(string).replace(/[&<>"'\/]/g, function (s)
+        {
             return Util.entityMap[s];
         });
     },
-    
+
     getObjectValues: function getObjectValues(object)
     {
         if (Util.isIterable(object))
@@ -395,15 +398,22 @@ Util = {
         }
     },
 
-    trimToLength: function truncateString(inputString, inputLength) {
-        var outputString = $.trim( Util.stringValue(inputString) );
+    trimToLength: function truncateString(inputString, inputLength)
+    {
+        var outputString = $.trim(Util.stringValue(inputString));
 
-        if(outputString.length > inputLength)
+        if (outputString.length > inputLength)
         {
             outputString = outputString.substring(0, inputLength).split(" ").slice(0, -1).join(" ") + "...";
         }
 
         return outputString;
+    },
+
+    nl2br: function nl2br(str, is_xhtml)
+    {
+        var breakTag = (is_xhtml || typeof is_xhtml === 'undefined') ? '<br />' : '<br>';
+        return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1' + breakTag + '$2');
     }
-    
+
 };
