@@ -3715,7 +3715,7 @@ RDF = {
                 // Make sure we used all of the closedSubGraph.
                 if (validatorStuff.closedShapes) {
                     
-                    window.checkRemaining = function checkRemaining (res) {
+                    checkRemaining = function checkRemaining (res) {
                         if (res.passed()) {
                             var remaining = closedSubGraph.filter(function (t) {
                                 var r = res.triples();
@@ -3731,12 +3731,12 @@ RDF = {
                     }
                     
                     if (validatorStuff.async)
-                        resOrPromise = resOrPromise.then(window.checkRemaining).catch(function (e) {
+                        resOrPromise = resOrPromise.then(checkRemaining).catch(function (e) {
                             debugger;
                             return Promise.reject(e);
                         });
                     else
-                        window.checkRemaining(resOrPromise);
+                        checkRemaining(resOrPromise);
                 }
                 this.termResults[key] = resOrPromise;
             }
@@ -3828,7 +3828,7 @@ RDF = {
                         var nestedValidatorStuff = validatorStuff.push(s, instSh);
                         var resOrPromise = schema.validate(s, ruleLabel, db, nestedValidatorStuff, false);
                         
-                        window.postValidate = function postValidate (res) {
+                        function postValidate (res) {
                             // If it passed or is indeterminate,
                             if (res.status !== RDF.DISPOSITION.FAIL) {
 
@@ -3840,14 +3840,14 @@ RDF = {
                         }
                         
                         if (validatorStuff.async) {
-                            resOrPromise.then(window.postValidate).catch(function (e) {
+                            resOrPromise.then(postValidate).catch(function (e) {
                                 console.dir(e);
                                 debugger;
                                 RDF.message(e);
                             });
                             promises.push(resOrPromise);
                         } else {
-                            window.postValidate(resOrPromise);
+                            postValidate(resOrPromise);
                         }
                         
 		    }
