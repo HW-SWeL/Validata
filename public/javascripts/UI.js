@@ -80,7 +80,10 @@ UI = {
         UI.schemaSourceModal.on("show.bs.modal", function modalShow()
         {
             $(this).find(".modal-body").css("max-height", ( $(window).height() - 200 ));
-
+        });
+        UI.schemaSourceModal.on("shown.bs.modal", function modalShow()
+        {
+            UI.schemaSourceText.refresh();
         });
 
         // Clicking anywhere inside a step panel triggers the staggered update
@@ -178,18 +181,18 @@ UI = {
             UI.triggerStaggeredContentChange();
         });
         
-        dataSourceTextarea.siblings(".CodeMirror-resize-sub-300").click(function (e)
+        dataSourceTextarea.siblings(".CodeMirror-resize-sub-100").click(function (e)
         {
             var old_height = $(UI.dataSourceText.getWrapperElement()).height();
-            if (old_height > 300)
+            if (old_height > 100)
             {
-                UI.dataSourceText.setSize("100%", old_height - 300);
+                UI.dataSourceText.setSize("100%", old_height - 100);
             }
         });
-        dataSourceTextarea.siblings(".CodeMirror-resize-inc-300").click(function (e)
+        dataSourceTextarea.siblings(".CodeMirror-resize-inc-100").click(function (e)
         {
             var old_height = $(UI.dataSourceText.getWrapperElement()).height();
-            UI.dataSourceText.setSize("100%", old_height + 300);
+            UI.dataSourceText.setSize("100%", old_height + 100);
         });
 
 
@@ -203,15 +206,15 @@ UI = {
             UI.triggerStaggeredContentChange();
         });
 
-        schemaSourceTextarea.siblings(".CodeMirror-resize-sub-300").click(function (e)
+        schemaSourceTextarea.siblings(".CodeMirror-resize-sub-100").click(function (e)
         {
             var old_height = $(UI.schemaSourceText.getWrapperElement()).height();
-            if (old_height > 300)
+            if (old_height > 100)
             {
                 UI.schemaSourceText.setSize("100%", old_height - 100);
             }
         });
-        schemaSourceTextarea.siblings(".CodeMirror-resize-inc-300").click(function (e)
+        schemaSourceTextarea.siblings(".CodeMirror-resize-inc-100").click(function (e)
         {
             var old_height = $(UI.schemaSourceText.getWrapperElement()).height();
             UI.schemaSourceText.setSize("100%", old_height + 100);
@@ -327,7 +330,7 @@ UI = {
         Validata.Schema = ValidataConfig['schemas'][selectedSchemaIndex];
         UI.reqLevels = ValidataConfig['schemas'][selectedSchemaIndex]['reqLevels'];
 
-        if (UI.reqLevels)
+        if ( Util.iterableLength( UI.reqLevels ) )
         {
             UI.reqLevelSelector.empty();
 

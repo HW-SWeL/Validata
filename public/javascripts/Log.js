@@ -2,7 +2,7 @@ Log = {
 
     v: function v(logMessage)
     {
-        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
+        if ($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
@@ -12,7 +12,7 @@ Log = {
 
     d: function d(logMessage)
     {
-        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
+        if ($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
@@ -22,7 +22,7 @@ Log = {
 
     i: function i(logMessage)
     {
-        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
+        if ($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
@@ -32,7 +32,7 @@ Log = {
 
     w: function w(logMessage)
     {
-        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
+        if ($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
@@ -42,7 +42,7 @@ Log = {
 
     e: function e(logMessage)
     {
-        if($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
+        if ($.type(logMessage) == "string" && arguments.callee.caller && arguments.callee.caller.name)
         {
             logMessage = arguments.callee.caller.name + ": " + logMessage;
         }
@@ -60,56 +60,56 @@ Log = {
     {
         var inlineTraceString = '';
 
-        if( inputArguments.callee )
+        if (inputArguments.callee)
         {
             inlineTraceString += inputArguments.callee.name;
         }
 
-        
-        try {
-            if(inputCallee.caller)
+        try
+        {
+            if (inputCallee.caller)
             {
                 inlineTraceString += " called by " + inputCallee.caller.name;
             }
         }
-        catch(e)
+        catch (e)
         {
         }
 
-        if(inputArguments.length)
+        if (inputArguments.length)
         {
             inlineTraceString += " with arguments: " + [].slice.apply(inputArguments).toString();
         }
 
         return inlineTraceString;
     },
-    
+
     prettyConsoleLog: function prettyConsoleLog(logLevel, logMessage)
     {
         var objectToLog = false;
-        if($.type(logMessage) != "string")
+        if ($.type(logMessage) != "string")
         {
             objectToLog = logMessage;
             logMessage = "Object dump below:";
         }
-    
-        if(logLevel == "v")
+
+        if (logLevel == "v")
         {
             console.log("%c" + logMessage, "color: #999999");
         }
-        else if(logLevel == "d")
+        else if (logLevel == "d")
         {
             console.log(logMessage);
         }
-        else if(logLevel == "i")
+        else if (logLevel == "i")
         {
             console.log("%c" + logMessage, "color: #008800");
         }
-        else if(logLevel == "w")
+        else if (logLevel == "w")
         {
             console.warn(logMessage);
         }
-        else if(logLevel == "e")
+        else if (logLevel == "e")
         {
             console.error(logMessage);
         }
@@ -117,8 +117,8 @@ Log = {
         {
             console.log(logMessage);
         }
-    
-        if(objectToLog !== false)
+
+        if (objectToLog !== false)
         {
             console.log(objectToLog);
         }

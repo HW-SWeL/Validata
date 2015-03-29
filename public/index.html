@@ -222,9 +222,11 @@
                                     <h4 class="modal-title" id="schemaSourceModalLabel">Schema Source (ShEx)</h4>
                                 </div>
                                 <div class="modal-body">
-                                    <textarea id="schemaSourceText"></textarea>
-                                    <div class="CodeMirror-resize-inc-300" title="Increase textarea size"></div>
-                                    <div class="CodeMirror-resize-sub-300" title="Reduce textarea size"></div>
+                                    <div class="codeMirrorTextareaContainer">
+                                        <textarea id="schemaSourceText"></textarea>
+                                        <div class="CodeMirror-resize-inc-100" title="Increase textarea size"></div>
+                                        <div class="CodeMirror-resize-sub-100" title="Reduce textarea size"></div>
+                                    </div>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -318,9 +320,11 @@
                                         <div class="form-group">
                                             <label for="dataSourceText">Directly Input Data</label><br />
 
-                                            <textarea id="dataSourceText"></textarea>
-                                            <div class="CodeMirror-resize-inc-300" title="Increase textarea size"></div>
-                                            <div class="CodeMirror-resize-sub-300" title="Reduce textarea size"></div>
+                                            <div class="codeMirrorTextareaContainer">
+                                                <textarea id="dataSourceText"></textarea>
+                                                <div class="CodeMirror-resize-inc-100" title="Increase textarea size"></div>
+                                                <div class="CodeMirror-resize-sub-100" title="Reduce textarea size"></div>
+                                            </div>
                                         </div>
 
                                     </form>
@@ -370,13 +374,13 @@
                                         </div>
 
                                         <div id="reqLevelPanel" class="alert alert-info">
-                                            <div id="reqLevelHeading" class="panel-heading">
-                                                <label for="reqLevelSelector">Select Requirement Level</label>
-                                                <select id="reqLevelSelector" class="form-control">
-                                                    <option value="" disabled selected>Click here to select a validation strictness...</option>
-                                                    <option value="DEFAULT">DEFAULT</option>
-                                                </select>
-                                            </div>
+                                            <p>Validata uses the Closed World Assumption by default, meaning all used properties must be defined in the schema. Untick this box to validate in Open World mode.</p>
+                                            <br/>
+                                            <label for="reqLevelSelector">Select Requirement Level</label>
+                                            <select id="reqLevelSelector" class="form-control">
+                                                <option value="" disabled selected>Click here to select a validation strictness...</option>
+                                                <option value="DEFAULT">DEFAULT</option>
+                                            </select>
                                         </div>
 
                                     </form>
