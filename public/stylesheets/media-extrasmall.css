@@ -464,6 +464,12 @@ a.panel-title {
     cursor: pointer;
 }
 
+span.validationResultsMatchMessageBody,
+span.validationResultsWarningMessageBody,
+span.validationResultsErrorMessageBody {
+    word-wrap: break-word;
+}
+
 #validationResultsErrorsCount,
 #validationResultsWarningsCount,
 #validationResultsMatchesCount {
