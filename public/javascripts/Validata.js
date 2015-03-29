@@ -312,7 +312,7 @@ Validata = {
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings'], function (index, rawError)
                         {
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawError.line)) ? "clickableError" : "";
-                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
+                            var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
 
                             warningsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
@@ -347,12 +347,15 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'], function (index, rawMatch)
                         {
+                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawMatch.triple.line)) ? "clickableError" : "";
+                            var messageBody = '<span class="validationResultsMatchMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawMatch.triple.line) + '">' + Util.escapeHtml(rawMatch.toString()) + '</span>';
+                            
                             matchesResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
                                 '            <svg viewBox="0 1368 24 24" class="svg-size-20px svg-path-success" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
                                 '                <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_info_24px"></use>' +
                                 '            </svg>' +
-                                '            <span class="validationResultsMatchMessageBody">' + Util.escapeHtml(rawMatch.toString()) + '</span>' +
+                                messageBody +
                                 '        </li>';
                         });
 
@@ -375,10 +378,60 @@ Validata = {
                     if (UI.highlightedLineNumber)
                     {
                         UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-warning');
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-match');
                         UI.highlightedLineNumber = false;
                     }
 
                     UI.dataSourceText.addLineClass(lineNumber - 1, 'background', 'line-error');
+                    UI.highlightedLineNumber = lineNumber - 1;
+
+                    var lineCoords = UI.dataSourceText.charCoords({line: lineNumber, ch: 0}, "local").top;
+                    var middleHeight = UI.dataSourceText.getScrollerElement().offsetHeight / 2;
+                    UI.dataSourceText.scrollTo(null, lineCoords - middleHeight - 5);
+
+                    UI.activateWizardStep("Data", true);
+                }
+            });
+            
+            UI.validationResultsByErrorLevelAccordion.find('.validationResultsMatchMessageBody').on('click', function ()
+            {
+                var lineNumber = $(this).data('linenumber');
+                if (Util.stringIsNotBlank(lineNumber))
+                {
+                    if (UI.highlightedLineNumber)
+                    {
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-warning');
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-match');
+                        UI.highlightedLineNumber = false;
+                    }
+
+                    UI.dataSourceText.addLineClass(lineNumber - 1, 'background', 'line-match');
+                    UI.highlightedLineNumber = lineNumber - 1;
+
+                    var lineCoords = UI.dataSourceText.charCoords({line: lineNumber, ch: 0}, "local").top;
+                    var middleHeight = UI.dataSourceText.getScrollerElement().offsetHeight / 2;
+                    UI.dataSourceText.scrollTo(null, lineCoords - middleHeight - 5);
+
+                    UI.activateWizardStep("Data", true);
+                }
+            });
+            
+            UI.validationResultsByErrorLevelAccordion.find('.validationResultsWarningMessageBody').on('click', function ()
+            {
+                var lineNumber = $(this).data('linenumber');
+                if (Util.stringIsNotBlank(lineNumber))
+                {
+                    if (UI.highlightedLineNumber)
+                    {
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-warning');
+                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-match');
+                        UI.highlightedLineNumber = false;
+                    }
+
+                    UI.dataSourceText.addLineClass(lineNumber - 1, 'background', 'line-warning');
                     UI.highlightedLineNumber = lineNumber - 1;
 
                     var lineCoords = UI.dataSourceText.charCoords({line: lineNumber, ch: 0}, "local").top;

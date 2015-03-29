@@ -523,3 +523,11 @@ a.panel-title {
     background: #FBC2C4 !important;
     color: #8a1f11 !important;
 }
+.line-warning {
+    background: #fbf3a8 !important;
+    color: #8a8a40 !important;
+}
+.line-match {
+    background: #defbd2 !important;
+    color: #5d8a57 !important;
+}

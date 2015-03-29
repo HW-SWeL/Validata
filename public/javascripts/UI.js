@@ -245,6 +245,8 @@ UI = {
         if(UI.highlightedLineNumber)
         {
             UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
+            UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-warning');
+            UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-match');
             UI.highlightedLineNumber = false;
         }
         
