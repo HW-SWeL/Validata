@@ -275,7 +275,7 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'], function (index, rawError)
                         {
-                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawError.line)) ? "clickableError" : "";
+                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawError.line)) ? "clickable" : "";
                             var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
 
                             errorsResourceSectionHTMLString +=
@@ -311,7 +311,7 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings'], function (index, rawError)
                         {
-                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawError.line)) ? "clickableError" : "";
+                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawError.line)) ? "clickable" : "";
                             var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawError.line) + '">' + Util.escapeHtml(rawError.description) + '</span>';
 
                             warningsResourceSectionHTMLString +=
@@ -347,7 +347,7 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'], function (index, rawMatch)
                         {
-                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawMatch.triple.line)) ? "clickableError" : "";
+                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(rawMatch.triple.line)) ? "clickable" : "";
                             var messageBody = '<span class="validationResultsMatchMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(rawMatch.triple.line) + '">' + Util.escapeHtml(rawMatch.toString()) + '</span>';
                             
                             matchesResourceSectionHTMLString +=
