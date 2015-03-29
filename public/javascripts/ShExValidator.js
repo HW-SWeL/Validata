@@ -1832,6 +1832,21 @@ RDF = {
                         if (validatorStuff.async)
                             promises.push(resOrPromise);
                     });
+
+                    function langStrCheck(passes) {
+                        var langs = [];
+                        for(var p in passes) {
+                            p = passes[p];
+
+                            if(!p.r.matches[0].triple.o.langtag || !p.r.matches[0].triple.o.langtag.lex) return false;
+
+                            if(langs.indexOf(p.r.matches[0].triple.o.langtag.lex) !== -1 ) return false;
+
+                            langs.push(p.r.matches[0].triple.o.langtag.lex);
+                        }
+
+                        return true;
+                    }
                     function postTest () {
                         if (inOpt && passes.length === 0) {
                             ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE;
@@ -1839,7 +1854,7 @@ RDF = {
                         } else if (passes.length < _AtomicRule.min) {
                             ret.status = RDF.DISPOSITION.FAIL;
                             ret.error_belowMin(_AtomicRule.min, _AtomicRule);
-                        } else if (_AtomicRule.max !== null && passes.length > _AtomicRule.max) {
+                        } else if (_AtomicRule.max !== null && passes.length > _AtomicRule.max && !langStrCheck(passes)) {
                             ret.status = RDF.DISPOSITION.FAIL;
                             ret.error_aboveMax(_AtomicRule.max, _AtomicRule, passes[_AtomicRule.max].r);
                         }
@@ -13337,7 +13352,7 @@ function parseWithN3(dataText) {
         var db = RDF.Dataset();
 
         parser.parse(dataText, function (error, N3triple, prefixes) {
-            if (error) reject(error);
+            if (error) reject(parseN3Error(error));
             else if (N3triple) {
                 var triple = RDF.Triple(
                     parseNode(N3triple.subject),
@@ -13355,6 +13370,18 @@ function parseWithN3(dataText) {
             }
         });
     });
+}
+
+function parseN3Error(error) {
+    var line = error.message.match(/line [0-9]*/g);
+
+    line = (line && line.length > 0 && line[0].length > 5)?Number(line[0].substr(5)):null;
+
+    return {
+        message: error.message,
+        line: line,
+        column: 0
+    }
 }
 
 },{"../includes/Erics_RDF.js":1,"n3":3,"promise":11}],18:[function(require,module,exports){

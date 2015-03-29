@@ -477,7 +477,16 @@ Validata = {
                 }
                 else
                 {
-                    UI.dataErrorAlert.find('.sourceText').text( Validata.Data.rawResponse );
+                    UI.dataErrorAlert.find('.sourceText').text( Validata.Data.rawResponse.message );
+
+                    UI.dataSourceText.addLineClass(Validata.Data.rawResponse.line-1, 'background', 'line-error');
+                    UI.highlightedLineNumber = Validata.Data.rawResponse.line-1;
+
+                    var lineCoords = UI.dataSourceText.charCoords({line: Validata.Data.rawResponse.line, ch: 0}, "local").top;
+                    var middleHeight = UI.dataSourceText.getScrollerElement().offsetHeight / 2;
+                    UI.dataSourceText.scrollTo(null, lineCoords - middleHeight - 5);
+
+                    UI.activateWizardStep("Data", true);
 
                     dataErrorAlertVisible = true;
                     validationMessagesVisible = false;

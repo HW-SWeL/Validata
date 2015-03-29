@@ -236,6 +236,9 @@ UI = {
         UI.validationResultsWarningsResourceShapesPanel.empty().addClass('in');
         UI.validationResultsMatchesResourceShapesPanel.empty().removeClass('in');
 
+        UI.schemaErrorAlert.fadeOut('fast').find('.sourceText').empty();
+        UI.dataErrorAlert.fadeOut('fast').find('.sourceText').empty();
+        
         if(UI.highlightedLineNumber)
         {
             UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
