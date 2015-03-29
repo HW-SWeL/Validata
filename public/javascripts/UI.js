@@ -433,6 +433,12 @@ UI = {
 
             $.each(Validata.Data.rawResponse['db']['SPO'], function rawDataResponseIterator(nodeKey, nodeObject)
             {
+                // Blank nodes can't be validated yet due to a bug (?) in the validator which changes the name on every instance so we're just hiding them for now
+                if (nodeKey.indexOf("_:") >= 0)
+                {
+                    return true;
+                }
+                
                 var nodeKeyText = nodeKey.replace(/[<>]/g, '');
 
                 resourceSelector.append('<option value="' + nodeKeyText + '">' + nodeKeyText + '</option>');
@@ -469,6 +475,12 @@ UI = {
         {
             $.each(Validata.Validation.options.resourceShapeMap, function (resource, shape)
             {
+                // Blank nodes can't be validated yet due to a bug (?) in the validator which changes the name on every instance so we're just hiding them for now
+                if (resource.indexOf("_:") >= 0)
+                {
+                    return true;
+                }
+                
                 var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
 
                 resourceShapeSelectorRow
