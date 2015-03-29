@@ -13333,7 +13333,7 @@ function parseNode(text, prefixes) {
             RDF.IRI(N3Util.getLiteralType(text))
         );
     }
-    else if (N3Util.isIRI(text)) {
+    else if (N3Util.isIRI(text) || text === "") {
         return RDF.IRI(text);
     }
     else if (N3Util.isBlank(text)) {
