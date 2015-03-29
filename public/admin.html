@@ -5,143 +5,324 @@
 
         <meta name="viewport" content="width=device-width"/>
 
-        <title>Validata Admin</title>
+        <title>Validata: Admin</title>
 
         <link rel="icon" type="image/png" href="components/material-design-icons/action/drawable-hdpi/ic_spellcheck_black_48dp.png"/>
-        
-        <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css"/>
-        <link rel="stylesheet" href="components/animate.css/animate.css"/>
 
-        <link rel="stylesheet" href="stylesheets/vendor/material-design-icons.css"/>
+        <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css"/>
+        <link rel="stylesheet" href="components/bootstrap-switch/dist/css/bootstrap3/bootstrap-switch.min.css"/>
+        <link rel="stylesheet" href="components/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css" />
+        <link rel="stylesheet" href="components/animate.css/animate.css"/>
+        <link rel="stylesheet" href="components/codemirror/lib/codemirror.css"/>
 
         <link rel="stylesheet" href="stylesheets/media-sizes.css"/>
+        <link rel="stylesheet" href="stylesheets/admin/ui.css"/>
+        <link rel="stylesheet" href="stylesheets/admin/schemas.css"/>
+        <link rel="stylesheet" href="stylesheets/admin/codemirror.css"/>
+
     </head>
     <body>
 
         <div class="container-fluid">
             <div class="row">
                 <div class="lead well">
-                    <h2>ShEx Admin Panel</h2>
-                    <p>Create, modify and export config files for use with Validata</p>
+                    <h2>Validata: Admin</h2>
                 </div>
             </div>
-
-            <div class="col-md-9">
-
-                <div role="tabpanel">
-
-                    <!-- Nav tabs -->
-                    <ul id="tabList" class="nav nav-pills" role="tablist">
-                        <li role="presentation" class="active"><a href="#home" role="tab" data-toggle="tab">Add a schema</a></li>
-                    </ul>
-
-                    <!-- Tab panes -->
-                    <div class="tab-content">
-                        <div role="tabpanel" class="tab-pane active" id="home">
-                            <div class="well schemaPanel">
-
-                                <form class="form-horizontal">
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Title</label>
-                                        <div class="col-sm-10">
-                                            <input type="text" class="form-control titleInput" required />
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Description</label>
-                                        <div class="col-sm-10">
-                                            <input type="text" class="form-control descriptionInput" required />
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <div class="col-sm-offset-1 col-sm-10">
-                                            <div class="checkbox">
-                                                <label>
-                                                    <input type="checkbox" class="enabledInput" checked> Enabled?
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <div class="col-sm-offset-1 col-sm-10">
-                                            <div class="checkbox">
-                                                <label>
-                                                    <input type="checkbox" class="defaultInput"> Default?
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Upload Schema File</label>
-                                        <div class="col-sm-10">
-                                            <input type="file" class="schemaSourceFile">
-                                        </div>
-                                    </div>
-
-                                    <div class="schemaErrorAlert hiddenFadeIn col-sm-12">
-                                        <div class="alert alert-danger col-sm-offset-1 col-sm-10" role="alert">
-                                            <h4>An error occurred while parsing the schema:</h4>
-
-                                            <div class="sourceText"></div>
-                                        </div>
-                                    </div>
-
-                                    <div class="schemaSuccessAlert hiddenFadeIn col-sm-12">
-                                        <div class="alert alert-success col-sm-offset-1 col-sm-10" role="alert">
-                                            <h5>Schema Parsed Successfully</h5>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="col-sm-1 control-label">Schema</label>
-                                        <div class="col-sm-10">
-                                            <textarea cols="30" rows="10" class="form-control schemaSourceText" required></textarea>
-                                        </div>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-success addSchema disabled">
-                                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add to config
-                                    </button>
-
-                                </form>
-
-                            </div>
-
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="panel panel-success">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <svg viewBox="0 216 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <use xlink:href="/images/svg-sprite/svg-sprite-file.svg#ic_file_upload_24px"></use>
+                                </svg>
+                                Import</h3>
                         </div>
-
+                        <div class="panel-body">
+                            <p>Warning: Loading a configuration will overwrite the configuration options below.</p>
+                            <input id="import-file" type="file" />
+                        </div>
                     </div>
-
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <svg viewBox="0 2352 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_settings_24px"></use>
+                                </svg>
+                                Configuration Options
+                            </h3>
+                        </div>
+                        <div class="panel-body">
+                            <div class="config-showsource-toggle">
+                                <div class="config-showsource-toggle-icon"></div>
+                                Show Source Button
+                            </div>
+                            <div class="config-allowcustom-toggle">
+                                <div class="config-allowcustom-toggle-icon"></div>
+                                Allow Custom Schema
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel panel-info">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <svg viewBox="0 192 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <use xlink:href="/images/svg-sprite/svg-sprite-file.svg#ic_file_download_24px"></use>
+                                </svg>
+                                Export
+                            </h3>
+                        </div>
+                        <div class="panel-body">
+                            <a class="btn btn-primary download-file">
+                                <div class="download-icon">
+                                    <svg viewBox="0 672 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <use xlink:href="/images/svg-sprite/svg-sprite-content.svg#ic_save_24px"></use>
+                                    </svg>
+                                </div>
+                                Download File
+                            </a>
+                        </div>
+                    </div>
+                    <div class="panel panel-default panel-help">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">
+                                <svg viewBox="0 1248 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                    <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_help_24px"></use>
+                                </svg>
+                                Help
+                            </h3>
+                        </div>
+                        <div class="panel-body">
+                            See the <a href="http://www.w3.org/2001/sw/wiki/ShEx">ShEx documentation</a> for clarifications on syntax.
+                        </div>
+                        <div class="panel-body">
+                            <table class="table table-condensed">
+                                <tr>
+                                    <th colspan="2">Name</th>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-title="The predicate of any matching triple is the same as the NameTerm IRI." data-placement="right">Name Term</span></td>
+                                    <td><code>ex:state</code></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The predicate of any matching triple starts with the IRI.">Name Stem</span></td>
+                                    <td><samp>ex:<code>~</code></samp></td>
+                                </tr>
+                            </table>
+                            <table class="table table-condensed">
+                                <tr>
+                                    <th colspan="2">Value</th>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The object of any matching triple is the same as the ValueType IRI.">Value Type</span></td>
+                                    <td><code>ex:state</code></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The object of any matching triple is one of the list of triples in the ValueSet.">Value Set</span></td>
+                                    <td><samp><code>(</code>ex:assigned ex:unassigned<code>)</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The object of any matching triple starts with the IRI.">Value Stem</span></td>
+                                    <td><samp>ex:<code>~</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="The object of a matching triple is an IRI or blank node and the that node is the subject of triples matching the referenced shape expression.">Value Reference</span></td>
+                                    <td><samp><code>@&lt;UserShape&gt;</code></samp></td>
+                                </tr>
+                            </table>
+                            <table class="table table-condensed">
+                                <tr>
+                                    <th colspan="2">Rules</th>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="A matching triple matches the NameTerm and the ValueTerm. Cardinality constraints apply.">Arc Rule</span></td>
+                                    <td><code>foaf:givenName xsd:string+</code></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="Each conjoint matches the input graph.">And Rule</span></td>
+                                    <td><samp>foaf:givenName xsd:string<code>,</code><br>
+                                        foaf:familyName xsd:string</samp></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="Exactly one disjoint matches the input graph.">Or rule</span></td>
+                                    <td><code>(</code><samp>foaf:givenName xsd:string </samp><code>|</code><samp><br>
+                                        foaf:name xsd:string </samp><code>)</code></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="A matching triple matches the enclosed rule (here an AndRule). Cardinality constraints apply.">Group Rule</span></td>
+                                    <td><samp><code>(</code> foaf:givenName xsd:string<code>,</code><br>
+                                        foaf:familyName xsd:string <code>)</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="Include the referenced rule in place of the include directive.">Rule Inclusions</span></td>
+                                    <td><samp><code>&amp;&nbsp;&lt;PersonShape&gt;</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td><span data-toggle="tooltip" data-placement="right" title="Negates arc-rules, and-rules and or-rules">Rule Negation</span></td>
+                                    <td><samp><code>!</code>foaf:givenName xsd:string</samp></td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td><samp><code>!</code>( foaf:givenName xsd:string,<br>
+                                        foaf:familyName xsd:string )</samp></td>
+                                </tr>
+                            </table>
+                            <table class="table table-condensed">
+                                <tr>
+                                    <th colspan="2">Cardinality</th>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">Applying no cardinality constraint means a rule must exist once and only once.</td>
+                                </tr>
+                                <tr>
+                                    <td>x∈{0,1}</td>
+                                    <td><samp>foaf:givenName xsd:string<code>?</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td>x≥1</td>
+                                    <td><samp>foaf:givenName xsd:string<code>+</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td>x≥0</td>
+                                    <td><samp>foaf:givenName xsd:string<code>*</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td>x=n</td>
+                                    <td><samp>foaf:givenName xsd:string<code>{</code>n<code>}</code></samp><br>
+                                        <samp>foaf:givenName xsd:string<code>{3}</code></samp></td>
+                                </tr>
+                                <tr>
+                                    <td>n≥x≥m</td>
+                                    <td><samp>foaf:givenName xsd:string<code>{</code>n<code>,</code>m<code>}</code></samp>
+                                        <samp>foaf:givenName xsd:string<code>{3,6}</code></samp></td>
+                                </tr>
+                            </table>
+                            <table class="table table-condensed">
+                                <tr>
+                                    <th colspan="2">Requirement levels</th>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">A schema may have a number of <a href="https://www.ietf.org/rfc/rfc2119.txt">requirement levels</a>.<br>These should be defined in the schema configuration as an ordered, comma separated list, starting with least strict.</td>
+                                </tr>
+                                <tr>
+                                    <td>Example:</td>
+                                    <td><code>MAY,SHOULD,MUST</code></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">In the schema, these requirement levels are specified before each rule, enclosed in backticks.</td>
+                                </tr>
+                                <tr>
+                                    <td>Example:</td>
+                                    <td><samp><code>`MUST`</code> foaf:givenName xsd:string</samp></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">
+                                        NOTE: Appending <code>&nbsp;NOT</code> to a requirement level is ignored by the UI. Negation should be added using standard syntax.
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Examples:</td>
+                                    <td><samp><code>`SHOULD NOT`</code> !foaf:givenName xsd:string</samp></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="col-md-12">
-                    <a href="" id="finish" class="btn btn-primary disabled" download="ShExValidataConfig.json">
-                        <span class="glyphicon glyphicon-download" aria-hidden="true"></span> Download Config
-                    </a>
+                <div class="col-md-9">
+                    <ol style="display:none;">
+                        <li class="list-group-item schema-demo schema-demo-template">
+                            <div class="input-group schema-demo-name">
+                                <span class="input-group-addon">Name</span>
+                                <input type="text" class="form-control schema-demo-name-input" placeholder="Untitled Demo">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-danger schema-demo-delete" type="button">Delete Demo</button>
+                                </span>
+                            </div>
+                            <div class="schema-input-demo-data">
+                                <textarea class="schema-demo-data-input"></textarea>
+                                <div class="CodeMirror-resize-inc-300" title="Increase textarea size"></div>
+                                <div class="CodeMirror-resize-sub-300" title="Reduce textarea size"></div>
+                            </div>
+                        </li>
+                    </ol>
+                    <ol style="display:none;">
+                        <li class="schema schema-is-enabled schema-template">
+                            <div class="schema-header">
+                                <div class="schema-enable" title="Toggle Visibility"></div>
+                                <div class="schema-default" title="Toggle Default"></div>
+                                <div class="schema-name">Untitled Schema</div>
+                                <div class="schema-reorder" title="Reorder Schema">
+                                    <svg viewBox="0 2208 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_reorder_24px"></use>
+                                    </svg>
+                                </div>
+                                <div class="schema-delete" title="Delete Schema">
+                                    <svg viewBox="0 792 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_delete_24px"></use>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="schema-body">
+                                <div class="input-group schema-input-name">
+                                    <span class="input-group-addon">Name</span>
+                                    <input type="text" class="form-control schema-input-name-input" placeholder="Untitled Schema">
+                                </div>
+                                <div class="input-group schema-input-description">
+                                    <span class="input-group-addon">Description</span>
+                                    <input type="text" class="form-control schema-input-description-input">
+                                </div>
+                                <div class="schema-input-creationdate">
+                                    <div class='input-group date datetimepicker'>
+                                        <span class="input-group-addon">Creation Date</span>
+                                        <input type='text' class="schema-input-creationdate-input form-control" />
+                                        <span class="input-group-addon">
+                                            <svg viewBox="0 912 24 24" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+                                                <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_event_24px"></use>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="schema-input-requirementlevels">
+                                    <div class='input-group'>
+                                        <span class="input-group-addon">Requirement Levels</span>
+                                        <input type="text" value="" class="schema-input-requirementlevels-input form-control"/>
+                                    </div>
+                                </div>
+                                <div class="schema-input-schema">
+                                    <textarea class="schema-input-schema-input"></textarea>
+                                    <div class="CodeMirror-resize-inc-300" title="Increase textarea size"></div>
+                                    <div class="CodeMirror-resize-sub-300" title="Reduce textarea size"></div>
+                                    <div class="schema-input-schema-results"></div>
+                                </div>
+                                <h4>Demos (Turtle, TriG, N-Triples or N-Quads)</h4>
+                                <p>Add RDF data here that can be used to demonstrate that the validator works correctly.</p>
+                                <ul class="list-group schema-demos">
+                                </ul>
+                                <button class="btn btn-success schema-new-demo">Add New Demo</button>
+                            </div>
+                        </li>
+                    </ol>
+                    <ol id="slippylist" class="schemas"></ol>
+                    <button class="btn btn-success btn-md create-new-schema">Add New Schema</button>
                 </div>
-
-                <p>Have a config file already?
-                    <button id="import" class="btn btn-xs btn-warning">
-                        <span class="glyphicon glyphicon-upload" aria-hidden="true"></span> Import it here
-                    </button>
-                </p>
-
             </div>
+
         </div>
         
         <script src="components/jquery/dist/jquery.js"></script>
+        <script src="components/moment/min/moment.min.js"></script>
         <script src="components/bootstrap/dist/js/bootstrap.js"></script>
+        <script src="components/bootstrap-switch/dist/js/bootstrap-switch.min.js"></script>
+        <script src="components/slip/slip.js"></script>
+        <script src="components/codemirror/lib/codemirror.js"></script>
+        <script src="components/eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js"></script>
+        <script src="components/svg4everybody/svg4everybody.js"></script>
 
         <script src="javascripts/ShExValidator.js"></script>
         <script src="javascripts/Log.js"></script>
         <script src="javascripts/Util.js"></script>
-        <script src="javascripts/admin/UI.js"></script>
-        <script src="javascripts/admin/Validata.js"></script>
         <script src="javascripts/admin/DocumentReady.js"></script>
-
+        <script src="javascripts/admin/refactorme.js"></script>
     </body>
 </html>

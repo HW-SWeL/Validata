@@ -4,29 +4,102 @@
 */
 
 #topNavbar {
-    height: 140px;
+    height: 120px;
+    overflow: hidden;
+    overflow-y: auto;
 }
 
-#wrapper {
-    padding-left: 250px;
+/*
+    Quick Summary Sidebar Panel - always visible display of current validation status
+*/
+
+div#quickSummaryPanel {
+    position: fixed;
+
+    width: 230px;
+    
+    bottom: 20px;
+    top: auto;
+    left: 20px;
+    right: auto;
+
+    margin: 0;
+    z-index: 10;
 }
 
-#wrapper.toggled {
-    padding-left: 0;
-}
-
-#sidebar-wrapper {
-    width: 250px;
-}
-
-#wrapper.toggled #sidebar-wrapper {
-    width: 0;
-}
-
-#page-content-wrapper {
+#pageContentWrapper {
     position: relative;
+    float: right;
+    width: calc(100% - 250px);
 }
 
-#wrapper.toggled #page-content-wrapper {
-    margin-right: 0;
+#sidebarContentWrapper {
+    width: 250px;
+    padding: 0 0 0 20px;
+    overflow-y: auto;
+}
+
+body.topNavbarVisible #sidebarContentWrapper {
+    position: relative;
+    float: left;
+    max-height: calc(100% - 360px);
+}
+
+body.topNavbarInvisible #sidebarContentWrapper {
+    position: fixed;
+
+    top: 20px;
+    bottom: auto;
+    left: 0;
+    right: auto;
+
+    max-height: calc(100% - 200px);
+}
+
+#sidebarContentWrapper::-webkit-scrollbar {
+    -webkit-appearance: none;
+}
+
+#sidebarContentWrapper::-webkit-scrollbar:vertical {
+    width: 11px;
+}
+
+#sidebarContentWrapper::-webkit-scrollbar:horizontal {
+    height: 11px;
+}
+
+#sidebarContentWrapper::-webkit-scrollbar-thumb {
+    border-radius: 8px;
+    border: 2px solid white; /* should match background, can't be transparent */
+    background-color: rgba(0, 0, 0, .5);
+}
+
+#sidebarContentWrapper::-webkit-scrollbar-track {
+    background-color: #fff;
+    border-radius: 8px;
+}
+
+.loader {
+    position: absolute;
+    top: -3px;
+    right: 0px;
+    
+    overflow: hidden;
+    background: none;
+
+    -webkit-border-bottom-left-radius: 0;
+    -moz-border-radius-bottomleft: 0;
+    border-bottom-left-radius: 0;
+}
+
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+    .loader {
+        -ms-zoom: 1;
+        
+        background: url(/images/material-spinner-50px.gif) center center no-repeat !important;
+        background-size: 30px !important;
+        
+        top: 3px;
+        right: 3px;
+    }
 }

@@ -1,67 +1,123 @@
+/* Keyframes for animations to work in IE */
+
+
+@-webkit-keyframes rotate {
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes rotate {
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@-webkit-keyframes dash {
+    0% {
+        stroke-dasharray: 1, 60;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -10;
+    }
+    100% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -37;
+    }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 60;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -10;
+    }
+    100% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -37;
+    }
+}
+
+@-webkit-keyframes color {
+    100%, 0% {
+        stroke: #d62d20;
+    }
+    40% {
+        stroke: #0057e7;
+    }
+    66% {
+        stroke: #008744;
+    }
+    80%, 90% {
+        stroke: #dd9100;
+    }
+}
+
+@keyframes color {
+    100%, 0% {
+        stroke: #d62d20;
+    }
+    40% {
+        stroke: #0057e7;
+    }
+    66% {
+        stroke: #008744;
+    }
+    80%, 90% {
+        stroke: #be7d00;
+    }
+}
+
+
 
 /* 
     Basic page structure - 250px wide fixed left sidebar which disappears on extrasmall screens
 */
 
+html, body {
+    height: 100%;
+}
+
 #topNavbar {
     height: auto;
 }
 
-#wrapper {
-    padding-left: 0;
-    -webkit-transition: all 0.5s ease;
-    -moz-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
+#topNavbar h2 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 25px;
 }
 
-#wrapper.toggled {
-    padding-left: 250px;
-}
-
-#sidebar-wrapper {
-    z-index: 1000;
-    position: fixed;
-    left: 250px;
-    width: 0;
-    height: calc(100% - 140px);
-    margin-left: -250px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    -webkit-transition: all 0.5s ease;
-    -moz-transition: all 0.5s ease;
-    -o-transition: all 0.5s ease;
-    transition: all 0.5s ease;
-}
-
-#wrapper.toggled #sidebar-wrapper {
-    width: 250px;
-}
-
-#page-content-wrapper {
-    width: 100%;
-    position: absolute;
+#pageContentWrapper {
+    position: relative;
     padding: 0 20px 0 20px;
 }
 
-#wrapper.toggled #page-content-wrapper {
-    position: absolute;
-    margin-right: -250px;
+#sidebarContentWrapper {
+    position: relative;
+    padding: 0 20px 0 20px;
+    max-height: none !important;
 }
 
 /*
     Wizard Steps Sidebar list - clickable list of steps tracking "progress" without restricting user
 */
 
-ul.sidebar-nav {
-    width: 250px;
+ul#wizardSidebarStepsList {
     margin: 0;
-    padding: 0 20px 0 20px;
+    padding: 0;
     list-style: none;
     counter-reset: wizard-counter;
 }
 
-ul.sidebar-nav li.wizardSidebarStep {
+ul#wizardSidebarStepsList li.wizardSidebarStep {
     position: relative;
     margin: 0.5em 0 0.5em 2em;
     padding: 0.25em 0.75em;
@@ -69,7 +125,7 @@ ul.sidebar-nav li.wizardSidebarStep {
     cursor: pointer;
 }
 
-ul.sidebar-nav li.wizardSidebarStep:before {
+ul#wizardSidebarStepsList li.wizardSidebarStep:before {
     content: counter(wizard-counter);
     counter-increment: wizard-counter;
     position: absolute;
@@ -80,23 +136,23 @@ ul.sidebar-nav li.wizardSidebarStep:before {
     width: 2em;
     line-height: 2em;
     border: none;
-    background: #0088cc;
+    background: #337ab7;
     text-align: center;
     font-weight: bold;
     color: white;
     border-radius: 2em;
 }
 
-ul.sidebar-nav li.wizardSidebarStep:before {
+ul#wizardSidebarStepsList li.wizardSidebarStep:before {
     background: #333333;
 }
 
-ul.sidebar-nav li.wizardSidebarStep.wizard-active {
-    color: #0088cc;
+ul#wizardSidebarStepsList li.wizardSidebarStep.wizard-active {
+    color: #337ab7;
 }
 
-ul.sidebar-nav li.wizardSidebarStep.wizard-active:before {
-    background: #0088cc;
+ul#wizardSidebarStepsList li.wizardSidebarStep.wizard-active:before {
+    background: #337ab7;
 }
 
 /*
@@ -104,12 +160,27 @@ ul.sidebar-nav li.wizardSidebarStep.wizard-active:before {
 */
 
 div#demoPanel {
-    margin: 40px 0 40px 20px;
+    margin: 20px 0 0 0;
+    padding: 0;
 }
 
 div#demoPanel h4 {
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+div#demoPanelButtonGroup button.demoButton {
+    padding-left: 28px;
+    text-align: left;
+}
+
+.demoButtonIcon {
+    display: block;
+    position: absolute;
+    top: 4px;
+    left: 2px;
+    margin: 0;
+    vertical-align: middle;
 }
 
 /*
@@ -117,17 +188,12 @@ div#demoPanel h4 {
 */
 
 div#quickSummaryPanel {
-    position: absolute;
-    
-    bottom: 20px;
-    top: auto;
-    left: 20px;
-    right: auto;
+    margin: 20px;
 }
 
 div#quickSummaryPanelHeading h4 {
-    margin-top: 5px;
-    margin-bottom: 5px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 div#quickSummaryPanel tr.quickSummarySection {
@@ -135,59 +201,162 @@ div#quickSummaryPanel tr.quickSummarySection {
 }
 
 div#quickSummaryPanel tr.quickSummarySection th.quickSummarySectionTitle {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
     padding-left: 10px;
     vertical-align: middle;
 }
 
-div.quickSummarySectionIcon {
-    display: inline-block;
-    width: 24px;
-    height: 24px;
+div#quickSummaryPanel tr.quickSummarySection td {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.quickSummarySectionIcon {
     margin: 8px 0 8px 0;
 }
 
-.quickSummarySection.quickSummaryStatusIncomplete  {
+.quickSummarySection.quickSummaryStatusIncomplete {
     background: #e3e3e3;
 }
 
-.quickSummarySection.quickSummaryStatusInvalid  {
+.quickSummarySection.quickSummaryStatusInvalid {
     background: #e3b5af;
 }
 
-.quickSummarySection.quickSummaryStatusValid  {
+.quickSummarySection.quickSummaryStatusWarning {
+    background: #f7ecb5;
+}
+
+.quickSummarySection.quickSummaryStatusValid {
     background: #bfe3b2;
 }
 
-.quickSummarySection.quickSummaryStatusIncomplete div.quickSummarySectionIcon {
-    /*background-position: 0 -264px;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-content.svg);*/
-
-    background-position: 0 -24px;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconIncomplete {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconWarning,
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconInvalid {
+    display: none;
 }
 
-.quickSummarySection.quickSummaryStatusInvalid div.quickSummarySectionIcon {
-    /*background-position: 0 0;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-alert.svg);*/
 
-    background-position: 0 -648px;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-content.svg);
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconWarning {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconInvalid {
+    display: none;
 }
 
-.quickSummarySection.quickSummaryStatusValid div.quickSummarySectionIcon {
-    /*background-position: 0 -3480px;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-action.svg);*/
+
+
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconInvalid {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconWarning {
+    display: none;
+}
+
+
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconValid {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconWarning,
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconInvalid {
+    display: none;
+}
+
+
+.svg-size-24px {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+.svg-size-20px {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+}
+
+.svg-path-white {
+    fill: #ffffff;
+}
+
+.svg-path-primary {
+    fill: #337ab7;
+}
+
+.svg-path-success {
+    fill: #5cb85c;
+}
+
+.svg-path-info {
+    fill: #5bc0de;
+}
+
+.svg-path-warning {
+    fill: #f0ad4e;
+}
+
+.svg-path-danger {
+    fill: #d9534f;
+}
+
+
+/* 
+    Material Design Loader
+*/
+
+.loader {
+    position: fixed;
+    top: 0;
+    right: 2px;
+    width: 30px;
+    height: 30px;
     
-    background-position: 0 0;
-    background-repeat: no-repeat;
-    background-image: url(../components/material-design-icons/sprites/svg-sprite/svg-sprite-toggle.svg);
+    zoom: 1.7;
+    -webkit-zoom: 1.7;
+    -moz-transform:  scale(1.7, 1.7);
+    -moz-transform-origin: right top;
+    
+    z-index: 10;
+
+    overflow: hidden;
+    background: #ffffff;
+
+    -webkit-border-bottom-left-radius: 15px;
+    -moz-border-radius-bottomleft: 15px;
+    border-bottom-left-radius: 15px;
 }
 
+.circular {
+    -webkit-animation: rotate 2s linear infinite;
+    animation: rotate 2s linear infinite;
+    position: relative;
+    height: 30px;
+    width: 30px;
+}
+
+.loader.hidden .circular,
+.loader.hidden .circular .path {
+    -webkit-animation: none !important;
+    animation: none !important;
+}
+
+.path {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+    -webkit-animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
+    animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
+    stroke-linecap: round;
+}
 
 /*
     Wide Modal - used for showing larger content to the user, e.g. ShEx source code
@@ -236,26 +405,136 @@ div.quickSummarySectionIcon {
     display: none;
 }
 
-
-div#demoPanelButtonGroup button.demoButton {
-    padding-left: 28px;
-    text-align: left;
-}
-
-div.demoButtonIcon {
-    display: block;
-    position: absolute;
-    left: 8px;
-    width: 20px;
-    height: 24px;
-    margin: 0;
-    vertical-align: middle;
-
-    background-image: url('../components/material-design-icons/sprites/css-sprite/sprite-av-white.png');
-    background-position: -113px -142px;
-}
-
 #schemaDescription {
-  word-wrap: break-word;
-  word-break: break-all;
+    word-wrap: break-word;
+    word-break: break-all;
+}
+
+#closedShapesOption {
+    width: 30px;
+    height: 30px;
+    vertical-align: bottom;
+}
+
+#resourceShapeMapTable {
+    background: #f9f9f9;
+}
+
+#resourceShapeMapTable > tbody > tr:nth-of-type(odd) {
+    background: #ffffff;
+}
+
+
+
+.validationResultsAccordion div.panel-group,
+.validationResultsAccordion ul.list-group {
+    margin-bottom: 0;
+}
+
+.panel-heading {
+    padding: 0;
+}
+
+.panel-title {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    padding: 10px 15px;
+}
+
+a.panel-title {
+    color: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    text-decoration: none;
+    vertical-align: bottom;
+    line-height: 23px;
+}
+
+
+.resourceShapeErrorsListGroup li,
+.resourceShapeWarningsListGroup li,
+.resourceShapeMatchesListGroup li {
+    padding-left: 30px;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+span.validationResultsMatchMessageBody,
+span.validationResultsWarningMessageBody,
+span.validationResultsErrorMessageBody {
+    word-wrap: break-word;
+}
+
+#validationResultsErrorsCount,
+#validationResultsWarningsCount,
+#validationResultsMatchesCount {
+    vertical-align: bottom;
+    font-weight: bold;
+}
+
+
+.CodeMirror {
+    border: 1px solid rgba(0,0,0,0.2);
+}
+
+.codeMirrorTextareaContainer {
+    position: relative;
+}
+
+/*
+    Resize Codemirror buttons
+*/
+.CodeMirror-resize-inc-100, .CodeMirror-resize-sub-100 {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    z-index: 30;
+    cursor: pointer;
+    -webkit-user-select: none;  /* Chrome all / Safari all */
+    -moz-user-select: none;     /* Firefox all */
+    -ms-user-select: none;      /* IE 10+ */
+}
+.CodeMirror-resize-inc-100:before, .CodeMirror-resize-sub-100:before {
+    color: #FFF;
+    font-weight: 700;
+    font-size: 19px;
+}
+.CodeMirror-resize-inc-100 {
+    background: #5cb85c;
+    right: 24px;
+}
+.CodeMirror-resize-sub-100 {
+    background: #d9534f;
+    right: 0;
+}
+.CodeMirror-resize-inc-100:before {
+    margin-left: 7px;
+    content: "+";
+}
+.CodeMirror-resize-sub-100:before {
+    margin-left: 8px;
+    top: -2px;
+    position: relative;
+    content: "-";
+}
+
+/* Displays where the errors in the shex file are */
+.line-error {
+    background: #FBC2C4 !important;
+    color: #8a1f11 !important;
+}
+.line-warning {
+    background: #fbf3a8 !important;
+    color: #8a8a40 !important;
+}
+.line-match {
+    background: #defbd2 !important;
+    color: #5d8a57 !important;
 }

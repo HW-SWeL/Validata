@@ -130,6 +130,13 @@
                     console.log(parsedSchema);
                     jshex.parseShEx(parsedSchema);
                     console.log(jshex);
+                    console.log(jshex.selectNodes(function(node){
+                        if(node._=="IRI"){
+                            node.prefix="LEIF";
+                            return true;
+                        }
+                    }));
+                    console.log(jshex);
                     console.log("\""+jshex.toShEx()+"\"");
                 }
             };

@@ -27,9 +27,8 @@ JShEx.prototype.parseShEx = function(responseObject){
     this.prefixes = responseObject.resolver.Prefixes;
     for (var shape in this.origSchema.ruleMap) {
         if(this.origSchema.ruleMap.hasOwnProperty(shape)){
-            this.shapes[shape] = {
-                _:"shape",
-                id:shape.substring(1,shape.length-1),
+            this.shapes[shape.substring(1,shape.length-1)] = {
+                _:"Shape",
                 rule:this.parseRule(this.origSchema.ruleMap[shape])
             };
         }
@@ -122,7 +121,7 @@ JShEx.prototype.parseTerm = function(term){
             return this.parseValueWild(t);
             break;
         default:
-            return {_:"node end"};
+            return {_:"InvalidTerm"};
             break;
     }
 };
@@ -145,7 +144,7 @@ JShEx.prototype.parseRule = function(rule){
             return this.parseAtomicRule(rule);
             break;
         default:
-            return {_:"node end"};
+            return {_:"InvalidRule"};
             break;
     }
 };
@@ -318,7 +317,7 @@ JShEx.prototype.exportRuleToShEx = function(rule){
             return this.exportUnaryRuleToShEx(rule);
             break;
         default:
-            return "UNKNOWN RULE";
+            return "!ERROR_INVALID_RULE!";
             break;
     }
 };
@@ -413,7 +412,7 @@ JShEx.prototype.exportTermToShExthis = function(term){
             return this.exportValueWildToShEx(term);
             break;
         default:
-            return "UNKNOWN TERM";
+            return "!ERROR_INVALID_TERM!";
             break;
     }
 };
@@ -486,16 +485,82 @@ JShEx.prototype.exportIndentLines = function(lines){
 
 
 
+JShEx.prototype.selectNodes = function(selector){
+    var result = [];
+    for(var shape in this.shapes)
+        if(this.shapes.hasOwnProperty(shape))
+            result = result.concat(this.selectNodesFromNode(this.shapes[shape],selector));
+    return result;
+};
 
+JShEx.prototype.selectNodesFromNode = function(node,selector){
+    var result = [];
+    if(selector(node)){
+        // Applies to the following objects:
+        // * IncludeRule
+        // * IRI
+        // * ValueReference
+        // * ValueWild
+        result = result.concat(node);
+    }
+    if(Object.prototype.toString.call( node ) === '[object Array]'){
+        for(var i=0;i<node.length;i++){
+            result = result.concat(this.selectNodesFromNode(node[i],selector));
+        }
+    } else if(node._=="Shape" || node._=="UnaryRule"){
+        result = result.concat(this.selectNodesFromNode(node.rule,selector));
+    } else if(node._=="AndRule") {
+        result = result.concat(this.selectNodesFromNode(node.conjoints,selector));
+    } else if(node._=="OrRule") {
+        result = result.concat(this.selectNodesFromNode(node.disjoints,selector));
+    } else if(node._=="AtomicRule") {
+        result = result.concat(this.selectNodesFromNode(node.name,selector));
+        result = result.concat(this.selectNodesFromNode(node.value,selector));
+    } else if(node._=="ValueSet") {
+        result = result.concat(this.selectNodesFromNode(node.values,selector));
+    }
+    return result;
+};
 
+// Adds a prefix to the object
+JShEx.prototype.createPrefix = function(prefix,value){
+    if(!this.prefixes.hasOwnProperty(prefix)){
+        if(prefix!=undefined) {
+            this.prefixes[prefix] = value;
+            return true;
+        }
+    }
+    return false;
+};
+// Renames the prefix in the object. It also changes all the other nodes
+// in the tree.
+JShEx.prototype.updatePrefix = function(oldprefix,prefix,value){
+    this.selectNodes(function(node){
+        if(node._=="IRI"){
+            if(node.prefix==oldprefix){
+                node.prefix = prefix;
+            }
+        }
+    });
+    delete this.prefixes[oldprefix];
+    return this.createPrefix(prefix,value);
+};
+// Returns the nodes in the tree where this prefix is actually used
+JShEx.prototype.removePrefix = function(prefix){
+    return !this.updatePrefix(prefix,undefined,undefined);
+};
 
-
-
-JShEx.prototype.createPrefix = function(prefix,value){};
-JShEx.prototype.updatePrefix = function(prefix,value){};
-JShEx.prototype.removePrefix = function(prefix,value){};
-
-JShEx.prototype.createShape = function(shapeId){};
+JShEx.prototype.createShape = function(shape){
+    if(!this.shapes.hasOwnProperty(shape)) {
+        this.shapes[shape] = {
+            _: "Shape",
+            id: shape,
+            rule: undefined
+        };
+        return true;
+    }
+    return false;
+};
 JShEx.prototype.updateShape = function(shapeId,newShapeId){};
 JShEx.prototype.removeShape = function(shapeId){};
 

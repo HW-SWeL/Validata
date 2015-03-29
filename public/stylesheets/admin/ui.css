@@ -1,0 +1,80 @@
+.panel-heading {
+    cursor: pointer;
+}
+
+.input-group {
+    margin-bottom: 10px;
+}
+
+.panel-title svg {
+    display: inline-block;
+    margin-right: 10px;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+.panel-success .panel-title svg {
+    fill: #3c763d;
+}
+.panel-info .panel-title svg {
+    fill: #31708f;
+}
+.panel-default .panel-title svg {
+    fill: #333;
+}
+.panel-primary .panel-title svg {
+    fill: #fff;
+}
+
+.config-showsource-toggle-icon, .config-allowcustom-toggle-icon {
+    width: 24px;
+    height: 24px;
+    background-image: url(../../images/svg-sprite/svg-sprite-toggle.svg);
+}
+.download-icon {
+    display: inline-block;
+    margin-right: 10px;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+.download-icon svg{
+    fill: #FFF;
+}
+.date-icon {
+    display: inline-block;
+    margin-right: 10px;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    background-position: 0 -912px;
+    background-image: url(../../images/svg-sprite-action-black.svg);
+}
+
+
+.datetimepicker svg {
+    width: 16px;
+    height: 16px;
+}
+
+.config-showsource-toggle, .config-allowcustom-toggle {
+    cursor: pointer;
+    padding: 4px;
+}
+
+.config-showsource-toggle-icon, .config-allowcustom-toggle-icon {
+    margin-right: 10px;
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    background-position: 0 -2208px;
+}
+.config-showsource .config-showsource-toggle-icon, .config-allowcustom .config-allowcustom-toggle-icon{
+    background-position: 0 0;
+}
+h2 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 25px;
+}
