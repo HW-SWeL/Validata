@@ -446,14 +446,12 @@ UI = {
 
             var resourceSelectorCell = $('<td></td>').append(resourceSelector);
             resourceShapeRow.append(resourceSelectorCell);
-
-            $.each(Validata.Schema.rawResponse.shapes, function shapesResponseIterator(index, shape)
+            
+            $.each(Validata.Schema.rawResponse.shapes, function schemaResponseIterator(index, shape)
             {
-                var selected = '';
-
                 shapeSelector.append('<option value="' + shape + '">' + Util.escapeHtml(shape) + '</option>');
             });
-
+            
             var shapeSelectorCell = $('<td></td>').append(shapeSelector);
             resourceShapeRow.append(shapeSelectorCell);
 
@@ -486,6 +484,7 @@ UI = {
                 resourceShapeSelectorRow
                     .find('select.resourceSelector')
                     .find('option')
+                    .prop('selected', false)
                     .filter(function ()
                     {
                         return $(this).val() == resource;
@@ -495,6 +494,7 @@ UI = {
                 resourceShapeSelectorRow
                     .find('select.shapeSelector')
                     .find('option')
+                    .prop('selected', false)
                     .filter(function ()
                     {
                         return $(this).val() == shape;
@@ -506,9 +506,41 @@ UI = {
         }
         else
         {
-            var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
+            
+            $.each(Validata.Data.shapesResponse, function findShapesResponseIterator(resource, shape)
+            {
 
-            UI.resourceShapeMapTableBody.append(resourceShapeSelectorRow);
+                if( Util.stringIsNotBlank(shape) )
+                {
+                    Log.i("Iterating through Validata.Data.shapesResponse, found non-blank shape match with resource: " + resource + " and shape: " + shape);
+
+                    resource = resource.replace(/[<>]/g, '');
+
+                    var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
+                    
+                    resourceShapeSelectorRow
+                        .find('select.resourceSelector')
+                        .find('option')
+                        .prop('selected', false)
+                        .filter(function ()
+                        {
+                            return $(this).val() == resource;
+                        })
+                        .prop('selected', true);
+
+                    resourceShapeSelectorRow
+                        .find('select.shapeSelector')
+                        .find('option')
+                        .prop('selected', false)
+                        .filter(function ()
+                        {
+                            return $(this).val() == shape;
+                        })
+                        .prop('selected', true);
+                    
+                    UI.resourceShapeMapTableBody.append(resourceShapeSelectorRow);
+                }
+            });
         }
 
         Validata.Validation.options.resourceShapeMap = UI.buildResourceShapeMapFromTable();
