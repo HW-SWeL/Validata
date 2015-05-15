@@ -384,7 +384,7 @@ UI = {
 
             $.each(Validata.Schema.dataDemos, function schemaDataDemosIterator(index, dataDemoObject)
             {
-                var demoButtonIcon = '<svg viewBox="0 552 24 24" class="demoButtonIcon svg-path-white svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="/images/svg-sprite/svg-sprite-av.svg#ic_play_arrow_24px"></use></svg>';
+                var demoButtonIcon = '<svg viewBox="0 552 24 24" class="demoButtonIcon svg-path-white svg-size-24px" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="images/svg-sprite/svg-sprite-av.svg#ic_play_arrow_24px"></use></svg>';
 
                 $('<button type="button" class="btn btn-block btn-success demoButton">' + demoButtonIcon + dataDemoObject['name'] + '</button>').on('click', function dataDemoButtonClick()
                 {
