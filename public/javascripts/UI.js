@@ -335,11 +335,17 @@ UI = {
         if ( Util.iterableLength( UI.reqLevels ) )
         {
             UI.reqLevelSelector.empty();
-
+            reqLevelString = "";
             UI.reqLevels.forEach(function (reqLevel)
             {
-                UI.reqLevelSelector.append('<option>' + Util.stringValue(reqLevel).toUpperCase() + '</option>');
+                reqLevelString = reqLevelString.concat('<option>' + Util.stringValue(reqLevel).toUpperCase() + '</option>');
             });
+            n = reqLevelString.lastIndexOf("<option>");
+            if (n != -1)
+            {
+              reqLevelString = reqLevelString.substr(0, n+7) + " selected" + reqLevelString.substr(n+7);
+            }
+            UI.reqLevelSelector.append(reqLevelString);
             UI.reqLevelPanel.show();
         }
         else
