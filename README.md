@@ -1,16 +1,13 @@
 # Validata: RDF Validator using Shape Expressions
-Validata is an intuitive, standalone web-based tool to help building RDF documents by validating against preset schemas written in the Shape Expressions (ShEx) language.
-
-All functionality is implemented client-side, so it can be deployed in any web hosting environment which can serve static files.  
-To deploy a Validata instance, simply check out this repository and place the files in ```/public``` in your web root.  
-The public folder can be served by any web server with almost any configuration, as all the files are static.  
-Once deployed, you'll most likely want to use the admin tool to generate a configuration file to suit your needs. This can be accessed at ```<deployment address>/admin``` and will generate a ShExValidataConfig.js file which you can then upload to ```/public/javascripts/```  
+Validata is an intuitive, standalone web-based tool to help building RDF documents by validating against preset schemas written in the Shape Expressions (ShEx) language.  
   
-The actual validation task is performed by code from the [ShEx-validator](https://github.com/HeriotWattMEng2015/ShEx-validator) project. The NodeJS module from that project is then packaged for client-side usage using Browserify.  
+All functionality is implemented client-side, so it can be deployed in any web hosting environment with any web server which can serve static files.  
+    
+The actual validation task is performed by code from the [ShEx-validator](https://github.com/HeriotWattMEng2015/ShEx-validator) project. The Node.js module from that project is then packaged for client-side usage using Browserify, as detailed below.  
   
-##Requirements
-* nodejs / npm
-* bower
+##Requirements for deployment setup:
+* Node.js / NPM
+* Bower
   
 Installing Node.js (which includes the npm package manager) is easy on Windows and Mac with the https://nodejs.org installer.
   
