@@ -17,8 +17,11 @@ https://github.com/joyent/node/wiki/Installing-Node.js-via-package-manager
 After installing Node.js, make sure you have the latest version of npm by telling it to update itself:  
 ```sudo npm install npm -g```  
   
-Once you have NPM installed, install bower globally:  
-```npm install -g bower```  
+Once you have NPM installed, install bower and browserify globally:  
+```
+npm install -g bower
+npm install -g browserify
+```  
   
 Bower is a very handy package manager, better equipped for front end web development than NPM alone: http://bower.io  
 
