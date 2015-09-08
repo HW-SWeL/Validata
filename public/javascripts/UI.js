@@ -339,6 +339,7 @@ UI = {
             UI.reqLevels.forEach(function (reqLevel)
             {
                 UI.reqLevelSelector.append('<option>' + Util.stringValue(reqLevel).toUpperCase() + '</option>');
+                $('#reqLevelSelector').val(Util.stringValue(reqLevel).toUpperCase());
             });
             UI.reqLevelPanel.show();
         }
