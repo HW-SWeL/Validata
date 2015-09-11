@@ -1,9 +1,10 @@
 {
   "name": "ShExValidata",
   "version": "0.0.0",
-  "homepage": "https://github.com/HeriotWattMEng2015/ShExValidata",
+  "homepage": "https://github.com/HW-SWeL/ShExValidata",
   "authors": [
-    "Andrew Beveridge <github@andrewbeveridge.co.uk>"
+    "Andrew Beveridge <github@andrewbeveridge.co.uk>",
+    "Alasdair Gray <A.J.G.Gray@hw.ac.uk"
   ],
   "moduleType": [
     "globals"
