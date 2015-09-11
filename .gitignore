@@ -8,3 +8,8 @@ node_modules/
 # Bower Files
 # --------------------
 public/components
+
+# --------------------
+# Config File
+# --------------------
+public/javascripts/ValidataConfig.json
