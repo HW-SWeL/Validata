@@ -1,35 +1,35 @@
 # Validata: RDF Validator using Shape Expressions
 Validata is an intuitive, standalone web-based tool to help building RDF documents by validating against preset schemas written in the Shape Expressions (ShEx) language.  
-  
+
 All functionality is implemented client-side, so it can be deployed in any web hosting environment with any web server which can serve static files.  
-    
-The actual validation task is performed by code from the [ShEx-validator](https://github.com/HeriotWattMEng2015/ShEx-validator) project. The Node.js module from that project is then packaged for client-side usage using Browserify, as detailed below.  
-  
+
+The actual validation task is performed by code from the [ShEx-validator](https://github.com/HW-SWeL/ShEx-validator) project. The Node.js module from that project is then packaged for client-side usage using Browserify, as detailed below.  
+
 ##Requirements for deployment setup:
 * Node.js / NPM
 * Bower
-  
+
 Installing Node.js (which includes the npm package manager) is easy on Windows and Mac with the https://nodejs.org installer.
-  
+
 On Linux I'd recommend installing it using your distribution's package manager, however as it isn't in the standard repositories you should follow these instructions (only a couple of commands for most distros) to install:
 https://github.com/joyent/node/wiki/Installing-Node.js-via-package-manager  
 
 After installing Node.js, make sure you have the latest version of npm by telling it to update itself:  
 ```sudo npm install npm -g```  
-  
+
 Once you have NPM installed, install bower globally:  
 ```
 npm install -g bower
 ```  
-  
+
 Bower is a very handy package manager, better equipped for front end web development than NPM alone: http://bower.io  
 
-  
+
 ##Validata deployment quick start guide:  
-  
+
 Clone the repository to a new folder. The static web application will be served from the "public" subfolder of this folder.  
-```git clone git@github.com:HeriotWattMEng2015/Validata.git ShExValidataAndrew``` 
-  
+```git clone git@github.com:HW-SWeL/Validata.git ShExValidataAndrew```
+
 Move into the project folder and update NPM packages and Bower packages:  
 ```cd ShExValidataAndrew```  
 ```npm install```  
@@ -47,7 +47,7 @@ Hopefully the admin generator is fairly self-explanatory - once you're finished,
 Then, upload this file to the /public/javascripts folder of your deployment location, overwriting the existing configuration file, and your new settings will immediately be live.  
 
 ##Issue tracking  
-If something isn't working right or isn't explained well enough above, please feel free to post an issue on the GitHub project [issue tracker!](https://github.com/HeriotWattMEng2015/Validata/issues)  
+If something isn't working right or isn't explained well enough above, please feel free to post an issue on the GitHub project [issue tracker!](https://github.com/HW-SWeL/Validata/issues)  
 
 ##Validata and ShExValidator Developement
 
