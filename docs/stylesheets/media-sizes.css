@@ -1,0 +1,9 @@
+/*********************************/
+/*         MEDIA QUERIES         */
+/*********************************/
+
+@import url(media-extrasmall.css);
+@import url(media-small.css) (min-width: 768px);
+@import url(media-medium.css) (min-width: 992px);
+@import url(media-large.css) (min-width: 1200px);
+@import url(media-high.css) (min-height: 700px);

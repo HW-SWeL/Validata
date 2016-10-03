@@ -1,0 +1,540 @@
+/* Keyframes for animations to work in IE */
+
+
+@-webkit-keyframes rotate {
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes rotate {
+    100% {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+    }
+}
+
+@-webkit-keyframes dash {
+    0% {
+        stroke-dasharray: 1, 60;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -10;
+    }
+    100% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -37;
+    }
+}
+
+@keyframes dash {
+    0% {
+        stroke-dasharray: 1, 60;
+        stroke-dashoffset: 0;
+    }
+    50% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -10;
+    }
+    100% {
+        stroke-dasharray: 27, 60;
+        stroke-dashoffset: -37;
+    }
+}
+
+@-webkit-keyframes color {
+    100%, 0% {
+        stroke: #d62d20;
+    }
+    40% {
+        stroke: #0057e7;
+    }
+    66% {
+        stroke: #008744;
+    }
+    80%, 90% {
+        stroke: #dd9100;
+    }
+}
+
+@keyframes color {
+    100%, 0% {
+        stroke: #d62d20;
+    }
+    40% {
+        stroke: #0057e7;
+    }
+    66% {
+        stroke: #008744;
+    }
+    80%, 90% {
+        stroke: #be7d00;
+    }
+}
+
+
+
+/* 
+    Basic page structure - 250px wide fixed left sidebar which disappears on extrasmall screens
+*/
+
+html, body {
+    height: 100%;
+}
+
+#topNavbar {
+    height: auto;
+}
+
+#topNavbar h2 {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    font-size: 25px;
+}
+
+#pageContentWrapper {
+    position: relative;
+    padding: 0 20px 0 20px;
+}
+
+#sidebarContentWrapper {
+    position: relative;
+    padding: 0 20px 0 20px;
+    max-height: none !important;
+}
+
+/*
+    Wizard Steps Sidebar list - clickable list of steps tracking "progress" without restricting user
+*/
+
+ul#wizardSidebarStepsList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: wizard-counter;
+}
+
+ul#wizardSidebarStepsList li.wizardSidebarStep {
+    position: relative;
+    margin: 0.5em 0 0.5em 2em;
+    padding: 0.25em 0.75em;
+    list-style: none;
+    cursor: pointer;
+}
+
+ul#wizardSidebarStepsList li.wizardSidebarStep:before {
+    content: counter(wizard-counter);
+    counter-increment: wizard-counter;
+    position: absolute;
+    left: -2em;
+    top: 50%;
+    margin-top: -1.1em;
+    height: 2em;
+    width: 2em;
+    line-height: 2em;
+    border: none;
+    background: #337ab7;
+    text-align: center;
+    font-weight: bold;
+    color: white;
+    border-radius: 2em;
+}
+
+ul#wizardSidebarStepsList li.wizardSidebarStep:before {
+    background: #333333;
+}
+
+ul#wizardSidebarStepsList li.wizardSidebarStep.wizard-active {
+    color: #337ab7;
+}
+
+ul#wizardSidebarStepsList li.wizardSidebarStep.wizard-active:before {
+    background: #337ab7;
+}
+
+/*
+    Demo Data Panel - shows buttons to load sample data for selected schema, if any exists
+*/
+
+div#demoPanel {
+    margin: 20px 0 0 0;
+    padding: 0;
+}
+
+div#demoPanel h4 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+div#demoPanelButtonGroup button.demoButton {
+    padding-left: 28px;
+    text-align: left;
+}
+
+.demoButtonIcon {
+    display: block;
+    position: absolute;
+    top: 4px;
+    left: 2px;
+    margin: 0;
+    vertical-align: middle;
+}
+
+/*
+    Quick Summary Sidebar Panel - always visible display of current validation status
+*/
+
+div#quickSummaryPanel {
+    margin: 20px;
+}
+
+div#quickSummaryPanelHeading h4 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+div#quickSummaryPanel tr.quickSummarySection {
+    cursor: pointer;
+}
+
+div#quickSummaryPanel tr.quickSummarySection th.quickSummarySectionTitle {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 10px;
+    vertical-align: middle;
+}
+
+div#quickSummaryPanel tr.quickSummarySection td {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.quickSummarySectionIcon {
+    margin: 8px 0 8px 0;
+}
+
+.quickSummarySection.quickSummaryStatusIncomplete {
+    background: #e3e3e3;
+}
+
+.quickSummarySection.quickSummaryStatusInvalid {
+    background: #e3b5af;
+}
+
+.quickSummarySection.quickSummaryStatusWarning {
+    background: #f7ecb5;
+}
+
+.quickSummarySection.quickSummaryStatusValid {
+    background: #bfe3b2;
+}
+
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconIncomplete {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconWarning,
+.quickSummarySection.quickSummaryStatusIncomplete .quickSummarySectionIconInvalid {
+    display: none;
+}
+
+
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconWarning {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusWarning .quickSummarySectionIconInvalid {
+    display: none;
+}
+
+
+
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconInvalid {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconValid,
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusInvalid .quickSummarySectionIconWarning {
+    display: none;
+}
+
+
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconValid {
+    display: inline-block;
+}
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconWarning,
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconIncomplete,
+.quickSummarySection.quickSummaryStatusValid .quickSummarySectionIconInvalid {
+    display: none;
+}
+
+
+.svg-size-24px {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+.svg-size-20px {
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+}
+
+.svg-path-white {
+    fill: #ffffff;
+}
+
+.svg-path-primary {
+    fill: #337ab7;
+}
+
+.svg-path-success {
+    fill: #5cb85c;
+}
+
+.svg-path-info {
+    fill: #5bc0de;
+}
+
+.svg-path-warning {
+    fill: #f0ad4e;
+}
+
+.svg-path-danger {
+    fill: #d9534f;
+}
+
+
+/* 
+    Material Design Loader
+*/
+
+.loader {
+    position: fixed;
+    top: 0;
+    right: 2px;
+    width: 30px;
+    height: 30px;
+    
+    zoom: 1.7;
+    -webkit-zoom: 1.7;
+    -moz-transform:  scale(1.7, 1.7);
+    -moz-transform-origin: right top;
+    
+    z-index: 10;
+
+    overflow: hidden;
+    background: #ffffff;
+
+    -webkit-border-bottom-left-radius: 15px;
+    -moz-border-radius-bottomleft: 15px;
+    border-bottom-left-radius: 15px;
+}
+
+.circular {
+    -webkit-animation: rotate 2s linear infinite;
+    animation: rotate 2s linear infinite;
+    position: relative;
+    height: 30px;
+    width: 30px;
+}
+
+.loader.hidden .circular,
+.loader.hidden .circular .path {
+    -webkit-animation: none !important;
+    animation: none !important;
+}
+
+.path {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+    -webkit-animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
+    animation: dash 1.5s ease-in-out infinite, color 6s ease-in-out infinite;
+    stroke-linecap: round;
+}
+
+/*
+    Wide Modal - used for showing larger content to the user, e.g. ShEx source code
+*/
+
+.modal.modal-wide {
+    padding: 0 !important;
+}
+
+.modal.modal-wide .modal-dialog {
+    width: 90%;
+}
+
+.modal-wide .modal-body {
+    overflow-y: auto;
+}
+
+/*
+    Custom inputs
+*/
+
+.sourceText {
+    max-height: 300px;
+    overflow: auto;
+    font-family: monospace;
+    white-space: pre;
+    padding: 5px;
+    background-color: rgb(235, 235, 228);
+    border: 1px solid rgb(169, 169, 169);
+}
+
+.editableSourceText {
+    height: 500px;
+    overflow: auto;
+    font-family: monospace;
+    white-space: pre;
+    padding: 5px;
+    border: 1px solid rgb(169, 169, 169);
+}
+
+/* 
+    Main Content Panels
+*/
+
+.hiddenFadeIn {
+    display: none;
+}
+
+#schemaDescription {
+    word-wrap: break-word;
+    word-break: break-all;
+}
+
+#closedShapesOption {
+    width: 30px;
+    height: 30px;
+    vertical-align: bottom;
+}
+
+#resourceShapeMapTable {
+    background: #f9f9f9;
+}
+
+#resourceShapeMapTable > tbody > tr:nth-of-type(odd) {
+    background: #ffffff;
+}
+
+
+
+.validationResultsAccordion div.panel-group,
+.validationResultsAccordion ul.list-group {
+    margin-bottom: 0;
+}
+
+.panel-heading {
+    padding: 0;
+}
+
+.panel-title {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    padding: 10px 15px;
+}
+
+a.panel-title {
+    color: inherit;
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    text-decoration: none;
+    vertical-align: bottom;
+    line-height: 23px;
+}
+
+
+.resourceShapeErrorsListGroup li,
+.resourceShapeWarningsListGroup li,
+.resourceShapeMatchesListGroup li {
+    padding-left: 30px;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+span.validationResultsMatchMessageBody,
+span.validationResultsWarningMessageBody,
+span.validationResultsErrorMessageBody {
+    word-wrap: break-word;
+}
+
+#validationResultsErrorsCount,
+#validationResultsWarningsCount,
+#validationResultsMatchesCount {
+    vertical-align: bottom;
+    font-weight: bold;
+}
+
+
+.CodeMirror {
+    border: 1px solid rgba(0,0,0,0.2);
+}
+
+.codeMirrorTextareaContainer {
+    position: relative;
+}
+
+/*
+    Resize Codemirror buttons
+*/
+.CodeMirror-resize-inc-100, .CodeMirror-resize-sub-100 {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+    z-index: 30;
+    cursor: pointer;
+    -webkit-user-select: none;  /* Chrome all / Safari all */
+    -moz-user-select: none;     /* Firefox all */
+    -ms-user-select: none;      /* IE 10+ */
+}
+.CodeMirror-resize-inc-100:before, .CodeMirror-resize-sub-100:before {
+    color: #FFF;
+    font-weight: 700;
+    font-size: 19px;
+}
+.CodeMirror-resize-inc-100 {
+    background: #5cb85c;
+    right: 24px;
+}
+.CodeMirror-resize-sub-100 {
+    background: #d9534f;
+    right: 0;
+}
+.CodeMirror-resize-inc-100:before {
+    margin-left: 7px;
+    content: "+";
+}
+.CodeMirror-resize-sub-100:before {
+    margin-left: 8px;
+    top: -2px;
+    position: relative;
+    content: "-";
+}
+
+/* Displays where the errors in the shex file are */
+.line-error {
+    background: #FBC2C4 !important;
+    color: #8a1f11 !important;
+}
+.line-warning {
+    background: #fbf3a8 !important;
+    color: #8a8a40 !important;
+}
+.line-match {
+    background: #defbd2 !important;
+    color: #5d8a57 !important;
+}
