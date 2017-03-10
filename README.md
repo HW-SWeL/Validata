@@ -55,7 +55,7 @@ Any time the ShEx-validator code is modified in ```/node_modules/ShEx-validator`
 
 This requires that browserify is deployed, which can be done with the following command
 ```
-npm insall -g broswerify
+npm install -g broswerify
 ```
 The latest version of the ShEx-validator validation library can be packaged into a client-side javascript file using browserify:  
 ```browserify public/javascripts/ShExValidator-browserify.js -o public/javascripts/ShExValidator.js```  
