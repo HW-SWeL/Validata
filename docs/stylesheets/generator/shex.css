@@ -1,0 +1,79 @@
+/* shex creator*/
+
+.shex-shape-name {
+	font-size: medium;
+}
+
+.shex-rule-arc:after {
+	content: " (" attr(cardinality) ") ";
+	padding: 2px;
+}
+
+.shex-rule-arc[cardinality="1"]:after
+{	content: "";
+}
+
+/*.shex-rule-arc:after:after {
+	content: " (" attr(requirement) ") ";
+	position: relative;
+	right: 0px;
+	padding: 2px;
+}*/
+
+.shex-rule-group {
+	padding: 15px;
+}
+
+.shex-rule-arc {
+
+}
+
+.shex-rule-arc > .shex-class {
+	display: inline-block;
+}
+
+.shex-rule-add {
+	cursor: pointer;
+	border-radius: 5px;
+	background: #fff;
+	padding: 2px;
+}
+
+
+.shex-type > .shex-prefix, .shex-type > .shex-identifier {
+	display: inline-block;
+}
+
+.shex-prefix {
+	color: #00f;
+}
+
+.shex-prefix + .shex-identifier:before {
+    margin-left: -4px;
+    content: ":";
+    color: #00f;
+}
+
+.shex-prefix + .shex-identifier {
+    color: #008;
+}
+
+.shex-class-name + .shex-class-value:before {
+    content: " - ";
+    color: #AAA;
+}
+
+.shex-reference {
+    font-weight: bold;
+    display: inline-block;
+}
+
+.shex-rule-include{
+    padding: 4px;
+    border: 1px solid #AAA;
+    font-weight: bold;
+}
+.shex-rule-include:before{
+    font-weight: normal;
+    content: "Inherit rules from subject: "
+}

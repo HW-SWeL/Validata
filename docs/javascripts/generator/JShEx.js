@@ -1,0 +1,597 @@
+/*
+ * Parses and exports shex
+ *
+ * Dependencies: Shex Validator
+ *
+ */
+
+function JShEx(){
+    this.prefixes = {};
+    this.shapes = {};
+    this.start = undefined;
+    this.origSchema = undefined;
+}
+
+// static regex for buffer and parse for the nmea strings.
+JShEx.prototype.tab = "    ";
+
+// Takes in the parsed output from the shex parser and converts it into a simplified shex format
+JShEx.prototype.parseShEx = function(responseObject){
+
+    // Clears the content
+    this.prefixes = {};
+    this.shapes = {};
+    this.start = undefined;
+    this.origSchema = responseObject.schema;
+    this.start = this.origSchema.startRule.lex;
+    this.prefixes = responseObject.resolver.Prefixes;
+    for (var shape in this.origSchema.ruleMap) {
+        if(this.origSchema.ruleMap.hasOwnProperty(shape)){
+            this.shapes[shape.substring(1,shape.length-1)] = {
+                _:"Shape",
+                rule:this.parseRule(this.origSchema.ruleMap[shape])
+            };
+        }
+    }
+    return this;
+};
+
+JShEx.prototype.parseIRI = function(term) {
+    var prefix = "";
+    var subject = "";
+    for (var p in this.prefixes) {
+        if(this.prefixes.hasOwnProperty(p)){
+            var prefixKey = p;
+            var prefixValue = this.prefixes[p];
+            if(term.lex.indexOf(prefixValue)==0){
+                subject = term.lex.substring(prefixValue.length);
+                prefix = prefixKey;
+            }
+        }
+    }
+    if(subject==""){
+        if(term.lex.indexOf("http://www.w3.org/2013/ShEx/ns#")==0){
+            subject = term.lex.substring("http://www.w3.org/2013/ShEx/ns#".length);
+            prefix = "";
+        }
+    }
+    return {
+        _:term._,
+        term: subject,
+        prefix: prefix
+    };
+};
+
+JShEx.prototype.parseValueSet = function(term) {
+    var values = [];
+    for(var i=0;i<term.values.length;i++){
+        values.push(this.parseTerm(term.values[i]));
+    }
+    return {
+        _:term._,
+        values:values
+    };
+};
+
+JShEx.prototype.parseValueReference = function(term) {
+    return {
+        _:term._,
+        label:term.label.lex
+    };
+};
+
+JShEx.prototype.parseValueWild = function(term) {
+    return {
+        _:term._,
+        exceptions: ""
+    };
+};
+
+
+JShEx.prototype.parseTerm = function(term){
+    var t = undefined;
+    if(term._ == "NameTerm")
+        t = term.term;
+    else if(term._ == "ValueTerm")
+        t = term.term;
+    else if(term._ == "ValueType")
+        t = term.type;
+    else if(term._ == "ValueReference")
+        t = term;
+    else if(term._ == "ValueSet")
+        t = term;
+    else if(term._ == "ValueWild")
+        t = term;
+    else if(term._ == "IRI")
+        t = term;
+    else
+        console.log(term);
+
+    switch(t._){
+        case "IRI":
+            return this.parseIRI(t);
+            break;
+        case "ValueSet":
+            return this.parseValueSet(t);
+            break;
+        case "ValueReference":
+            return this.parseValueReference(t);
+            break;
+        case "ValueWild":
+            return this.parseValueWild(t);
+            break;
+        default:
+            return {_:"InvalidTerm"};
+            break;
+    }
+};
+
+JShEx.prototype.parseRule = function(rule){
+    switch(rule._){
+        case "AndRule":
+            return this.parseAndRule(rule);
+            break;
+        case "OrRule":
+            return this.parseOrRule(rule);
+            break;
+        case "UnaryRule":
+            return this.parseUnaryRule(rule);
+            break;
+        case "IncludeRule":
+            return this.parseIncludeRule(rule);
+            break;
+        case "AtomicRule":
+            return this.parseAtomicRule(rule);
+            break;
+        default:
+            return {_:"InvalidRule"};
+            break;
+    }
+};
+
+JShEx.prototype.parseAndRule = function(rule){
+    var c = [];
+    for(var i=0;i<rule.conjoints.length;i++){
+        c.push(this.parseRule(rule.conjoints[i]));
+    }
+    return {
+        _:rule._,
+        conjoints:c
+    };
+};
+
+JShEx.prototype.parseAtomicRule = function(rule){
+    return {
+        _:rule._,
+        name: this.parseTerm(rule.nameClass),
+        value: this.parseTerm(rule.valueClass),
+        max: rule.max,
+        min: rule.min,
+        negated: rule.negated,
+        reversed: rule.reversed
+    };
+};
+
+JShEx.prototype.parseIncludeRule = function(rule){
+    return {
+        _:rule._,
+        include: rule.include.lex
+    };
+};
+
+JShEx.prototype.parseOrRule = function(rule){
+    var c = [];
+    for(var i=0;i<rule.disjoints.length;i++){
+        c.push(this.parseRule(rule.disjoints[i]));
+    }
+    return {
+        _:rule._,
+        disjoints:c
+    };
+};
+
+JShEx.prototype.parseUnaryRule = function(rule){
+    var p = {
+        _:rule._,
+        rule: this.parseRule(rule.rule)
+    };
+    if(rule.opt)
+        p.optional = true;
+    return p;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+JShEx.prototype.toShEx = function(){
+    var prefixesStr = "";
+    for(var prefix in this.prefixes)
+        if(this.prefixes.hasOwnProperty(prefix))
+            prefixesStr += this.exportPrefixToShEx(prefix,this.prefixes[prefix])+"\n";
+    var startStr = this.exportStartToShEx(this.start)+"\n";
+    var shapesStr = "";
+    for(var shape in this.shapes)
+        if(this.shapes.hasOwnProperty(shape))
+            shapesStr += this.exportShapeToShEx(this.shapes[shape])+"\n\n";
+    return prefixesStr+"\n"+startStr+"\n"+shapesStr;
+};
+
+JShEx.prototype.exportPrefixToShEx = function(prefix,value){
+    return "PREFIX "+prefix+": <"+value+">";
+};
+
+JShEx.prototype.exportStartToShEx = function(start){
+    return "start = <"+start+">";
+};
+
+JShEx.prototype.exportShapeToShEx = function(shape){
+    var shapeStr = "<"+shape.id+"> {\n";
+    shapeStr += this.exportIndentLines(this.exportRuleToShEx(shape.rule));
+    shapeStr += "\n}";
+    return shapeStr;
+};
+
+JShEx.prototype.exportRuleToShEx = function(rule){
+    switch(rule._){
+        case "AndRule":
+            return this.exportAndRuleToShEx(rule);
+            break;
+        case "OrRule":
+            return this.exportOrRuleToShEx(rule);
+            break;
+        case "IncludeRule":
+            return this.exportIncludeRuleToShEx(rule);
+            break;
+        case "AtomicRule":
+            return this.exportAtomicRuleToShEx(rule);
+            break;
+        case "UnaryRule":
+            return this.exportUnaryRuleToShEx(rule);
+            break;
+        default:
+            return "!ERROR_INVALID_RULE!";
+            break;
+    }
+};
+
+JShEx.prototype.exportAndRuleToShEx = function(rule){
+    var out = "";
+    for(var i=0;i<rule.conjoints.length;i++){
+        out += this.exportRuleToShEx(rule.conjoints[i]);
+        if(i!=rule.conjoints.length-1) {
+            out += ",\n";
+        }
+    }
+    return out;
+};
+
+JShEx.prototype.exportOrRuleToShEx = function(rule){
+    var out = "(\n";
+    for(var i=0;i<rule.disjoints.length;i++){
+        out += this.exportRuleToShEx(rule.disjoints[i]);
+        if(i!=rule.disjoints.length-1) {
+            out += "\n| ";
+        }
+    }
+    out += "\n)";
+    return out;
+};
+
+JShEx.prototype.exportUnaryRuleToShEx = function(rule){
+    var out = "";
+    // Ignore redundant parenthesis
+    if(rule.rule._=="OrRule"){
+        out += this.exportRuleToShEx(rule.rule);
+    } else {
+        out = "(\n";
+        out += this.exportRuleToShEx(rule.rule);
+        out += "\n)";
+    }
+    if(rule.optional)
+        out += "?";
+    return out;
+};
+
+JShEx.prototype.exportAtomicRuleToShEx = function(rule){
+    var out = "";
+    if(rule.negated)
+        out+="!";
+    out += this.exportTermToShExthis(rule.name);
+    out += " ";
+    out += this.exportTermToShExthis(rule.value);
+    if(rule.max == undefined && rule.min == undefined) {
+        out += "";
+    } else if(rule.max == undefined) {
+        if (rule.min == 1)
+            out += "+";
+        else if (rule.min == 0)
+            out += "*";
+        else
+            out += "{" + rule.min + ",100000000000}";
+        // The above is a hack, just in case we have somehow gained
+        // the ability to have n to infinity cardinality.
+    } else if(rule.min == undefined){
+        out += "{0,"+rule.max+"}";
+    } else if(rule.min == 0 && rule.max == 1){
+        out += "?";
+    } else if(rule.min==rule.max){
+        if(rule.min != 1)
+            out += "{"+rule.min+"}";
+        else
+            out += "";
+    } else {
+        out += "{"+rule.min+","+rule.max+"}";
+    }
+    return out;
+};
+
+JShEx.prototype.exportIncludeRuleToShEx = function(rule){
+    return "&<"+rule.include+">";
+};
+
+JShEx.prototype.exportTermToShExthis = function(term){
+    switch(term._){
+        case "IRI":
+            return this.exportIRIToShEx(term);
+            break;
+        case "ValueSet":
+            return this.exportValueSetToShEx(term);
+            break;
+        case "ValueReference":
+            return this.exportValueReferenceToShEx(term);
+            break;
+        case "ValueWild":
+            return this.exportValueWildToShEx(term);
+            break;
+        default:
+            return "!ERROR_INVALID_TERM!";
+            break;
+    }
+};
+
+JShEx.prototype.exportIRIToShEx = function(term){
+    if(term.prefix=="")
+        return term.term;
+    return term.prefix+":"+term.term;
+};
+
+JShEx.prototype.exportValueSetToShEx = function(term){
+    var out = "(";
+    for(var i=0;i<term.values.length;i++){
+        out+=this.exportTermToShExthis(term.values[i]);
+        if(i!=term.values.length-1)
+            out += " ";
+    }
+    out += ")";
+    return out;
+};
+
+JShEx.prototype.exportValueReferenceToShEx = function(term){
+    return "@<"+term.label+">";
+};
+
+JShEx.prototype.exportValueWildToShEx = function(){
+    return ".";
+};
+
+JShEx.prototype.exportIndentLines = function(lines){
+    return this.tab+lines.replace(/\n/g, '\n'+this.tab);
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+JShEx.prototype.selectNodes = function(selector){
+    var result = [];
+    for(var shape in this.shapes)
+        if(this.shapes.hasOwnProperty(shape))
+            result = result.concat(this.selectNodesFromNode(this.shapes[shape],selector));
+    return result;
+};
+
+JShEx.prototype.selectNodesFromNode = function(node,selector){
+    var result = [];
+    if(selector(node)){
+        // Applies to the following objects:
+        // * IncludeRule
+        // * IRI
+        // * ValueReference
+        // * ValueWild
+        result = result.concat(node);
+    }
+    if(Object.prototype.toString.call( node ) === '[object Array]'){
+        for(var i=0;i<node.length;i++){
+            result = result.concat(this.selectNodesFromNode(node[i],selector));
+        }
+    } else if(node._=="Shape" || node._=="UnaryRule"){
+        result = result.concat(this.selectNodesFromNode(node.rule,selector));
+    } else if(node._=="AndRule") {
+        result = result.concat(this.selectNodesFromNode(node.conjoints,selector));
+    } else if(node._=="OrRule") {
+        result = result.concat(this.selectNodesFromNode(node.disjoints,selector));
+    } else if(node._=="AtomicRule") {
+        result = result.concat(this.selectNodesFromNode(node.name,selector));
+        result = result.concat(this.selectNodesFromNode(node.value,selector));
+    } else if(node._=="ValueSet") {
+        result = result.concat(this.selectNodesFromNode(node.values,selector));
+    }
+    return result;
+};
+
+// Adds a prefix to the object
+JShEx.prototype.createPrefix = function(prefix,value){
+    if(!this.prefixes.hasOwnProperty(prefix)){
+        if(prefix!=undefined) {
+            this.prefixes[prefix] = value;
+            return true;
+        }
+    }
+    return false;
+};
+// Renames the prefix in the object. It also changes all the other nodes
+// in the tree.
+JShEx.prototype.updatePrefix = function(oldprefix,prefix,value){
+    this.selectNodes(function(node){
+        if(node._=="IRI"){
+            if(node.prefix==oldprefix){
+                node.prefix = prefix;
+            }
+        }
+    });
+    delete this.prefixes[oldprefix];
+    return this.createPrefix(prefix,value);
+};
+// Returns the nodes in the tree where this prefix is actually used
+JShEx.prototype.removePrefix = function(prefix){
+    return !this.updatePrefix(prefix,undefined,undefined);
+};
+
+JShEx.prototype.createShape = function(shape){
+    if(!this.shapes.hasOwnProperty(shape)) {
+        this.shapes[shape] = {
+            _: "Shape",
+            id: shape,
+            rule: undefined
+        };
+        return true;
+    }
+    return false;
+};
+JShEx.prototype.updateShape = function(shapeId,newShapeId){};
+JShEx.prototype.removeShape = function(shapeId){};
+
+JShEx.prototype.setStart = function(shapeId){};
+
+JShEx.prototype.createRule = function(node,opt){};
+JShEx.prototype.createAndRule = function(node,opt){};
+JShEx.prototype.createOrRule = function(node,opt){};
+JShEx.prototype.createUnaryRule = function(node,opt){};
+JShEx.prototype.createAtomicRule = function(node,opt){};
+JShEx.prototype.createIncludeRule = function(node,opt){};
+JShEx.prototype.removeRule = function(node,opt){};
+
+JShEx.prototype.setRuleCardinality = function(node,opt){
+    // Handle OrRule differently, because it needs to be wrapped in a unary
+};
+
+JShEx.prototype.setRuleConformance = function(node,opt){
+    // Handle OrRule differently, because it needs to be wrapped in a unary
+};
+
+JShEx.prototype.getSuggestedValues = function(node,opt){
+    // Handle OrRule differently, because it needs to be wrapped in a unary
+};
+
+JShEx.prototype.setNameTerm = function(node,opt){
+};
+
+JShEx.prototype.setValueTerm = function(node,opt){
+};
+
+JShEx.prototype.editValueSet = function(node,opt){
+    // Handle OrRule differently, because it needs to be wrapped in a unary
+};
