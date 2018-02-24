@@ -68,3 +68,7 @@ The latest version of the ShEx-validator validation library can be packaged into
 ```
 browserify public/javascripts/ShExValidator-browserify.js -o public/javascripts/ShExValidator.js
 ``` 
+
+## Test branch deployment
+
+To see the state of migration of the code to the new shex.js library, clone the test branch, the instructions are all the same as the test branch pulls the test branch of ShEx-Validator package

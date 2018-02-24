@@ -132,7 +132,7 @@ Validata = {
 
         if (Validata.Schema.parsed)
         {
-            Validata.findShapes();
+            // Validata.findShapes();
         }
     },
 
