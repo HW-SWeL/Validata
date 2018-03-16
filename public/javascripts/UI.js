@@ -52,7 +52,7 @@ UI = {
 
         UI.dataSourceFile = $('#dataSourceFile');
 
-        UI.resourceShapeMapTableBody = $('#resourceShapeMapTableBody');
+        UI.resourceShapeMapTableBody = $('#resourceShapeMapTableBody');//use
         UI.addNewResourceShapeButton = $('#addNewResourceShapeButton');
         UI.removeResourceShapeButton = $('#removeResourceShapeButton');
         UI.closedShapesOption = $('#closedShapesOption');
@@ -423,24 +423,32 @@ UI = {
 
     generateResourceShapeSelectorRow: function generateResourceShapeSelectorRow()
     {
-        if (Util.iterableLength(Validata.Data.rawResponse['db']) &&
-            Util.iterableLength(Validata.Data.rawResponse['db']['SPO']) &&
+        // if (Util.iterableLength(Validata.Data.rawResponse['db']) &&
+        //     Util.iterableLength(Validata.Data.rawResponse['db']['SPO']) &&
+        //     Util.iterableLength(Validata.Schema.rawResponse.shapes)
+        // )
+
+        if (Util.iterableLength(Validata.Data.rawResponse.triples) &&
             Util.iterableLength(Validata.Schema.rawResponse.shapes)
-        )
+        )   
+
+
         {
+            console.log('gen resources');
+            var resources = Validata.Data.rawResponse.db.getSubjectsByIRI()
             var resourceShapeRow = $('<tr></tr>').addClass('resourceShapeRow');
             var resourceSelector = $('<select></select>').addClass('resourceSelector form-control');
             var shapeSelector = $('<select></select>').addClass('shapeSelector form-control');
-
-            $.each(Validata.Data.rawResponse['db']['SPO'], function rawDataResponseIterator(nodeKey, nodeObject)
+            console.log('resources',resources);
+            $.each(resources, function rawDataResponseIterator(nodeKey, nodeObject)
             {
                 // Blank nodes can't be validated yet due to a bug (?) in the validator which changes the name on every instance so we're just hiding them for now
-                if (nodeKey.indexOf("_:") >= 0)
-                {
-                    return true;
-                }
-                
-                var nodeKeyText = nodeKey.replace(/[<>]/g, '');
+                // if (nodeKey.indexOf("_:") >= 0)
+                // {
+                //     return true;
+                // }
+                console.log('nodeKey',nodeKey)
+                var nodeKeyText = nodeObject.replace(/[<>]/g, '');
 
                 resourceSelector.append('<option value="' + nodeKeyText + '">' + nodeKeyText + '</option>');
             });
@@ -450,7 +458,8 @@ UI = {
             
             $.each(Validata.Schema.rawResponse.shapes, function schemaResponseIterator(index, shape)
             {
-                shapeSelector.append('<option value="' + shape + '">' + Util.escapeHtml(shape) + '</option>');
+                console.log('index, shape',shape);
+                shapeSelector.append('<option value="' + index + '">' + Util.escapeHtml(index) + '</option>');
             });
             
             var shapeSelectorCell = $('<td></td>').append(shapeSelector);
@@ -464,6 +473,25 @@ UI = {
         }
     },
 
+    generateResourceDropdown: function generateResourceDropdown(){
+        console.log('updating resources');
+        if (Util.iterableLength(Validata.Schema.rawResponse.shapes)) {
+
+            var resourceShapeRow = $('<tr></tr>').addClass('resourceShapeRow');
+            var resourceSelector = $('<select></select>').addClass('resourceSelector form-control');
+            var shapeSelector = $('<select></select>').addClass('shapeSelector form-control');
+            var resourceSelectorCell = $('<td></td>').append(resourceSelector);
+            resourceShapeRow.append(resourceSelectorCell);
+
+            $.each(Validata.Schema.rawResponse.shapes,function (shape){
+                shapeSelector.append('<option value="' + shape + '">' + Util.escapeHtml(shape) + '</option>');
+            });
+            var shapeSelectorCell = $('<td></td>').append(shapeSelector);
+            resourceShapeRow.append(shapeSelectorCell);
+            return resourceShapeRow;
+        }
+    },
+
     updateResourceShapeMapTable: function updateResourceShapeMapTable()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -471,7 +499,8 @@ UI = {
         UI.resourceShapeMapTableBody.empty();
 
         if (Util.iterableLength(Validata.Validation.options.resourceShapeMap))
-        {
+        {   
+            console.log('if in updateResourceShapeMapTable')
             $.each(Validata.Validation.options.resourceShapeMap, function (resource, shape)
             {
                 // Blank nodes can't be validated yet due to a bug (?) in the validator which changes the name on every instance so we're just hiding them for now
@@ -507,41 +536,53 @@ UI = {
         }
         else
         {
-            
-            $.each(Validata.Data.shapesResponse, function findShapesResponseIterator(resource, shape)
-            {
+            console.log('else in updateResourceShapeMapTable');
 
-                if( Util.stringIsNotBlank(shape) )
-                {
-                    Log.i("Iterating through Validata.Data.shapesResponse, found non-blank shape match with resource: " + resource + " and shape: " + shape);
+            var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
+            // resourceShapeSelectorRow
+            //             .find('select.resourceSelector')
+            //             .find('option')
+            //             .prop('selected', false)
+            //             .filter(function ()
+            //             {
+            //                 return $(this).val() == resource;
+            //             })
+            //             .prop('selected', true);
+            UI.resourceShapeMapTableBody.append(resourceShapeSelectorRow);
+            // $.each(Validata.Data.rawResponse.db.getSubjectsByIRI(), function findShapesResponseIterator(resource)
+            // {
 
-                    resource = resource.replace(/[<>]/g, '');
+            //     // if( Util.stringIsNotBlank(shape) )
+            //     // {
+            //         // Log.i("Iterating through Validata.Data.shapesResponse, found non-blank shape match with resource: " + resource + " and shape: " + shape);
 
-                    var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
+            //         // resource = resource.replace(/[<>]/g, '');
+
+            //         var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
                     
-                    resourceShapeSelectorRow
-                        .find('select.resourceSelector')
-                        .find('option')
-                        .prop('selected', false)
-                        .filter(function ()
-                        {
-                            return $(this).val() == resource;
-                        })
-                        .prop('selected', true);
+            //         resourceShapeSelectorRow
+            //             .find('select.resourceSelector')
+            //             .find('option')
+            //             .prop('selected', false)
+            //             .filter(function ()
+            //             {
+            //                 return $(this).val() == resource;
+            //             })
+            //             .prop('selected', true);
 
-                    resourceShapeSelectorRow
-                        .find('select.shapeSelector')
-                        .find('option')
-                        .prop('selected', false)
-                        .filter(function ()
-                        {
-                            return $(this).val() == shape;
-                        })
-                        .prop('selected', true);
+            //         // resourceShapeSelectorRow
+            //         //     .find('select.shapeSelector')
+            //         //     .find('option')
+            //         //     .prop('selected', false)
+            //         //     .filter(function ()
+            //         //     {
+            //         //         return $(this).val() == shape;
+            //         //     })
+            //         //     .prop('selected', true);
                     
-                    UI.resourceShapeMapTableBody.append(resourceShapeSelectorRow);
-                }
-            });
+            //         UI.resourceShapeMapTableBody.append(resourceShapeSelectorRow);
+            //     // }
+            // });
         }
 
         Validata.Validation.options.resourceShapeMap = UI.buildResourceShapeMapFromTable();

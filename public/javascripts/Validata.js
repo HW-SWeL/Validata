@@ -100,9 +100,24 @@ Validata = {
         Validata.validator.findShapes().done(function findShapesDone()
         {
             Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+            UI.updateResourceShapeMapTable();
         });
     },
 
+    findShapesResultCallback: function findShapesResultCallback(shapesResponse)
+    {
+        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
+        console.log('findShapesResultCallback done');
+        Validata.Data.shapesResponse = shapesResponse;
+
+
+        UI.updateResourceShapeMapTable();
+
+        Validata.Validation.rawResponses = [];
+
+        Validata.validator.validate(Validata.Validation.options.resourceShapeMap);
+    },
+    
     schemaParsedCallback: function schemaParsedCallback(responseObject)
     {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -111,6 +126,7 @@ Validata = {
         Validata.Schema.parsed = true;
 
         Validata.triggerValidationMessageUpdate();
+        // UI.updateResources();
     },
 
     schemaParseErrorCallback: function schemaParseErrorCallback(responseObject)
@@ -132,7 +148,7 @@ Validata = {
 
         if (Validata.Schema.parsed)
         {
-            // Validata.findShapes();
+            Validata.findShapes();
         }
     },
 
@@ -146,18 +162,7 @@ Validata = {
         Validata.triggerValidationMessageUpdate();
     },
 
-    findShapesResultCallback: function findShapesResultCallback(shapesResponse)
-    {
-        Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
-
-        Validata.Data.shapesResponse = shapesResponse;
-
-        UI.updateResourceShapeMapTable();
-
-        Validata.Validation.rawResponses = [];
-
-        Validata.validator.validate(Validata.Validation.options.resourceShapeMap);
-    },
+    
 
     validationResultCallback: function validationResultCallback(resultObject)
     {
