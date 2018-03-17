@@ -434,12 +434,12 @@ UI = {
 
 
         {
-            console.log('gen resources');
+            // console.log('gen resources');
             var resources = Validata.Data.rawResponse.db.getSubjectsByIRI()
             var resourceShapeRow = $('<tr></tr>').addClass('resourceShapeRow');
             var resourceSelector = $('<select></select>').addClass('resourceSelector form-control');
             var shapeSelector = $('<select></select>').addClass('shapeSelector form-control');
-            console.log('resources',resources);
+            // console.log('resources',resources);
             $.each(resources, function rawDataResponseIterator(nodeKey, nodeObject)
             {
                 // Blank nodes can't be validated yet due to a bug (?) in the validator which changes the name on every instance so we're just hiding them for now
@@ -447,7 +447,7 @@ UI = {
                 // {
                 //     return true;
                 // }
-                console.log('nodeKey',nodeKey)
+                // console.log('nodeKey',nodeKey)
                 var nodeKeyText = nodeObject.replace(/[<>]/g, '');
 
                 resourceSelector.append('<option value="' + nodeKeyText + '">' + nodeKeyText + '</option>');
@@ -458,7 +458,7 @@ UI = {
             
             $.each(Validata.Schema.rawResponse.shapes, function schemaResponseIterator(index, shape)
             {
-                console.log('index, shape',shape);
+                // console.log('index, shape',shape);
                 shapeSelector.append('<option value="' + index + '">' + Util.escapeHtml(index) + '</option>');
             });
             

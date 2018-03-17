@@ -6,7 +6,7 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
-    "ShEx-validator": "git://github.com/HW-SWeL/ShEx-validator#test",
+    "ShEx-validator": "git://github.com/HW-SWeL/ShEx-validator.git#test",
     "body-parser": "~1.10.2",
     "cookie-parser": "~1.3.3",
     "debug": "~2.1.1",

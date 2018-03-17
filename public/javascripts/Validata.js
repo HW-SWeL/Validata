@@ -101,13 +101,15 @@ Validata = {
         {
             Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
             UI.updateResourceShapeMapTable();
+            Validata.validator.validate(Validata.Validation.options.resourceShapeMap);
+            console.log('validator called');
         });
     },
 
     findShapesResultCallback: function findShapesResultCallback(shapesResponse)
     {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
-        console.log('findShapesResultCallback done');
+        // console.log('findShapesResultCallback done');
         Validata.Data.shapesResponse = shapesResponse;
 
 
@@ -116,6 +118,7 @@ Validata = {
         Validata.Validation.rawResponses = [];
 
         Validata.validator.validate(Validata.Validation.options.resourceShapeMap);
+        console.log('called to validate');
     },
     
     schemaParsedCallback: function schemaParsedCallback(responseObject)
@@ -282,7 +285,8 @@ Validata = {
                         {
                             var line = Util.isDefined(rawError.line) ? rawError.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
-                            var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
+                            var requirementLevel = 'default';
+                            // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
                             var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.description) ) + '</span>';
 
                             errorsResourceSectionHTMLString +=
@@ -320,7 +324,8 @@ Validata = {
                         {
                             var line = Util.isDefined(rawError.line) ? rawError.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
-                            var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
+                            var requirementLevel = 'default';
+                            // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
                             var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.description) ) + '</span>';
 
                             warningsResourceSectionHTMLString +=
@@ -358,7 +363,8 @@ Validata = {
                         {
                             var line = Util.isDefined(rawMatch.triple) ? rawMatch.triple.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
-                            var requirementLevel = Util.isDefined(rawMatch.rule.req_lev) ? " [" + Util.stringValue(rawMatch.rule.req_lev) + "] " : "";
+                            var requirementLevel = 'default';
+                            // var requirementLevel = Util.isDefined(rawMatch.rule.req_lev) ? " [" + Util.stringValue(rawMatch.rule.req_lev) + "] " : "";
                             var messageBody = '<span class="validationResultsMatchMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawMatch.toString()) ) + '</span>';
 
                             matchesResourceSectionHTMLString +=
