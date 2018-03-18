@@ -1,4678 +1,5 @@
 (function(){function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}return e})()({1:[function(require,module,exports){
-var Promise = require("promise");
-
-function pad (d, str) {
-    if (str === undefined) str = '  ';
-    var ret = '';
-    while (d-- > 0)
-        ret += str;
-    return ret;
-}
-
-function defix (term, prefixes) {
-    if (term._ !== 'IRI')
-        return term.toString();
-    if (term.lex === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type')
-        return 'a';
-    for (var key in prefixes)
-        if (term.lex.substr(0, prefixes[key].length) === prefixes[key])
-            return key + ":" + term.lex.substr(prefixes[key].length);
-    return term.toString();
-}
-
-function IntStringMap () {
-    var stringToInt = {};
-    var intToString = [];
-    var intToMembers = [];
-    return {
-        add: function (string) {
-            if (stringToInt[string])
-                return stringToInt[string];
-            size = intToString.length;
-            stringToInt[string] = size;
-            intToString.push(string);
-            intToMembers.push([]);
-            return size;
-        },
-        addMember: function (member, offset) {
-            if (offset === undefined) offset = intToMembers.length - 1;
-            if (intToMembers.indexOf(member) == -1)
-                intToMembers[offset].push(member);
-        },
-        getInt: function (str) { return stringToInt[str]; },
-        getString: function (i) { return intToString[i]; },
-        getMembers: function (offset) {
-            if (offset === undefined) offset = intToMembers.length - 1;
-            return intToMembers[offset];
-        }
-    };
-}
-
-function StringIdMap () {
-    var _map = {};
-    return {
-        add: function (string, id) {
-            if (!(string in _map))
-                _map[string] = [];
-            _map[string].push(id);
-        },
-        get: function (string) {
-            return _map[string];
-        }
-    };
-}
-
-function CharMap (text, offsets) {
-    var _text = text || '';
-    var _offsets = offsets;
-    if (_offsets === undefined) {
-        _offsets = [];
-        var i;
-        for (i = 0; i < text.length; ++i) {
-            _text[i] = text[i];
-            _offsets[i] = i;
-        }
-        _offsets[i] = i;
-    }
-
-    return {
-        getText: function () { return _text; },
-
-        length: function () { return _offsets.length - 1; },
-
-        insertBefore: function (offset, str, skip) {
-            _text = _text.substr(0, _offsets[offset] + skip) + str + _text.substr(_offsets[offset] + skip);
-            _offsets = _offsets.slice(0, offset+1)
-                .concat(_offsets.slice(offset+1).map(
-                    function (el) {
-                        return el + str.length;
-                    }
-                ));
-        },
-
-        insertAfter: function (offset, str, skip) {
-            _text = _text.substr(0, _offsets[offset] + skip) + str + _text.substr(_offsets[offset] + skip);
-            _offsets = _offsets.slice(0, offset)
-                .concat(_offsets.slice(offset).map(
-                    function (el) {
-                        return el + str.length;
-                    }
-                ));
-        },
-
-        replace: function (offset, str) {
-            _text = _text.substr(0, _offsets[offset]) + str + _text.substr(_offsets[offset]+1);
-            _offsets = _offsets.slice(0, offset+1)
-                .concat(_offsets.slice(offset+1).map(
-                    function (el) {
-                        return el + str.length - 1;
-                    }
-                ));
-        },
-
-        HTMLescape: function () {
-            var copy = _text;
-            for (var i = 0; i < copy.length; ++i) {
-                switch (copy[i]) {
-                    case "<":
-                        this.replace(i, "&lt;");
-                        break;
-                    case ">":
-                        this.replace(i, "&gt;");
-                        break;
-                    default:
-                }
-            }
-        }
-    };
-}
-
-function SPARQLCardinality (min, max) {
-    var ret = '';
-    if (min === 0 && max === undefined)
-        ;
-    else {
-        ret += " HAVING (";
-        if (min === max)
-            ret += "COUNT(*)=" + min;
-        else {
-            if (min !== 0)
-                ret += "COUNT(*)>=" + min;
-            if (min !== 0 && max !== undefined)
-                ret += " && ";
-            if (max !== undefined)
-                ret += "COUNT(*)<=" + max;
-        }
-        ret += ")";
-    }
-    return ret;
-}
-
-function ResourceShapeCardinality (min, max, sePrefix, rsPrefix, seFix, rsFix) {
-    if (min === 1 && max === 1) {
-        return rsFix + "occurs " + rsPrefix + ":Exactly-one ;\n";
-    } else if (min === 0 && max === 1) {
-        return rsFix + "occurs " + rsPrefix + ":Zero-or-one ;\n";
-    } else if (min === 0 && max === undefined) {
-        return rsFix + "occurs " + rsPrefix + ":Zero-or-many ;\n";
-    } else if (min === 1 && max === undefined) {
-        return rsFix + "occurs " + rsPrefix + ":One-or-many ;\n";
-    } else {
-        return seFix + "min " + min + " ;\n" +
-            seFix + (max === undefined ? "maxundefined true" : "max " + max) + " ;\n";
-    }
-}
-
-function codesToSExpression (codes, depth) {
-    var lead = pad(depth, '    ');
-    if (codes === undefined)
-        return "";
-    return Object.keys(codes).map(function (k) {
-        return "\n" + lead + codes[k].toSExpression(depth+1);
-    }).join("");
-}
-
-function codesToHaskell (codes, depth) {
-    var lead = pad(depth, '    ');
-    if (codes === undefined)
-        return "";
-    return Object.keys(codes).map(function (k) {
-        return "\n" + lead + codes[k].toHaskell(depth+1);
-    }).join("");
-}
-
-function origText () {
-    if (this._pos && "origText" in this._pos)
-        return this._pos.origText();
-    else
-        return this.toString();
-}
-
-RDF = {
-    message: function (str) {
-        //console.error(str);
-    },
-
-    actionCategory: {
-        DATA: "acquiring data",
-        SCHEMA: "processing schema",
-        ACTION: "executing action",
-        VALIDATION: "validating"
-    },
-    StructuredError_proto: {
-    },
-    StructuredError: function (data) {
-        var ret = {
-            _: "StructuredError",
-            data: data,
-            toString: function () {
-                function nest (a) {
-                    return a.map(function (p) {
-                        return p[0] == "code" ?
-                        "\""+p[1]+"\"" :
-                            p[0] == "link" ?
-                            "<"+p[1]+"> {\n"+nest(p[2]).replace(new RegExp("^","gm"),"  ")+"\n}" :
-                                p[0] == "SyntaxError" ?
-                                p[1].column+"."+p[1].line+"("+p[1].offset+"):"+p[1].toString()+" See [[["+p[2].substr(p[1].offset - 20, 40)+"]]]":
-                                    p[0] == "NestedError" ?
-                                    "[[["+p[1]+"]]]":
-                                        p[0] == "actionCategory" ?
-                                        "while "+p[1]+":\n":
-                                            p[1];
-                    }).join("\n");
-                };
-                return nest(this.data);
-            }
-        };
-        Object.keys(RDF.StructuredError_proto).map(function (k) {
-            ret[k] = RDF.StructuredError_proto[k];
-        });
-        return ret;
-    },
-
-    /* <Exceptions>
-     */
-    // SPARQL validation queries can't expression recursive grammars.
-    ValidationRecursion: function (label) {
-        this._ = 'ValidationRecursion'; this.label = label;
-    },
-
-    UnknownRule: function (label) {
-        this._ = 'UnknownRule'; this.label = label;
-        this.toString = function () {
-            return "Rule " + this.label.toString() + " not found in schema.";
-        };
-    },
-    /* </Exceptions>
-     */
-
-    createIRIResolver: function() {
-        return {
-            errorHandler: function (message) { throw message; },
-
-            // make a copy, usually to have a new prefix map. e.g.
-            //   var prefixes = r.schemaIRIResolver.clone().Prefixes;
-            //   prefixes['se'] = "http://www.w3.org/2013/ShEx/Definition#";
-            clone: function () {
-                var ret = { Prefixes:{} };
-                for (var p in this)
-                    if (p != 'Prefixes')
-                        ret[p]=this[p];
-                for (p in this.Prefixes)
-                    ret.Prefixes[p]=this.Prefixes[p];
-                return ret;
-            },
-
-            Base: '',
-            setBase: function (base) {
-                this.Base = base;
-            },
-            getBase: function (base) {
-                return this.Base;
-            },
-
-            Prefixes: {},
-            setPrefix: function (pre, i) {
-                this.Prefixes[pre] = i;
-            },
-            getPrefix: function (pre) {
-                // unescapeReserved
-                var nspace = this.Prefixes[pre];
-                if (nspace === undefined) {
-                    this.errorHandler("unknown namespace prefix: " + pre);
-                    // throw("unknown namespace prefix: " + pre);
-                    RDF.message("unknown namespace prefix: " + pre);
-                    nspace = '<!' + pre + '!>';
-                }
-                return nspace;
-            },
-
-            getAbsoluteIRI: function (rel) {
-                var relProtHostPath  = /^(?:([a-z]+:)?(\/\/[^\/]+))?(.*?)$/.exec(rel);
-                var baseProtHostPath = /^(?:([a-z]+:)?(\/\/[^\/]+))?(.*?)[^\/]*$/.exec(this.getBase());
-                var prot = relProtHostPath[1] || baseProtHostPath[1] || "";
-                var host = relProtHostPath[2] || baseProtHostPath[2] || "";
-                var path = relProtHostPath[3].charAt() === '/' ? relProtHostPath[3] : baseProtHostPath[3] + relProtHostPath[3];
-                path = path.replace(/\/(\.\/)*/g, '/');
-                path = path.replace(/\/\/+/g, '/');
-                var startAt = path.match(/^(\/\.\.)*/g)[0].length;
-                var prepend = path.substr(0,startAt);
-                path = path.substr(startAt);
-                while (path.match(/\/\.\./)) {
-                    path = path.match(/\/\.\.$/) ?
-                        path.replace(/\/([^\/]*?)\/\.\.$/, '') :
-                        path.replace(/\/([^\/]*?)\/\.\.\//, '/');
-                    startAt = path.match(/^(\/\.\.)*/g)[0].length;
-                    prepend += path.substr(0,startAt);
-                    path = path.substr(startAt);
-                }
-                if ((prot || host) && !path)
-                    path = "/";
-                return prot + host + prepend + path;
-            }
-        };
-    },
-
-    createBNodeScope: function() {
-        return {
-            NextBNode: 0,
-            nextLabel: function () {
-                return ''+this.NextBNode++; // needs mutex
-            },
-            uniqueLabel: function (proposed) {
-                return proposed; // @@ check against allocated.
-            }
-        };
-    },
-
-    DISPOSITION: {
-        PASS :      {value: 1, name: "pass"      },
-        FAIL:       {value: 3, name: "fail"      },
-        NONE:       {value: 0, name: "empty"     },
-        ZERO:       {value: 2, name: "indefinite"},
-        EXOR :      {value: 1, name: "error"     }
-    },
-
-    SPARQLprefixes: function (prefixes) {
-        var ret = '';
-        var keys = Object.keys(prefixes);
-        keys.sort();
-        for (var i in keys)
-            ret += "PREFIX " + keys[i] + ":<" + prefixes[keys[i]] + ">\n";
-        return ret;
-    },
-
-    decodeUCHAR: function (el) {
-        if (el.length === 1) return el;
-        var code;
-        if (el.length==9)
-            code = parseInt(el.slice(1,9).join(''), 16);
-        if (el.length==5)
-            code = parseInt(el.slice(1,5).join(''), 16);
-        if (code<0x10000) { // RDFa.1.2.0.js:2712
-            return String.fromCharCode(code);
-        } else {
-            // Evil: generate surrogate pairs
-            var n = code - 0x10000;
-            var h = n >> 10;
-            var l = n & 0x3ff;
-            return String.fromCharCode(h + 0xd800) + String.fromCharCode(l + 0xdc00);
-        }
-    },
-
-    // Three kinds of position. Not needed in the long run, but useful for recording what's expected.
-    Position5: function (_orig, line, column, offset, width) {
-        // if (Math.abs(_orig.length - width) > 1)
-        //     RDF.message(new Error("'"+_orig+"'.length = "+_orig.length+" != "+width));
-        return { _orig:_orig, line:line, column:column, offset:offset, width:width,
-            origText: function () { return this._orig; }
-        };
-    },
-    Position2: function (line, column) {
-        return { line: line, column: column };
-    },
-    Position0: function () {
-        return {  };
-    },
-
-    // Turtle types
-    IRI: function (lexP, _posP) {
-        return {
-            _: 'IRI',
-            lex: lexP,
-            _pos: _posP,
-            id: undefined,
-            toString: function (orig) {
-                if (orig && this._pos && "origText" in this._pos) return this._pos.origText();
-                return '<' + this.lex + '>';
-            },
-            assignId: function (charmap, idP) {
-                if (this.id === undefined) {
-                    this.id = idP;
-                    charmap.insertBefore(this._pos.offset, "<span id='"+idP+"' class='IRI'>", 0);
-                    charmap.insertAfter(this._pos.offset+this._pos.width, "</span>", 0);
-                }
-                return this.id;
-            }
-        };
-    },
-    RDFLiteral: function (lexP, langtagP, datatypeP, _posP) {
-        return {
-            _: 'RDFLiteral',
-            lex: lexP,
-            langtag: langtagP,
-            datatype: datatypeP,
-            _pos: _posP,
-            id: undefined,
-            toString: function (orig) {
-                if (orig && this._pos && "origText" in this._pos) return this._pos.origText();
-                var ret = '"' + this.lex + '"';
-                if (this.langtag !== undefined)
-                    ret += '@' + this.langtag.toString();
-                if (this.datatype !== undefined)
-                    ret += '^^' + this.datatype.toString();
-                return ret;
-            },
-            assignId: function (charmap, id) {
-                if (this.id === undefined) {
-                    this.id = id;
-
-                    // Adding the markup for the lexical form before the datatype or
-                    // langtag takes advantage of the insert order and renders an
-                    // irrelevent datatype tag for native types (integer, decimal,
-                    // real).
-                    charmap.insertBefore(this._pos.offset, "<span id='"+id+"' class='literal'>", 0);
-                    charmap.insertAfter(this._pos.offset+this._pos.width, "</span>", 0); // !! needed to prevent two extra chars getting colored, but why?!
-                    // if (this.langtag !== undefined)
-                    //     this.langtag.assignId(charmap, id);
-                    if (this.datatype !== undefined)
-                        this.datatype.assignId(charmap, id);
-                    if (this.langtag !== undefined)
-                        this.langtag.assignId(charmap, id);
-                }
-                return this.id;
-            }
-        };
-    },
-    LangTag: function (lexP, _posP) {
-        return {
-            _: 'LangTag',
-            lex: lexP,
-            _pos: _posP,
-            id: undefined,
-            toString: function () {
-                return this.lex;
-            },
-            assignId: function (charmap, id) {
-                if (this.id === undefined) {
-                    this.id = id;
-                    charmap.insertBefore(this._pos.offset, "<span id='"+id+"' class='langtag'>", 0);
-                    charmap.insertAfter(this._pos.offset+this._pos.width, "</span>", 0);
-                }
-                return this.id;
-            }
-        };
-    },
-    BNode: function (lexP, _posP) {
-        return {
-            _: 'BNode',
-            lex: lexP,
-            _pos: _posP,
-            id: undefined,
-            toString: function (orig) {
-                if (orig && this._pos && "origText" in this._pos) {
-                    var ret = this._pos.origText();
-                    if (ret[0] != '\u005b' && ret[0] != '\u0028') // !open square bracket && !open paren
-                        return orig;
-                }
-                return '_:' + this.lex;
-            },
-            assignId: function (charmap, id) {
-                if (this.id === undefined) {
-                    this.id = id;
-                    charmap.insertBefore(this._pos.offset, "<span id='"+id+"' class='bnode'>", 0);
-                    charmap.insertAfter(this._pos.offset+this._pos.width, "</span>", 0);
-                }
-                return this.id;
-            }
-        };
-    },
-
-    Triple: function (sP, pP, oP) {
-        var ret = {
-            _: 'Triple',
-            s: sP,
-            p: pP,
-            o: oP,
-            toString: function (orig) {
-                return this.s.toString(orig) + ' ' + this.p.toString(orig) + ' ' + this.o.toString(orig) + '.';
-            },
-            desparateToString: function () {
-                var ss;
-                function str (t) {
-                    var ret;
-                    try {ret = t.toString();}
-                    catch (e) {ret = JSON.stringify(t);}
-                    return ret;
-                }
-                return str(this.s) + ' ' + str(this.p) + ' ' + str(this.s) + '.';
-            },
-            colorize: function (charmap, idMap, termStringToIds) {
-                var tripleId = "t"+idMap.add(this.toString());
-                // Assignid permits only one XML ID for a given term *rendering*.
-                idMap.addMember(this.s.assignId(charmap, tripleId+"_s"));
-                termStringToIds.add(this.s.toString(true), tripleId+"_s");
-                idMap.addMember(this.p.assignId(charmap, tripleId+"_p"));
-                termStringToIds.add(this.p.toString(true), tripleId+"_p");
-                idMap.addMember(this.o.assignId(charmap, tripleId+"_o"));
-                termStringToIds.add(this.o.toString(true), tripleId+"_o");
-            }
-        };
-        if (sP === null || sP === undefined || !('_' in sP) ||
-            pP === null || pP === undefined || !('_' in pP) ||
-            oP === null || oP === undefined || !('_' in oP))
-            throw "invalid Triple(" + this.desparateToString() + ")";
-        else
-            return ret;
-    },
-
-    Dataset: function () {
-        return {
-            // test with RDF.Dataset().test()
-            test: function (info, warning, error) {
-                info = info || function (s) { console.log("info: "+s); }
-                warning = warning || function (s) { console.log("warning: "+s); }
-                error = error || function (s) { console.log("error: "+s); }
-                var errors = 0;
-                var t0 = RDF.Triple(RDF.IRI  ("Bob"), RDF.IRI("http://...foaf/knows"),  RDF.IRI       ("Joe"));
-                var t1 = RDF.Triple(RDF.IRI  ("Bob"), RDF.IRI("http://...foaf/knows"),  RDF.BNode     ("sue"));
-                var t2 = RDF.Triple(RDF.BNode("Sue"), RDF.IRI("http://...foaf/knows"),  RDF.IRI       ("Bob"));
-                var t3 = RDF.Triple(RDF.IRI  ("Bob"), RDF.IRI("http://...foaf/name" ),  RDF.RDFLiteral("Bob"));
-                var t4 = RDF.Triple(RDF.IRI  ("Bob"), RDF.IRI("http://...foaf/name" ),  RDF.RDFLiteral("Rob"));
-
-                var ds = RDF.Dataset();
-                ds.unordered();
-                ds.push(t0);ds.push(t1);ds.push(t2);ds.push(t3);ds.push(t4); info(ds.toString());
-                info("- " + t1.toString()); ds.retract(t1); info(ds.toString());
-                info("- " + t4.toString()); ds.retract(t4); info(ds.toString());
-                info("- " + t3.toString()); ds.retract(t3); info(ds.toString());
-                info("- " + t2.toString()); ds.retract(t2); info(ds.toString());
-                info("- " + t0.toString()); ds.retract(t0); info(ds.toString());
-                try {
-                    info("- " + t2.toString()); ds.retract(t2); info(ds.toString());
-                    error("expected to fail removal of t2.");
-                    ++errors;
-                } catch (e) {
-                    // expected path
-                }
-                return errors;
-            },
-            _: 'Dataset',
-            /* triples is a simple array of Triple objects, here abbreviated {str:"s p o"}:
-             [{str:"<Bob> <foaf:knows> <Joe>"},
-             {str:"<Bob> <foaf:knows> _:sue"},
-             {str:"_:Sue <foaf:knows> <Bob>"},
-             {str:"<Bob> <foaf:name>  'Bob'"},
-             {str:"<Bob> <foaf:name>  'Rob'"}]
-             */
-            triples: [],
-            comments: [],
-            /* SPO is an index of the form:
-             { "<Bob>": { "<foaf:name>" :  { "'Bob'": [{str:"<Bob> <foaf:name>  'Bob'"}, 3],
-             "'Rob'": [{str:"<Bob> <foaf:name>  'Rob'"}, 4]},
-             "<foaf:knows>":  { "<Joe>": [{str:"<Bob> <foaf:knows> <Joe>"}, 0],
-             "_:sue": [{str:"<Bob> <foaf:knows> _:sue"}, 1]} },
-             "_:Sue": { "<foaf:knows>": { "<Bob>": [{str:"_:Sue <foaf:knows> <Bob>"}, 2]} } }
-             */
-            SPO: {},
-            indexEntries: [],
-            unordered: function () {
-                this.triples = null;
-            },
-            clear: function () {
-                this.triples = [];
-                this.comments = [];
-                this.SPO = {};
-                this.indexEntries = [];
-            },
-            triplesMatching: function (s, p, o, validatorStuff) {
-                var ret = [];
-                var sStr = s ? s.toString() : '', pStr = p ? p.toString() : '', oStr = o ? o.toString() : '';
-                function os (O) {
-                    if (o) {
-                        if (oStr in O) {
-                            ret.push(O[oStr][0]);
-                        }
-                    } else {
-                        for (var oi in O) {
-                            ret.push(O[oi][0]);
-                        }
-                    }
-                }
-                function ps (PO) {
-                    if (p) {
-                        if (pStr in PO) {
-                            os(PO[pStr]);
-                        }
-                    } else {
-                        for (var pi in PO) {
-                            os(PO[pi]);
-                        }
-                    }
-                }
-                function ss (SPO) {
-                    if (s) {
-                        if (sStr in SPO) {
-                            ps(SPO[sStr]);
-                        }
-                    } else {
-                        for (var si in SPO) {
-                            ps(SPO[si]);
-                        }
-                    }
-                }
-                ss(this.SPO);
-                return validatorStuff && validatorStuff.async ? Promise.resolve(ret) : ret;
-            },
-            triplesMatching_str: function (s, p, o) {
-                var ret = [];
-                for (var i = 0; i < this.triples.length; ++i) {
-                    var t = this.triples[i];
-                    if ((s === null || s === undefined || s === t.s.toString()) &&
-                        (p === null || p === undefined || p === t.p.toString()) &&
-                        (o === null || o === undefined || o === t.o.toString()))
-                        ret.push(t);
-                }
-                return ret;
-            },
-            length: function () {
-                return this.triples === null ? -1 : this.triples.length;
-            },
-            uniqueSubjects: function () {
-                var _Dataset = this;
-                return Object.keys(this.SPO).map(function (s) {
-                    // Dive in and grab triple.s for first p and o.
-                    var p = Object.keys(_Dataset.SPO[s])[0];
-                    var o = Object.keys(_Dataset.SPO[s][p])[0];
-                    return _Dataset.SPO[s][p][o][0].s;
-                });
-            },
-            slice: function (from, length) {
-                if (this.triples === null)
-                    throw "Dataset.slice not available in unordered mode.";
-                return this.triples.slice(from, length);
-            },
-            clone: function () {
-                var ret = RDF.Dataset();
-                for (si in this.SPO) {
-                    ret.SPO[si] = {};
-                    for (pi in this.SPO[si]) {
-                        ret.SPO[si][pi] = {};
-                        for (oi in this.SPO[si][pi]) {
-                            ret.SPO[si][pi][oi] = [ret.SPO[si][pi][oi][0], ret.SPO[si][pi][oi][1]];
-                        }
-                    }
-                }
-                if (this.triples !== null)
-                    ret.triples = this.triples.slice();
-                return ret;
-            },
-            splice: function (from, length) {
-                if (this.triples === null)
-                    throw "Dataset.splice not available in unordered mode.";
-                return this.triples.splice(from, length);
-            },
-            index: function (t, at) {
-                var sStr = t.s.toString(), pStr = t.p.toString(), oStr = t.o.toString();
-                if (!(sStr in this.SPO))
-                    this.SPO[sStr] = {};
-                var PO = this.SPO[sStr];
-                if (!(pStr in PO))
-                    PO[pStr] = {};
-                var O = PO[pStr];
-                var entry = [t, at];
-                if (this.triples) { // not in unordered mode
-                    var len = this.indexEntries.length;
-                    if (at < len)
-                        for (var i = at; i < len; ++i) {
-                            this.indexEntries[i+1] = this.indexEntries[i];
-                            this.indexEntries[i+1][1] = i+1;
-                        }
-                }
-                O[oStr] = entry;
-            },
-            push: function (t) {
-                if (this.triplesMatching(t.s, t.p, t.o).length === 0) {
-                    if (this.triples !== null) {
-                        this.triples.push(t);
-                        this.index(t, this.triples.length);
-                    } else {
-                        this.index(t, -1);
-                    }
-                }
-            },
-            insertAt: function (offset, t) {
-                if (this.triples === null)
-                    throw "Dataset.insertAt not available in unordered mode.";
-                if (this.triplesMatching(t.s, t.p, t.o).length === 0) {
-                    this.triples.splice(offset, 0, t);
-                    this.index(t, offset);
-                }
-            },
-            retract: function (t) {
-                var sStr = t.s ? t.s.toString() : '';
-                var pStr = t.p ? t.p.toString() : '';
-                var oStr = t.o ? t.o.toString() : '';
-                function os (O) {
-                    if (t.o) {
-                        if (!(oStr in O))
-                            throw "object not found: " + t.toString();
-                        delete O[oStr];
-                    } else {
-                        for (var oi in O)
-                            delete(O[oi]);
-                    }
-                    return Object.keys(O).length == 0;
-                }
-                function ps (PO) {
-                    if (t.p) {
-                        if (!(pStr in PO))
-                            throw "predicate not found: " + t.toString();
-                        if (os(PO[pStr]))
-                            delete PO[pStr];
-                    } else {
-                        for (var pi in PO)
-                            if (os(PO[pi]))
-                                delete PO[pi];
-                    }
-                    return Object.keys(PO).length == 0
-                }
-                function ss (SPO) {
-                    if (t.s) {
-                        if (!(sStr in SPO))
-                            throw "subject not found: " + t.toString();
-                        if (ps(SPO[sStr]))
-                            delete SPO[sStr];
-                    } else {
-                        for (var si in SPO)
-                            if (ps(SPO[si]))
-                                delete SPO[si];
-                    }
-                }
-                ss(this.SPO);
-            },
-            addComment: function (c) {
-                this.comments.push(c);
-            },
-
-            toString: function () {
-                if (this.triples === null) {
-                    var ret = [];
-                    for (si in this.SPO)
-                        for (pi in this.SPO[si])
-                            for (oi in this.SPO[si][pi])
-                                ret.push(this.SPO[si][pi][oi][0].toString());
-                    return ret.join("\n");
-                } else
-                    return this.triples.map(function (t) { return t.toString(); }).join("\n");
-            },
-            colorize: function (charmap) {
-                var idMap = IntStringMap();
-                var termStringToIds = StringIdMap();
-                if (this.triples === null)
-                    for (si in this.SPO)
-                        for (pi in this.SPO[si])
-                            for (oi in this.SPO[si][pi])
-                                this.SPO[si][pi][oi][0].colorize(charmap, idMap, termStringToIds);
-                else
-                    for (var iTriple = 0; iTriple < this.triples.length; ++iTriple)
-                        this.triples[iTriple].colorize(charmap, idMap, termStringToIds);
-                var commentId = "tc";
-                //this.label.assignId(charmap, ruleId+"_s"); // @@ could idMap.addMember(...), but result is more noisy
-                for (var iComment = 0; iComment < this.comments.length; ++iComment) {
-                    var comment = this.comments[iComment];
-                    charmap.insertBefore(comment._pos.offset, "<span id='"+commentId+"_"+iComment+"' class='comment'>", 0);
-                    charmap.insertAfter(comment._pos.offset+comment._pos.width, "</span>", 0);
-                }
-                return {idMap:idMap, termStringToIds:termStringToIds};
-            }
-        };
-    },
-
-    makeSPARQLInterface: function (url, constructorParms) {
-        var separator = url.match(/\?/) ? ';' : '?';
-        var defaultParms = $.extend({
-            type: 'GET',
-            dataType: "text"
-            //contentType: 'text/plain',{turtle,shex}
-        }, constructorParms);
-        var lastQuery = null;
-        var lastURL = null;
-        var done = function () {};
-        var fail = function (jqXHR, textStatus, errorThrown) {
-            throw "unable to query " + url + "\n" + textStatus + "\n" + errorThrown;
-        };
-        var always = function () {};
-        return {
-            execute: function (query, parms) {
-                lastQuery = query;
-                if ("done" in parms) { // suck in old-style controls -- needed for synchronous execution.
-                    this.done(parms.done); // set the new done
-                    delete parms.done;
-                }
-                var merge = $.extend({
-                    url: url + separator + "query=" + encodeURIComponent(query)
-                }, parms);
-                lastURL = merge.url;
-
-                function handler (body, textStatus, jqXHR, resolve, reject) {
-                    if (jqXHR.status === 200) {
-                        // Crappy mime parser doesn't handle quoted-string
-                        //  c.f. http://tools.ietf.org/html/rfc7230#section-3.2.6
-                        var ray = jqXHR.getResponseHeader("content-type").split(/;/)
-                            .map(function (s) { return s.replace(/ /g,''); });
-                        try {
-                            var r = RDF.parseSPARQLResults(body, ray.shift(), ray);
-                            if (parms.async)
-                                resolve(r);
-                            else
-                                done(r);
-                        } catch (e) {
-                            debugger;
-                            if (parms.async)
-                                reject([body, e, query]);
-                            else
-                                fail([body, e, query]);
-                        }
-                    } else {
-                        if (parms.async)
-                            reject([body, jqXHR, query]);
-                        else
-                            fail([body, jqXHR, query]);
-                    }
-                }
-
-                if (parms.async) {
-                    return new Promise(function (resolve, reject) {
-                        $.ajax(merge).then(function (body, textStatus, jqXHR) {
-                            handler(body, textStatus, jqXHR, resolve, reject);
-                        }).fail(function (jqXHR, textStatus, errorThrown) {
-                            jqXHR.statusText = "connection or CORS failure";
-                            reject(["", jqXHR, query, lastURL]);
-                        });
-                    });
-                } else {
-                    $.ajax(merge).done(handler).fail(function (jqXHR, textStatus, errorThrown) {
-                        jqXHR.statusText = "connection or CORS failure";
-                        fail(["", jqXHR, query, lastURL]);
-                    });
-                    return this;
-                }
-            },
-            getURL: function () { return url; },
-            getLastQuery: function () { return lastQuery; },
-            getLastURL: function () { return lastURL; },
-            done: function (newDone) { done = newDone; return this; },
-            fail: function (newFail) { fail = newFail; return this; },
-            always: function (newAlways) { always = newAlways; return this; }
-        };
-    },
-
-    // parseSPARQLResults("<...>"|"{...}", "application/sparql-results+json"|"xml", ["charset=UTF-8"])
-    //   parameters is ignored.
-    // returns:
-    //   {"vars":["s"],"solutions":[{"s":{"_":"BNode","lex":"b0x3631060","_pos":{"line":0,"column":0}}}]}
-    parseSPARQLResults: function (body, mediaType, parameters) {
-        var ret = { vars: [], solutions: [] };
-        if (mediaType === "application/sparql-results+xml") {
-            var xml = $(body instanceof XMLDocument ? body : $.parseXML(body));
-            return {
-                vars: xml.children("sparql").children("head").children("variable").get().map(function (obj) {
-                    return obj.getAttribute("name");
-                }),
-                solutions: xml.children("sparql").children("results").children("result").get().map(function (result, solnNo) {
-                    var ret = {};
-                    $(result).find("> binding").get().map(function (binding, bindNo) {
-                        var varName = binding.getAttribute("name");
-                        var elt = binding.children[0];
-                        var content = elt.textContent;
-                        var pos = RDF.Position2(solnNo, bindNo);
-                        if (elt.localName === "bnode") {
-                            ret[varName] = RDF.BNode(content, pos);
-                        } else if (elt.localName === "uri") {
-                            ret[varName] = RDF.IRI(content, pos);
-                        } else if (elt.localName === "literal") {
-                            var langTag = elt.getAttribute("xml:lang");
-                            var datatype = elt.getAttribute("datatype");
-                            if (datatype !== null)
-                                datatype = RDF.IRI(datatype, pos);
-                            ret[varName] = RDF.RDFLiteral(content, langTag, datatype, pos);
-                        } else {
-                            "unknown node type: \"" + elt.localName + "\"";
-                        }
-                    });
-                    return ret;
-                })
-            };
-        } else if (mediaType === "application/sparql-results+json") {
-            var x = $(typeof body === "object" ? body : jQuery.parseJSON(body));
-            return {
-                vars: x.head.vars,
-                solutions: x.results.bindings.map(function (result, solnNo) {
-                    var ret = {};
-                    var bindNo = 0;
-                    for (var varName in result) {
-                        var binding = result[varName];
-                        var pos = RDF.Position2(solnNo, bindNo++);
-                        if (binding.type === "bnode") {
-                            ret[varName] = RDF.BNode(binding.value, pos);
-                        } else if (binding.type === "uri") {
-                            ret[varName] = RDF.IRI(binding.value, pos);
-                        } else if (binding.type === "literal") {
-                            var langTag = null;
-                            if ("xml:lang" in binding)
-                                langTag = binding["xml:lang"];
-                            var datatype = null;
-                            if ("datatype" in binding)
-                                datatype = RDF.IRI(binding.datatype, pos);
-                            ret[varName] = RDF.RDFLiteral(binding.value, langTag, datatype, pos);
-                        } else {
-                            "unknown node type: \"" + binding.type + "\"";
-                        }
-                    }
-                    return ret;
-                })
-            };
-        } else if (mediaType === "text/turtle") {
-            var queryIriResolver = RDF.createIRIResolver();
-            return {obj: TurtleParser.parse(body, {iriResolver: queryIriResolver}),
-                iriResolver: queryIriResolver};
-        } else {
-            throw "no parser for media type \"" + mediaType + "\"";
-        }
-    },
-
-    QueryDB: function (sparqlInterface, slaveDB, cacheSize) {
-        slaveDB.unordered();
-        return {
-            _: 'QueryDB',
-            sparqlInterface: sparqlInterface,
-            slaveDB: slaveDB,
-            cacheSize: cacheSize,
-            queryStack: [],
-            _seen: 0,
-            LRU: [], // The Least Recently Used subject is at LRU[0].
-            nodes: [],
-            clearCache: function () {
-                this.slaveDB.clear();
-                this.LRU = [];
-                this.nodes = [];
-            },
-            triplesMatching: function (s, p, o, validatorStuff) {
-                var _queryDB = this;
-                var cacheSubject = (s && p && !o && cacheSize != 0);
-                var sStr = s.toString();
-                var cachedAt = cacheSubject ? this.LRU.indexOf(sStr) : -1;
-                function errorWrapper (rejection) {
-                    var body = rejection[0], e = rejection[1], query = rejection[2];
-                    debugger;
-                    var message =
-                        [["actionCategory", RDF.actionCategory.DATA],
-                            ["text", "failed to "],
-                            ['link', _queryDB.sparqlInterface.getLastURL(),
-                                [["text", e.constructor.name === "SyntaxError" ? "parse" : "GET"]]],
-                            ["code", query],
-                            ["text", " from " + _queryDB.sparqlInterface.getURL()]
-                        ];
-                    if (e.constructor.name === "SyntaxError")
-                        message.push(["SyntaxError", e, body]);
-                    throw RDF.StructuredError(message);
-                }
-                if (cachedAt != -1) {
-                    // We've already cached this subject in slaveDB. Push to top of LRU.
-                    this.LRU.splice(cachedAt,1);
-                    this.LRU.push(sStr);
-                    var node = this.nodes.splice(cachedAt,1)[0];
-                    this.nodes.push(node);
-                    function askSlave () {
-                        return _queryDB.slaveDB.triplesMatching(s, p, o, validatorStuff);
-                    }
-                    try {
-                        return validatorStuff.async ?
-                            node[1].then(askSlave).catch(errorWrapper) :
-                            askSlave();
-                    } catch (e) {
-                        errorWrapper(e);
-                    }
-                } else {
-                    var context = '';
-                    if (s._ === "BNode") {
-                        var t = validatorStuff.pointStack; // for readability
-                        for (var i = t.length-1; i && t[i][1]._ === "BNode"; --i) {
-                            context +=
-                                (t[i-1][1]._ === "IRI" ? t[i-1][1].toString() : ("?s"+i))+
-                                " "+t[i][0].toString()+
-                                " ?s"+(i-1)+" .\n";
-                        }
-                    }
-                    var pattern = "CONSTRUCT WHERE {" + context +
-                        " " + (s ? (s._ === "BNode" ? "?s0" : sStr) : "?s") +
-                        " " + (!cacheSubject && p ? p.toString() : "?p") +
-                        " " + (o ? o.toString() : "?o") +
-                        " }";
-                    // console.log(pattern);
-                    var results;
-                    var p1 = this.sparqlInterface.execute(pattern, {async: validatorStuff.async, done: function (r) {
-                        results = r;
-                    }});
-                    var p2 = null;
-
-                    // gave up separating the sync from the async -- too hard.
-                    if (validatorStuff.async) {
-                        p2 = p1.then(function (results) {
-                            var ret = results.obj.slice();
-                            _queryDB._seen += ret.length;
-                            if (cacheSubject) {
-                                ret.forEach(function (t) { _queryDB.slaveDB.push(t); });
-                                return _queryDB.slaveDB.triplesMatching(s, p, o, validatorStuff);
-                            } else {
-                                return ret;
-                            }
-                        }).catch(errorWrapper);
-                        if (cacheSubject) {
-                            this.LRU.push(sStr);
-                            this.nodes.push([s, p1]);
-                            if (this.LRU.length > this.cacheSize) {
-                                // Shift from the bottom of LRU.
-                                this.LRU.shift();
-                                var node = this.nodes.shift()[0];
-                                p2 = p2.then(function (res) {
-                                    // Queue removal from slave DB.
-                                    _queryDB.slaveDB.retract({s:node, p:null, o:null});
-                                    return res;
-                                });
-                            }
-                        }
-                    } else {
-                        try {
-                            var ret = results.obj.slice();
-                            _queryDB._seen += ret.length;
-                            if (cacheSubject) {
-                                ret.forEach(function (t) { _queryDB.slaveDB.push(t); });
-                                p2 = _queryDB.slaveDB.triplesMatching(s, p, o);
-                            } else {
-                                p2 = ret;
-                            }
-                        } catch(e) { errorWrapper(e); }
-                        if (cacheSubject) {
-                            this.LRU.push(sStr);
-                            this.nodes.push(s);
-                            if (this.LRU.length > this.cacheSize) {
-                                // Shift from the bottom of LRU.
-                                this.LRU.shift();
-                                var node = this.nodes.shift();
-                                _queryDB.slaveDB.retract({s:node, p:null, o:null});
-                            }
-                        }
-                    }
-                    return p2;
-                }
-            },
-            triplesMatching_str: function (s, p, o) {
-                throw "QueryDB.triplesMatching_str not implemented";
-            },
-            length: function () {
-                return -1; // unknown
-            },
-            uniqueSubjects: function () {
-                throw "QueryDB.uniqueSubjects not implemented";
-            },
-            slice: function (from, length) {
-                throw "QueryDB.slice not implemented";
-            },
-            clone: function () {
-                throw "QueryDB.clone not implemented";
-            },
-            splice: function (from, length) {
-                throw "QueryDB.splice not implemented";
-            },
-            index: function (t, at) {
-                throw "QueryDB.index not implemented";
-            },
-            push: function (t) {
-                throw "QueryDB.push not implemented";
-            },
-            insertAt: function (offset, t) {
-                throw "QueryDB.insertAt not implemented";
-            },
-            addComment: function (c) {
-                throw "QueryDB.addComment not implemented";
-            },
-
-            toString: function () {
-                throw "QueryDB.toString not implemented";
-            },
-            colorize: function (charmap) {
-                throw "QueryDB.colorize not implemented";
-            },
-
-            seen: function () {
-                return this._seen;
-            }
-        };
-    },
-
-    //
-    // Schema-related stuff
-    //
-
-    // ShEx types
-    Code: function (label, code, _pos) {
-        this._ = 'Code'; this.label = label; this.code = code; this._pos = _pos;
-        this.toString = function () {
-            return '%' + this.label + '{' + this.code + '%}';
-        };
-        this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            return seFix + "extension [\n" +
-                "    " + seFix + "label \"" + this.label + "\" ;\n" +
-                "    " + seFix + "action \"\"\"" + this.code + "\"\"\"\n" +
-                lead + "] ;\n";
-        };
-        this.toSExpression = function (depth) {
-            return "(code \""+this.label+"\" \""+this.code+"\")";
-        };
-        this.toHaskell = function (depth) {
-            return "(code \""+this.label+"\" \""+this.code+"\")";
-        };
-    },
-
-    Comment: function (comment, _pos) {
-        this._ = 'Comment'; this.comment = comment; this._pos = _pos;
-        this.toString = function () {
-            return '#' + this.comment;
-        };
-    },
-
-
-    NameTerm: function (term, _pos) {
-        this._ = 'NameTerm'; this.term = term; this._pos = _pos;
-        this.toString = function (orig) {
-            return this.term.toString(orig);
-        };
-        this.match = function (t2) {
-            return t2.toString() == this.term.toString();
-        };
-        this.SPARQLpredicate = function (prefixes) { // @@ simplify later
-            return defix(this.term, prefixes);
-        };
-        this.SPARQLpredicateTest = function (prefixes) {
-            return "true";
-        };
-        this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var t = defix(this.term, prefixes);
-            return rsFix + "name \"" + t.substr(t.indexOf(':')+1) + "\" ;\n" +
-                rsFix + "propertyDefinition " + this.SPARQLpredicate(prefixes) + " ;\n";
-        };
-        this.toSExpression = function (depth) {
-            return "(NameTerm "+this.term.toString()+")";
-        };
-        this.toHaskell = function (depth) {
-            return "(NameTerm "+this.term.toString()+")";
-        };
-    },
-    NameWild: function (exclusions, _pos) {
-        this._ = 'NameWild'; this.exclusions = exclusions; this._pos = _pos;
-        this.toString = function (orig) {
-            var ret = '.';
-            ret += this.exclusions.map(function (ex) { return ' - ' + ex.toString(orig); }).join('');
-            return ret;
-        };
-        this.match = function (t2) {
-            for (var i = 0; i < this.exclusions.length; ++i)
-                if (this.exclusions[i].lex === t2.lex)
-                    return false;
-            return true;
-        };
-        this.SPARQLpredicate = function (prefixes) { // @@ simplify later
-            return "?p";
-        };
-        this.SPARQLpredicateTest = function (prefixes) {
-            return "true"; // defix(this.term, prefixes)
-        };
-        this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-            if (exclusions.length)
-                return "# expressing NameWild with exclusions " + this.toString() + " will require some fancy POWDER.";
-            return '';
-        };
-        this.toSExpression = function (depth) {
-            return "(NameWild "+(this.exclusions.map(function(ex){return ex.toString();}).join(' '))+")";
-        };
-        this.toHaskell = function (depth) {
-            return "(NameWild "+(this.exclusions.map(function(ex){return ex.toString();}).join(' '))+")";
-        };
-    },
-    NamePattern: function (term, exclusions) {
-        this._ = 'NamePattern'; this.term = term; this.exclusions = exclusions;
-        this.toString = function (orig) {
-            return this.term.toString(orig) + '~' + this.exclusions.map(function (ex) { return ' - ' + ex.toString(orig); }).join('');
-        };
-        this.match = function (t2) {
-            var ts = this.term.lex;
-            if (ts != t2.lex.substr(0, ts.length))
-                return false;
-            for (var i = 0; i < this.exclusions.length; ++i)
-                if (this.exclusions[i].lex === t2.lex)
-                    return false;
-            return true;
-        };
-        this.SPARQLpredicate = function (prefixes) { // @@ simplify later
-            return "?p";
-        };
-        this.SPARQLpredicateTest = function (prefixes) {
-            return "true"; // defix(this.term, prefixes)
-        };
-        this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var t = defix(this.term, prefixes);
-            return seFix + "name \"" + t.substr(0, t.indexOf(':')) + ":*\" ;\n" +
-                seFix + "propertyStem " + this.SPARQLpredicate(prefixes) + " ;\n";
-        };
-        this.toSExpression = function (depth) {
-            return "(NamePattern "+this.term.toString()+")";
-        };
-        this.toHaskell = function (depth) {
-            return "(NamePattern "+this.term.toString()+")";
-        };
-    },
-
-    QueryClause: function (counter, sparql) {
-        this._ = 'QueryClause'; this.counter = counter; this.min = undefined; this.max = undefined; this.sparql = sparql;
-        this.prepend = function (str) {
-            this.sparql = str + this.sparql;
-            return this;
-        };
-        this.append = function (str) {
-            this.sparql += str;
-            return this;
-        };
-    },
-
-    /** beautify and potentially eliminated FILTERs
-     */
-    filterConjunction: function (conjoints) {
-        while (conjoints.indexOf("true") != -1)
-            conjoints.splice(conjoints.indexOf("true"), 1);
-        if (conjoints.length !== 0)
-            return " FILTER (" + conjoints.join(" && ") + ")";
-        else
-            return '';
-    },
-
-    /*
-     needCounter: either we in are an optional group or we're testing a ValueReference
-     card: undefined if we can't test cardinality (i.e. we're in a group) or {min:Int, max:Int}
-     */
-    arcCount: function (schema, label, prefixes, depth, counters, needCounter, predicate, predicateTest, object, objectTest, card, code) {
-        var lead = pad(depth, '    ');
-        var countSelect = '';
-        var counter = undefined;
-        var codeStr = code ? "\n" + lead + ' ' + code.code.replace('?s', '?' + label.lex) : '';
-        if (needCounter) {
-            counter = counters.incr(label.lex + "_c");
-            countSelect = " (COUNT(*) AS " + counter + ")";
-        }
-        var cardStr = card === undefined ? '' : SPARQLCardinality(card.min, card.max);
-        var str = lead +
-            "{ SELECT ?" + label.lex + countSelect + " {\n" +
-            lead + "  ?" + label.lex + " " +
-            predicate + " " + object +
-            " ." +
-            this.filterConjunction([predicateTest, objectTest]) +
-            codeStr + "\n" +
-            lead + "} GROUP BY ?" + label.lex +
-            cardStr + "}\n";
-        return new RDF.QueryClause(counter, str);
-    },
-    arcTest: function (schema, label, prefixes, depth, counters, needCounter, predicate, predicateTest, object, objectTest, card, code) {
-        // var needFilter = needCounter;
-        // return this.arcCount(schema, label, prefixes, depth, counters, needFilter, predicate, predicateTest, object, objectTest, card, code);
-        var lead = pad(depth, '    ');
-        var needFilter = card === undefined || card.min != card.max;
-
-        var byPredicate = this.arcCount(schema, label, prefixes, depth, counters, needCounter || needFilter, predicate, predicateTest, "?o", "true", card, undefined);
-        var withObject = this.arcCount(schema, label, prefixes, depth, counters, needFilter, predicate, predicateTest, object, objectTest, card, code);
-        byPredicate.append(withObject.sparql);
-        if (needFilter)
-            byPredicate.append(lead + "FILTER (" + byPredicate.counter + " = " + withObject.counter + ")\n");
-        return byPredicate;
-    },
-    arcDump: function (schema, label, prefixes, depth, variables, predicate, predicateTest, object, objectTest, card, code) {
-        var lead = pad(depth, '    ');
-        return new RDF.QueryClause(undefined, lead+"?"+label+" "+predicate+" "+object+" .\n");
-    },
-    arcSelect: function (schema, as, prefixes, depth, counters, predicate, predicateTest, object, objectTest) {
-        var lead = pad(depth, '    ');
-        var countSelect = '';
-        var counter = undefined;
-        var str =
-            lead + "  { " + as + " " +
-            predicate + " " + object +
-            " . FILTER (" +
-            predicateTest + " && " + objectTest + ") BIND (" + as + " AS ?s) BIND (" + predicate + " AS ?p) }";
-        return new RDF.QueryClause(counter, str);
-    },
-
-    // @<foo>
-    ValueReference: function (label, _pos) {
-        this._ = 'ValueReference'; this.label = label; this._pos = _pos;
-        this.toString = function (orig, schema) {
-            var l = this.label.toString(orig);
-            if (schema && this.label._ === 'BNode' && l in schema.ruleMap)
-                return "{ " + schema.ruleMap[l].toString(orig) + " }";
-            else
-                return '@' + l;
-        },
-            this.validate = function (schema, rule, t, point, db, validatorStuff) {
-                var ret = new RDF.ValRes();
-                schema.dispatch(0, 'enter', rule.codes, rule, t);
-                var nestedValidatorStuff = validatorStuff.push(point, rule.nameClass.term); // !!!! s/rule.nameClass.term/t.p/
-                var resOrPromise = schema.validatePoint(point, this.label, db, nestedValidatorStuff, true);
-                return validatorStuff.async ? resOrPromise.then(post) : post(resOrPromise);
-                function post (r) {
-                    schema.dispatch(0, 'exit', rule.codes, rule, r);
-                    ret.status = r.status;
-                    if (r.passed())
-                    { ret.status = r.status; ret.matchedTree(rule, t, r); }
-                    else
-                    { ret.status = RDF.DISPOSITION.FAIL; ret.error_noMatchTree(rule, t, r); }
-                    return ret;
-                }
-            },
-            this.SPARQLobject = function (prefixes) {
-                return "?o";
-            },
-            this.SPARQLobjectTest = function (prefixes) {
-                return "(isIRI(?o) || isBlank(?o))";
-            },
-            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
-                inOpt = 1;
-                var ret = RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-                var lead1 = pad(depth, '    ');
-                var lead2 = pad(depth+1, '    ');
-                var countSelect = '';
-                var counter = undefined;
-                if (inOpt) {
-                    counter = counters.incr(label.lex + "_c");
-                    countSelect = " (COUNT(*) AS " + counter + ")";
-                }
-                try {
-
-                    ret.append(
-                        lead1 + "{ SELECT ?" + label.lex + countSelect + " {\n" +
-                        lead2 + "{ SELECT ?" + label.lex + " ?" + this.label.lex + " {\n" +
-                        lead2 + "  ?" + label.lex + " " + predicate + " ?" + this.label.lex +
-                        " . FILTER (" + predicateTest + " && (isIRI(?" + this.label.lex + ") || isBlank(?" + this.label.lex + ")))\n" +
-                        lead2 + "} }\n" +
-                        schema.SPARQLvalidation3(this.label, prefixes, depth+1, counters).sparql +
-                        lead1 + "} GROUP BY ?" + label.lex + " }\n" +
-                        lead1 + "FILTER (" + ret.counter + " = " + counter + ")\n");
-                    var o = counters.incr(label.lex + '_' + this.label.lex + "_ref");
-                    ret.append(
-                        lead1 + "OPTIONAL { ?" + label.lex + " " + predicate + " " + o +
-                        " . FILTER (" + predicateTest + " && (isIRI(" + o + ") || isBlank(" + o + "))) }\n");
-                } catch (e) {
-                    if (typeof(e) === 'object' && e._ === 'ValidationRecursion')
-                        RDF.message("avoiding cyclic validation of " + e.label.toString());
-                    else
-                        throw e;
-                }
-                return ret;
-            },
-            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
-                var s = label.lex;
-                var o = label.lex+"_"+predicate.lex;
-                if (!(s in variables)) variables[s] = undefined;
-                if (!(o in variables)) variables[o] = undefined;
-                var ret = RDF.arcDump(schema, s, prefixes, depth, variables, predicate, predicateTest, o, this.SPARQLobjectTest(prefixes), card, code);
-                try {
-                    var lead1 = pad(depth, '    ');
-                    ret.append(lead1 + schema.SPARQLdataDump3(this.label, o, prefixes, depth+1, variables).sparql);
-                } catch (e) {
-                    if (typeof(e) === 'object' && e._ === 'ValidationRecursion')
-                        RDF.message("avoiding cyclic validation of " + e.label.toString());
-                    else
-                        throw e;
-                }
-                return ret;
-            },
-            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
-                var ret = RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
-                var lead1 = pad(depth, '    ');
-                var lead2 = pad(depth+1, '    ');
-                try {
-                    var nestedLabel = counters.incr(as.substr(1) + '_' + this.label.lex + '_ref'); // !! remove '?'s from incr
-                    ret.append( " UNION\n" +
-                    lead1 + "  {\n" +
-                    lead2 + "{ " + as + " " + predicate + " " + nestedLabel +
-                    " . FILTER (" + predicateTest + " && (isIRI(" + nestedLabel + ") || isBlank(" + nestedLabel + "))) }\n" +
-                    lead2 + "{\n" +
-                    schema.SPARQLremainingTriples3(this.label, nestedLabel, prefixes, depth+1, counters).sparql + "\n" +
-                    lead2 + "}\n" +
-                    lead1 + "  }");
-                } catch (e) {
-                    if (typeof(e) === 'object' && e._ === 'ValidationRecursion')
-                        RDF.message("avoiding cyclic validation of " + e.label.toString());
-                    else
-                        throw e;
-                }
-                return ret;
-            },
-            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-                var lead = pad(depth, '    ');
-                var seFix = lead + sePrefix + ":";
-                var rsFix = lead + rsPrefix + ":";
-                return rsFix + "valueShape " + defix(this.label, prefixes) + " ;\n";
-            },
-            this.toSExpression = function (depth) {
-                return "(ValueRef "+this.label.toString()+")";
-            },
-            this.toHaskell = function (depth) {
-                return "(ValueRef "+this.label.toString()+")";
-            };
-    },
-
-    // IRI | LITERAL | xsd:integer
-    ValueTerm: function (term, _pos) {
-        this._ = 'ValueTerm'; this.term = term; this._pos = _pos;
-        this.toString = function (orig, schema) {
-            return this.term.toString(orig);
-        },
-            this.validate = function (schema, rule, t, point, db, validatorStuff) {
-                var ret = new RDF.ValRes();
-                if (point._ == this.term._ && point.lex == this.term.lex) {
-                    ret.status = RDF.DISPOSITION.PASS;
-                    ret.matched(rule, t);
-                } else {
-                    ret.status = RDF.DISPOSITION.FAIL;
-                    ret.error_noMatch(rule, t);
-                }
-                return validatorStuff.async ? Promise.resolve(ret) : ret;
-            },
-            this.SPARQLobject = function (prefixes) {
-                return "?o";
-            },
-            this.SPARQLobjectTest = function (prefixes) {
-                var s = this.term.toString();
-                if (s == "<http://www.w3.org/2013/ShEx/ns#Literal>") return "isLiteral(?o)";
-                if (s == "<http://www.w3.org/2013/ShEx/ns#NonLiteral>") return "(isIRI(?o) || isBlank(?o))";
-                if (s == "<http://www.w3.org/2013/ShEx/ns#IRI>") return "isIRI(?o)";
-                if (s == "<http://www.w3.org/2013/ShEx/ns#BNode>") return "isBlank(?o)";
-                return "(isLiteral(?o) && dataterm(?o) = " + defix(this.term, prefixes) + ")";
-            },
-            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
-                return RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
-                return RDF.arcDump(schema, label, prefixes, depth, variables, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
-                return RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
-            },
-            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-                var lead = pad(depth, '    ');
-                var seFix = lead + sePrefix + ":";
-                var rsFix = lead + rsPrefix + ":";
-                return rsFix + "valueTerm " + defix(this.term, prefixes) + " ;\n";
-            },
-            this.toSExpression = function (depth) {
-                return "(ValueTerm "+this.term.toString()+")";
-            },
-            this.toHaskell = function (depth) {
-                return "(ValueTerm "+this.term.toString()+")";
-            };
-    },
-
-    // IRI | LITERAL | xsd:integer
-    ValueType: function (type, _pos) {
-        this._ = 'ValueType'; this.type = type; this._pos = _pos;
-        this.toString = function (orig, schema) {
-            return this.type.toString(orig);
-        },
-            this.validate = function (schema, rule, t, point, db, validatorStuff) {
-                function passIf (b) {
-                    if (b) { ret.status = RDF.DISPOSITION.PASS; ret.matched(rule, t); }
-                    else { ret.status = RDF.DISPOSITION.FAIL; ret.error_noMatch(rule, t); }
-                }
-                var ret = new RDF.ValRes();
-                if      (this.type.toString() == "<http://www.w3.org/2013/ShEx/ns#Literal>")
-                    passIf(point._ == "RDFLiteral");
-                else if (this.type.toString() == "<http://www.w3.org/2013/ShEx/ns#IRI>")
-                    passIf(point._ == "IRI");
-                else if (this.type.toString() == "<http://www.w3.org/2013/ShEx/ns#BNode>")
-                    passIf(point._ == "BNode");
-                else if (this.type.toString() == "<http://www.w3.org/2013/ShEx/ns#NonLiteral>")
-                    passIf(point._ == "BNode" || point._ == "IRI");
-                else if (point._ == "RDFLiteral") {
-                    if (point.datatype === undefined) {
-                        passIf(this.type.toString() == "<http://www.w3.org/2001/XMLSchema#string>");
-                    } else {
-                        passIf(point.datatype.toString() == this.type.toString());
-                    }
-                } else { ret.status = RDF.DISPOSITION.FAIL; ret.error_noMatch(rule, t); }
-                return validatorStuff.async ? Promise.resolve(ret) : ret;
-            },
-            this.SPARQLobject = function (prefixes) {
-                return "?o";
-            },
-            this.SPARQLobjectTest = function (prefixes) {
-                var s = this.type.toString();
-                if (s == "<http://www.w3.org/2013/ShEx/ns#Literal>") return "isLiteral(?o)";
-                if (s == "<http://www.w3.org/2013/ShEx/ns#NonLiteral>") return "(isIRI(?o) || isBlank(?o))";
-                if (s == "<http://www.w3.org/2013/ShEx/ns#IRI>") return "isIRI(?o)";
-                if (s == "<http://www.w3.org/2013/ShEx/ns#BNode>") return "isBlank(?o)";
-                return "(isLiteral(?o) && datatype(?o) = " + defix(this.type, prefixes) + ")";
-            },
-            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
-                return RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
-                return RDF.arcDump(schema, label, prefixes, depth, variables, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
-                return RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
-            },
-            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-                var lead = pad(depth, '    ');
-                var seFix = lead + sePrefix + ":";
-                var rsFix = lead + rsPrefix + ":";
-                return rsFix + "valueType " + defix(this.type, prefixes) + " ;\n";
-            },
-            this.toSExpression = function (depth) {
-                return "(ValueType "+this.type.toString()+")";
-            },
-            this.toHaskell = function (depth) {
-                return "(ValueType "+this.type.toString()+")";
-            };
-    },
-
-    // (1 2 3)
-    ValueSet: function (values, _pos) {
-        this._ = 'ValueSet'; this.values = values; this._pos = _pos;
-        this.toString = function (orig, schema) {
-            return '(' + this.values.map(function (v) { return v.toString(orig); }).join(' ') + ')';
-        },
-            this.validate = function (schema, rule, t, point, db, validatorStuff) {
-                var _ValueSet = this;
-                var ret = null;
-                function match (ret1) {
-                    if (ret1.status == RDF.DISPOSITION.PASS)
-                        ret = ret1;
-                }
-                function done () {
-                    if (ret)
-                        return ret;
-                    else {
-                        var ret2 = new RDF.ValRes();
-                        { ret2.status = RDF.DISPOSITION.FAIL; ret2.error_noMatch(rule, t); }
-                        return validatorStuff.async ? Promise.resolve(ret2) : ret2;
-                    }
-                }
-                if (validatorStuff.async) {
-                    return Promise.all(this.values.map(function (value) {
-                        return value.validate(schema, rule, t, point, db, validatorStuff).then(match);
-                    })).then(done);
-                } else {
-                    this.values.forEach(function (value) {
-                        match(value.validate(schema, rule, t, point, db, validatorStuff));
-                    });
-                    return done();
-                }
-            },
-            this.SPARQLobject = function (prefixes) {
-                return "?o";
-            },
-            this.SPARQLobjectTest = function (prefixes) {
-                return "(" + this.values.map(function (v) {
-                        return "?o = " + defix(v.term, prefixes);
-                    }).join(" || ") + ")";
-            },
-            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
-                return RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
-                return RDF.arcDump(schema, label, prefixes, depth, variables, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
-                return RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
-            },
-            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-                var lead = pad(depth, '    ');
-                var seFix = lead + sePrefix + ":";
-                var rsFix = lead + rsPrefix + ":";
-                return rsFix + "allowedValue " + this.values.map(function (v) {
-                        return defix(v, prefixes);
-                    }).join(' , ') + " ;\n";
-            },
-            this.toSExpression = function (depth) {
-                return "(ValueSet "+(this.values.map(function(ex){return ex.toString();}).join(' '))+")";
-            },
-            this.toHaskell = function (depth) {
-                return "(ValueSet "+(this.values.map(function(ex){return ex.toString();}).join(' '))+")";
-            };
-    },
-
-    // . - <foo> - <bar>~
-    ValueWild: function (exclusions, _pos) {
-        this._ = 'ValueWild'; this.exclusions = exclusions; this._pos = _pos;
-        this.toString = function (orig, schema) {
-            var x = exclusions.map(function (t) { return t.toString(orig); });
-            x.unshift('.');
-            return x.join(' ');
-        },
-            this.validate = function (schema, rule, t, point, db, validatorStuff) {
-                for (var i = 0; i < this.exclusions.length; ++i) {
-                    if (this.exclusions[i].matches(point)) {
-                        var ret1 = new RDF.ValRes();
-                        { ret1.status = RDF.DISPOSITION.FAIL; ret1.error_noMatch(rule, t); }
-                        return validatorStuff.async ? Promise.resolve(ret1) : ret1;
-                    }
-                }
-                var ret2 = new RDF.ValRes();
-                { ret2.status = RDF.DISPOSITION.PASS; ret2.matched(rule, t); }
-                return validatorStuff.async ? Promise.resolve(ret2) : ret2;
-            },
-            this.SPARQLobject = function (prefixes) {
-                return "?o";
-            },
-            this.SPARQLobjectTest = function (prefixes) {
-                if (exclusions.length === 0)
-                    return "true";
-                return "(" + this.exclusions.map(function (v) {
-                        return "?o !" + v.asSPARQLfilter(prefixes);
-                    }).join(" && ") + ")";
-            },
-            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
-                return RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
-                return RDF.arcDump(schema, label, prefixes, depth, variables, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
-                return RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
-            },
-            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-                return "# haven't made up some schema for ValueWild yet.\n";
-            },
-            this.toSExpression = function (depth) {
-                return "(ValueWild "+(this.exclusions.map(function(ex){return ex.toString();}).join(' '))+")";
-            },
-            this.toHaskell = function (depth) {
-                return "(ValueWild "+(this.exclusions.map(function(ex){return ex.toString();}).join(' '))+")";
-            };
-    },
-
-    // <foo>~
-    ValuePattern: function (term, exclusions, _pos) {
-        this._ = 'ValuePattern'; this.term = term; this.exclusions = exclusions; this._pos = _pos;
-        this.toString = function (orig, schema) {
-            return this.term.toString(orig) + '~' + this.exclusions.map(function (ex) { return ' - ' + ex.toString(orig); }).join('');
-        },
-            this.validate = function (schema, rule, t, point, db, validatorStuff) {
-                for (var i = 0; i < this.exclusions.length; ++i) {
-                    if (this.exclusions[i].toString() === point.toString()) {
-                        var ret1 = new RDF.ValRes();
-                        { ret1.status = RDF.DISPOSITION.FAIL; ret1.error_noMatch(rule, t); }
-                        return validatorStuff.async ? Promise.resolve(ret1) : ret1;
-                    }
-                }
-
-                if (point.datatype.lex.substr(0,this.term.lex.length) !== this.term.lex) {
-                    var ret2 = new RDF.ValRes();
-                    { ret2.status = RDF.DISPOSITION.FAIL; ret2.error_noMatch(rule, t); }
-                    return validatorStuff.async ? Promise.resolve(ret2) : ret2;
-                }
-                var ret3 = new RDF.ValRes();
-                { ret3.status = RDF.DISPOSITION.PASS; ret3.matched(rule, t); }
-                return validatorStuff.async ? Promise.resolve(ret3) : ret3;
-            },
-            this.SPARQLobject = function (prefixes) {
-                return "?o";
-            },
-            this.SPARQLobjectTest = function (prefixes) {
-                var ret = '';
-                ret += "(regex(STR(?o), \"^" + this.term.lex + "\"))";
-                if (this.exclusions.length > 0)
-                    ret += "(" + this.exclusions.map(function (v) {
-                        return "?o !" + v.asSPARQLfilter(prefixes);
-                    }).join(" && ") + ")";
-                return ret;
-            },
-            this.SPARQLobjectJoin = function (schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, card, code) {
-                // throw "SPARQLobjectJoin of ValuePattern " + this.toString() + " needs attention.";
-                return RDF.arcTest(schema, label, prefixes, depth, counters, inOpt, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), card, code);
-            },
-            this.SPARQLobjectDump = function (schema, label, prefixes, depth, variables, predicate, predicateTest, card, code) {
-                // throw "SPARQLobjectJoin of ValuePattern " + this.toString() + " needs attention.";
-                return RDF.arcDump(schema, label, prefixes, depth, variables, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes), code);
-            },
-            this.SPARQLobjectSelect = function (schema, label, as, prefixes, depth, counters, predicate, predicateTest) {
-                // throw "SPARQLobjectSelect of ValuePattern " + this.toString() + " needs attention.";
-                return RDF.arcSelect(schema, as, prefixes, depth, counters, predicate, predicateTest, this.SPARQLobject(prefixes), this.SPARQLobjectTest(prefixes));
-            },
-            this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-                return "# haven't made up some schema for ValuePattern yet (POWDER?).\n";
-            },
-            this.toSExpression = function (depth) {
-                return "(ValuePattern "+this.term.toString()+")";
-            },
-            this.toHaskell = function (depth) {
-                return "(ValuePattern "+this.term.toString()+")";
-            };
-    },
-
-    AtomicRule: function (negated, reversed, additive, nameClass, valueClass, min, max, codes, _pos, _req_lev) {
-        this._ = 'AtomicRule'; this.negated = negated; this.reversed = reversed; this.additive = additive; this.nameClass = nameClass; this.valueClass = valueClass; this.min = min; this.max = max; this.codes = codes; this._pos = _pos; this.req_lev = _req_lev;
-        this.ruleID = undefined;
-        this.setRuleID = function (ruleID) { this.ruleID = ruleID; };
-        this.label = undefined;
-        this.setLabel = function (label) { this.label = label; };
-        this.toKey = function () { return this.label.toString() + ' ' + this.toString(); };
-        this.setReqLevel = function (req_lev) { this.req_lev = req_lev; };
-        this.toString = function (orig, schema) {
-            var ret = '';
-            if (_req_lev) ret += '`' + _req_lev + '` ';
-            if (reversed) ret += '^';
-            ret += nameClass.toString(orig) + ' ';
-            ret += valueClass.toString(orig, schema);
-            if (min === 1 && max === 1) {
-            } else if (min === 0 && max === 1) {
-                ret += '?';
-            }  else if (min === 0 && max === undefined) {
-                ret += '*';
-            }  else if (min === 1 && max === undefined) {
-                ret += '+';
-            } else {
-                ret += '{' + min;
-                if (max !== undefined) { ret += ', ' + max; }
-                ret += '}';
-            }
-            var AtomicRule = this;
-            Object.keys(this.codes).map(function (k) { ret += " " + AtomicRule.codes[k].toString(); });
-            return ret;
-        };
-        this.colorize = function (charmap, idMap, termStringToIds) {
-            var ruleId = "r" + idMap.add(this.toKey());
-            this.label.assignId(charmap, ruleId+"_s"); // @@ could idMap.addMember(...), but result is more noisy
-            if (this.valueClass._ == 'ValueReference') { // not very OO
-                this.valueClass.label.assignId(charmap, ruleId+"_ref");
-                termStringToIds.add(this.valueClass.label.toString(true), this.valueClass.label.id);
-            }
-            charmap.insertBefore(this._pos.offset, "<span id='"+ruleId+"' class='rule'>", 0);
-            charmap.insertAfter(this._pos.offset+this._pos.width, "</span>", 0);
-            var AtomicRule = this;
-            Object.keys(this.codes).map(function (k) {
-                var code = AtomicRule.codes[k];
-                charmap.insertBefore(code._pos.offset, "<span id='"+ruleId+"_"+k+"' class='code'>", 0);
-                charmap.insertAfter(code._pos.offset+code._pos.width, "</span>", 0);
-            });
-        };
-        // only returns âˆ…|ðœƒ if inOpt
-        // ArcRule: if (inOpt âˆ§ SIZE(matchName)=0) if (min=0) return ðœƒ else return âˆ…;
-        // if(SIZE(matchName)<min|>max) return ð•—;
-        // vs=matchName.map(valueClass(v,_,g,false)); if(âˆƒð•—) return ð•—; return dispatch('post', ð•¡);
-        this.validate = function (schema, point, inOpt, db, validatorStuff) {
-            var matched = 0;
-            var ret = new RDF.ValRes();
-            ret.status = RDF.DISPOSITION.PASS;
-            var _AtomicRule = this;
-            function handleError (e) {
-                var message =
-                    [["text", "exception testing " + point.toString() + " against:"],
-                        ["code", _AtomicRule.toString()],
-                        ["text", "[["],
-                        ["NestedError", e],
-                        ["text", "]]"]
-                    ];
-                throw RDF.StructuredError(message);
-            }
-
-            var rOrP = db.triplesMatching(this.reversed ? null : point,
-                this.nameClass._ === 'NameTerm' ? this.nameClass.term : null,
-                this.reversed ? point : null,
-                validatorStuff);
-
-            return validatorStuff.async ?
-                rOrP.then(testTriples).catch(handleError) :
-                testTriples(rOrP);
-            function testTriples (matchName) {
-                matchName = matchName.filter(function (t) {
-                    return _AtomicRule.nameClass.match(t.p);
-                });
-                var pet = null;
-                if (inOpt && matchName.length === 0)
-                { ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE; ret.matchedEmpty(_AtomicRule);
-                    if (validatorStuff.async) pet = Promise.resolve(ret);
-                }
-                else if (matchName.length < _AtomicRule.min)
-                { ret.status = RDF.DISPOSITION.FAIL; ret.error_belowMin(_AtomicRule.min, _AtomicRule);
-                    if (validatorStuff.async) pet = Promise.resolve(ret);
-                }
-                //             else if (matchName.length > _AtomicRule.max)
-                //                 { ret.status = RDF.DISPOSITION.FAIL; ret.error_aboveMax(_AtomicRule.max, _AtomicRule, matchName[_AtomicRule.max]); }
-                else {
-                    var passes = [];
-                    var fails = [];
-                    var promises = [];
-                    matchName.forEach(function (t) {
-                        if (_AtomicRule.valueClass._ == 'ValueReference')
-                            schema.dispatch(0, 'link', _AtomicRule.codes, null, t);
-                        var resOrPromise = _AtomicRule.valueClass.validate(schema, _AtomicRule, t,
-                            _AtomicRule.reversed ? t.s : t.o,
-                            db, validatorStuff);
-                        if (validatorStuff.async)
-                            resOrPromise = resOrPromise.then(noteResults);
-                        else
-                            noteResults(resOrPromise);
-                        function noteResults (r) {
-                            if (_AtomicRule.valueClass._ != 'ValueReference')
-                                schema.dispatch(0, 'visit', _AtomicRule.codes, r, t);
-                            if (!r.passed() ||
-                                schema.dispatch(0, 'post', _AtomicRule.codes, r, t) == RDF.DISPOSITION.FAIL)
-                                fails.push({t:t, r:r});
-                            else
-                                passes.push({t:t, r:r});
-                            return r;
-                        }
-                        if (validatorStuff.async)
-                            promises.push(resOrPromise);
-                    });
-
-                    function langStrCheck(passes) {
-                        var langs = [];
-                        for(var p in passes) {
-                            p = passes[p];
-
-                            if(!p.r.matches[0].triple.o.langtag || !p.r.matches[0].triple.o.langtag.lex) return false;
-
-                            if(langs.indexOf(p.r.matches[0].triple.o.langtag.lex) !== -1 ) return false;
-
-                            langs.push(p.r.matches[0].triple.o.langtag.lex);
-                        }
-
-                        return true;
-                    }
-                    function postTest () {
-                        if (inOpt && passes.length === 0) {
-                            ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE;
-                            ret.matchedEmpty(_AtomicRule);
-                        } else if (passes.length < _AtomicRule.min) {
-                            ret.status = RDF.DISPOSITION.FAIL;
-                            ret.error_belowMin(_AtomicRule.min, _AtomicRule);
-                        } else if (_AtomicRule.max !== null && passes.length > _AtomicRule.max && !langStrCheck(passes)) {
-                            ret.status = RDF.DISPOSITION.FAIL;
-                            ret.error_aboveMax(_AtomicRule.max, _AtomicRule, passes[_AtomicRule.max].r);
-                        }
-                        if (ret.status == RDF.DISPOSITION.FAIL) {
-                            for (var iFails1 = 0; iFails1 < fails.length; ++iFails1)
-                                ret.add(fails[iFails1].r);
-                        } else {
-                            for (var iPasses = 0; iPasses < passes.length; ++iPasses)
-                                ret.add(passes[iPasses].r);
-                            for (var iFails2 = 0; iFails2 < fails.length; ++iFails2)
-                                if (!_AtomicRule.additive)
-                                    ret.missed(fails[iFails2].r);
-                        }
-                    }
-                    if (validatorStuff.async)
-                        pet = Promise.all(promises).then(function () {
-                            postTest();
-                            return ret;
-                        }).catch(function (e) {
-                            debugger;
-                            return Promise.reject(e);
-                        });
-                    else
-                        postTest();
-                }
-                function handleNegation (ret) {
-                    if (_AtomicRule.negated) {
-                        if (ret.status == RDF.DISPOSITION.FAIL) {
-                            ret.status = RDF.DISPOSITION.PASS;
-                            ret.errors = [];
-                        } else if (ret.status == RDF.DISPOSITION.PASS) {
-                            ret.status = RDF.DISPOSITION.FAIL;
-                            ret.error_aboveMax(0, _AtomicRule, matchName[0]); // !! take a triple from passes
-                        }
-                    }
-                    return ret;
-                }
-
-
-                if (validatorStuff.async) {
-                    return pet.then(function () {
-                        ret = handleNegation(ret);
-                        return ret;
-                    });
-                } else {
-                    ret = handleNegation(ret);
-                    return ret;
-                }
-
-            }
-        };
-        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
-            var lead = pad(depth, '    ');
-            var ret =
-                this.valueClass.SPARQLobjectJoin(schema, label, prefixes, depth, counters, inOpt,
-                    this.nameClass.SPARQLpredicate(prefixes),
-                    this.nameClass.SPARQLpredicateTest(prefixes),
-                    // if we are in an optional, we mustn't test card constraints.
-                    inOpt ? undefined : {min:this.min, max:this.max},
-                    this.codes.sparql);
-            ret.min = this.min;
-            ret.max = this.max;
-            return ret;
-        };
-        this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
-            var lead = pad(depth, '    ');
-            if (this.nameClass._ != 'NameTerm')
-                throw "unable to dump data in non-constant nameClass " + this.nameClass.toString();
-            var ret =
-                this.valueClass.SPARQLobjectDump(schema, label, prefixes, this.min === 0 ? depth + 1 : depth, variables,
-                    this.nameClass.term,
-                    this.nameClass.SPARQLpredicateTest(prefixes), // ignored for now.
-                    {min:this.min, max:this.max}, this.codes.sparql);
-            if (this.min === 0) {
-                ret.prepend(lead + "OPTIONAL {\n");
-                ret.append(lead + "}\n");
-            }
-            return ret;
-        };
-        this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
-            var lead = pad(depth, '    ');
-            var ret =
-                this.valueClass.SPARQLobjectSelect(schema, label, as, prefixes, depth, counters,
-                    this.nameClass.SPARQLpredicate(prefixes),
-                    this.nameClass.SPARQLpredicateTest(prefixes));
-            return ret;
-        };
-        this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += this.nameClass.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
-            ret += this.valueClass.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
-            ret += ResourceShapeCardinality(this.min, this.max, sePrefix, rsPrefix, seFix, rsFix);
-            if (this.ruleID) // !!! some day this will be a bnode
-                for (var i = 0; i < db.triples.length; ++i) {
-                    var t = db.triples[i];
-                    if (t.s.toString() == this.ruleID.toString()) {
-                        ret += lead + defix(t.p, prefixes) + " " + defix(t.o, prefixes) + " ;\n";
-                        db.triples.splice(i, 1);
-                        --i;
-                    }
-                }
-            var AtomicRule = this;
-            Object.keys(this.codes).map(function (k) {
-                ret += AtomicRule.codes[k].toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
-            });
-            return ret;
-        };
-        this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            if (this.ruleID &&
-                (this.ruleID._ !== 'BNode' ||
-                db.triplesMatching(undefined, undefined, this.ruleID).length !== 0))
-                return rsPrefix + ":property " + this.ruleID.toString();
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += rsPrefix + ":property " + "[\n";
-            ret += this.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth+1);
-            ret += lead + "]";
-            return ret;
-        };
-        this.toResourceShapes_standalone = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            if (!this.ruleID ||
-                (this.ruleID._ === 'BNode' &&
-                db.triplesMatching(undefined, undefined, this.ruleID).length === 0))
-                return '';
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += this.ruleID.toString() + "\n";
-            ret += this.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
-            ret += ".\n";
-            return ret;
-        };
-        this.toSExpression = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(ArcRule " + this.min + " " + this.max +" " +
-                this.nameClass.toSExpression(depth+1) +" " +
-                this.valueClass.toSExpression(depth+1) +
-                codesToSExpression(this.codes, depth+1) + ")\n";
-        };
-        this.toHaskell = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(Arcrule " + this.min + " " + this.max +" " +
-                this.nameClass.toHaskell(depth+1) +" " +
-                this.valueClass.toHaskell(depth+1) +
-                codesToHaskell(this.codes, depth+1) + ")\n";
-        };
-    },
-
-    ConcomitantRule: function (valueClass, min, max, codes, _pos) {
-        this._ = 'ConcomitantRule'; this.valueClass = valueClass; this.min = min; this.max = max; this.codes = codes; this._pos = _pos;
-        this.nameClass = {term: RDF.IRI("http://www.w3.org/2013/ShEx/Definition#concomitantRelation") };
-        this.ruleID = undefined;
-        this.setRuleID = function (ruleID) { this.ruleID = ruleID; };
-        this.label = undefined;
-        this.setLabel = function (label) { this.label = label; };
-        this.toKey = function () { return this.label.toString() + ' ' + this.toString(); };
-        this.toString = function (orig, schema) {
-            var ret = '';
-//            if (reversed) ret += '^';
-//            ret += nameClass.toString(orig) + ' ';
-            ret += "CONCOMITANT ";
-            ret += valueClass.toString(orig, schema);
-            if (min === 1 && max === 1) {
-            } else if (min === 0 && max === 1) {
-                ret += '?';
-            }  else if (min === 0 && max === undefined) {
-                ret += '*';
-            }  else if (min === 1 && max === undefined) {
-                ret += '+';
-            } else {
-                ret += '{' + min;
-                if (max !== undefined) { ret += ', ' + max; }
-                ret += '}';
-            }
-            var ConcomitantRule = this;
-            Object.keys(this.codes).map(function (k) { ret += " " + ConcomitantRule.codes[k].toString(); });
-            return ret;
-        };
-        this.colorize = function (charmap, idMap, termStringToIds) {
-            var ruleId = "r" + idMap.add(this.toKey());
-            this.label.assignId(charmap, ruleId+"_s"); // @@ could idMap.addMember(...), but result is more noisy
-            if (this.valueClass._ == 'ValueReference') { // not very OO
-                this.valueClass.label.assignId(charmap, ruleId+"_ref");
-                termStringToIds.add(this.valueClass.label.toString(true), this.valueClass.label.id);
-            }
-            charmap.insertBefore(this._pos.offset, "<span id='"+ruleId+"' class='rule'>", 0);
-            charmap.insertAfter(this._pos.offset+this._pos.width, "</span>", 0);
-            var ConcomitantRule = this;
-            Object.keys(this.codes).map(function (k) {
-                var code = ConcomitantRule.codes[k];
-                charmap.insertBefore(code._pos.offset, "<span id='"+ruleId+"_"+k+"' class='code'>", 0);
-                charmap.insertAfter(code._pos.offset+code._pos.width, "</span>", 0);
-            });
-        };
-        // only returns âˆ…|ðœƒ if inOpt
-        // Concomittant: if (inOpt âˆ§ SIZE(matchName)=0) if (min=0) return ðœƒ else return âˆ…;
-        // if(SIZE(matchName)<min|>max) return ð•—;
-        // vs=matchName.map(valueClass(v,_,g,false)); if(âˆƒð•—) return ð•—; return dispatch('post', ð•¡);
-        this.validate = function (schema, point, inOpt, db, validatorStuff) {
-            var matched = 0;
-            var ret = new RDF.ValRes();
-            ret.status = RDF.DISPOSITION.PASS;
-            var _ConcomitantRule = this;
-            var seen = {};
-            var matchName = db.uniqueSubjects();
-            function handleError (e) {
-                var message =
-                    [["text", "exception testing " + point.toString() + " against:"],
-                        ["code", _AtomicRule.toString()],
-                        ["text", "[["],
-                        ["NestedError", e],
-                        ["text", "]]"]
-                    ];
-                throw RDF.StructuredError(message);
-            }
-            if (inOpt && matchName.length === 0)
-            { ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE; ret.matchedEmpty(_ConcomitantRule);
-                return validatorStuff.async ? Promise.resolve(ret) : ret;
-            }
-            else if (matchName.length < _ConcomitantRule.min)
-            { ret.status = RDF.DISPOSITION.FAIL; ret.error_belowMin(_ConcomitantRule.min, _ConcomitantRule);
-                return validatorStuff.async ? Promise.resolve(ret) : ret;
-            }
-//             else if (matchName.length > _ConcomitantRule.max)
-//                 { ret.status = RDF.DISPOSITION.FAIL; ret.error_aboveMax(_ConcomitantRule.max, _ConcomitantRule, matchName[_ConcomitantRule.max]); }
-            else {
-                var passes = [];
-                var promises = [];
-                matchName.forEach(function (s) {
-                    var t = RDF.Triple(point, _ConcomitantRule.nameClass.term, s); // make up connecting triple for reporting
-                    if (_ConcomitantRule.valueClass._ == 'ValueReference')
-                        schema.dispatch(0, 'link', _ConcomitantRule.codes, null, t);
-                    var resOrPromise = _ConcomitantRule.valueClass.validate(schema, _ConcomitantRule, t,
-                        s,
-                        db, validatorStuff);
-                    if (validatorStuff.async)
-                        resOrPromise = resOrPromise.then(noteResults);
-                    else
-                        noteResults(resOrPromise);
-                    function noteResults (r) {
-                        if (_ConcomitantRule.valueClass._ != 'ValueReference')
-                            schema.dispatch(0, 'visit', _ConcomitantRule.codes, r, t);
-                        if (r.passed() &&
-                            schema.dispatch(0, 'post', _ConcomitantRule.codes, r, t) != RDF.DISPOSITION.FAIL)
-                            passes.push({t:t, r:r});
-                    }
-                    if (validatorStuff.async)
-                        promises.push(resOrPromise);
-                });
-                function postTest () {
-                    if (inOpt && passes.length === 0) {
-                        ret.status = min === 0 ? RDF.DISPOSITION.ZERO : RDF.DISPOSITION.NONE;
-                        ret.matchedEmpty(_ConcomitantRule);
-                    } else if (passes.length < _ConcomitantRule.min) {
-                        ret.status = RDF.DISPOSITION.FAIL;
-                        ret.error_belowMin(_ConcomitantRule.min, _ConcomitantRule);
-                    } else if (_ConcomitantRule.max !== null && passes.length > _ConcomitantRule.max) {
-                        ret.status = RDF.DISPOSITION.FAIL;
-                        ret.error_aboveMax(_ConcomitantRule.max, _ConcomitantRule, passes[_ConcomitantRule.max].r);
-                    }
-                    if (ret.status != RDF.DISPOSITION.FAIL)
-                        for (var iPasses = 0; iPasses < passes.length; ++iPasses)
-                            ret.add(passes[iPasses].r);
-                    return ret;
-                }
-                if (validatorStuff.async)
-                    return Promise.all(promises).then(function () {
-                        postTest();
-                        return ret;
-                    }).catch(function (e) {
-                        debugger;
-                        return Promise.reject(e);
-                    });
-                else {
-                    postTest();
-                    return ret;
-                }
-            }
-        };
-        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
-            var lead = pad(depth, '    ');
-            var ret =
-                this.valueClass.SPARQLobjectJoin(schema, label, prefixes, depth, counters, inOpt,
-                    "?p",
-                    "true",
-                    // if we are in an optional, we mustn't test card constraints.
-                    {min:this.min, max:this.max},
-                    this.codes.sparql);
-            ret.min = this.min;
-            ret.max = this.max;
-            return ret;
-        };
-        this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
-            var lead = pad(depth, '    ');
-            if (true)
-                throw "unable to dump data in concomitant nameClass";
-            var ret =
-                this.valueClass.SPARQLobjectDump(schema, label, prefixes, this.min === 0 ? depth + 1 : depth, variables,
-                    this.nameClass.term,
-                    this.nameClass.SPARQLpredicateTest(prefixes), // ignored for now.
-                    {min:this.min, max:this.max}, this.codes.sparql);
-            if (this.min === 0) {
-                ret.prepend(lead + "OPTIONAL {\n");
-                ret.append(lead + "}\n");
-            }
-            return ret;
-        };
-        this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
-            var lead = pad(depth, '    ');
-            var ret =
-                this.valueClass.SPARQLobjectSelect(schema, label, as, prefixes, depth, counters,
-                    "?p",
-                    "true");
-            return ret;
-        };
-        this.toResourceShapes = function (db, prefixes, sePrefix, rsPrefix, depth) {
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += rsFix + "name \"" + "???" + "\" ;\n" +
-            seFix + "concomitantShape true ;\n";
-            //ret += this.nameClass.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
-            ret += this.valueClass.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
-            ret += ResourceShapeCardinality(this.min, this.max, sePrefix, rsPrefix, seFix, rsFix);
-            if (this.ruleID) // !!! some day this will be a bnode
-                for (var i = 0; i < db.triples.length; ++i) {
-                    var t = db.triples[i];
-                    if (t.s.toString() == this.ruleID.toString()) {
-                        ret += lead + defix(t.p, prefixes) + " " + defix(t.o, prefixes) + " ;\n";
-                        db.triples.splice(i, 1);
-                        --i;
-                    }
-                }
-            var ConcomitantRule = this;
-            Object.keys(this.codes).map(function (k) {
-                ret += ConcomitantRule.codes[k].toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
-            });
-            return ret;
-        };
-        this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            if (this.ruleID &&
-                (this.ruleID._ !== 'BNode' ||
-                db.triplesMatching(undefined, undefined, this.ruleID).length !== 0))
-                return rsPrefix + ":property " + this.ruleID.toString();
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += rsPrefix + ":property " + "[\n";
-            ret += this.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth+1);
-            ret += lead + "]";
-            return ret;
-        };
-        this.toResourceShapes_standalone = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            if (!this.ruleID ||
-                (this.ruleID._ === 'BNode' &&
-                db.triplesMatching(undefined, undefined, this.ruleID).length === 0))
-                return '';
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += this.ruleID.toString() + "\n";
-            ret += this.toResourceShapes(db, prefixes, sePrefix, rsPrefix, depth);
-            ret += ".\n";
-            return ret;
-        };
-        this.toSExpression = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(ArcRule " + this.min + " " + this.max +" " +
-//                this.nameClass.toSExpression(depth+1) +" " +
-                this.valueClass.toSExpression(depth+1) +
-                codesToSExpression(this.codes, depth+1) + ")\n";
-        };
-        this.toHaskell = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(Arcrule " + this.min + " " + this.max +" " +
-//                this.nameClass.toHaskell(depth+1) +" " +
-                this.valueClass.toHaskell(depth+1) +
-                codesToHaskell(this.codes, depth+1) + ")\n";
-        };
-    },
-
-    UnaryRule: function (rule, opt, codes, _pos) {
-        this._ = 'UnaryRule'; this.rule = rule; this.opt = opt; this.codes = codes; this._pos = _pos;
-        this.ruleID = undefined;
-        this.setRuleID = function (ruleID) { this.ruleID = ruleID; };
-        this.label = undefined;
-        this.setLabel = function (label) { this.label = label; this.rule.setLabel(label); };
-        this.toKey = function () { return this.label.toString() + ' ' + this.toString(); };
-        this.toString = function (orig) {
-            var ret = "(" + rule.toString(orig) + ")";
-            if (this.opt) {
-                ret += '?';
-            }
-            var UnaryRule = this;
-            Object.keys(this.codes).map(function (k) { ret += ' %' + k + '{' + UnaryRule.codes[k] + '%}'; });
-            return ret;
-        };
-        this.colorize = function (charmap, idMap, termStringToIds) {
-            this.rule.colorize(charmap, idMap, termStringToIds);
-            // var ruleId = "r" + idMap.add(this.toKey());
-            // // ugh, toString() in order to get offsets for charmap inserts
-            // var ret = "(" + rule.toString(); + ")";
-            // if (this.opt) {
-            //     ret += '?';
-            // }
-            // if (this.codes)
-            //     Object.keys(this.codes).map(function (k) {
-            //         charmap.insertBefore(this._pos.offset, "<span id='"+ruleId+"' class='code'>", ret.length);
-            //         ret += ' %' + k + '{' + this.codes[k] + '%}';
-            //         charmap.insertBefore(this._pos.offset, "</span>", ret.length);
-            //     })
-        };
-        // GroupRule: v=validity(r,p,g,inOpt|opt); if(ð•—|ðœƒ) return v;
-        // if(âˆ…) {if(inOpt) return âˆ… else if (opt) return ð•¡ else return ð•—}; return dispatch('post', );
-        this.validate = function (schema, point, inOpt, db, validatorStuff) {
-            var _UnaryRule = this;
-            schema.dispatch(0, 'enter', this.codes, this, {o:point}); // !! lie! it's the *subject*!
-            var resOrPromise = this.rule.validate(schema, point, inOpt || this.opt, db, validatorStuff);
-            return validatorStuff.async ? resOrPromise.then(post) : post(resOrPromise);
-            function post (v) {
-                schema.dispatch(0, 'exit', _UnaryRule.codes, this, null);
-                var ret = new RDF.ValRes();
-                ret.status = v.status;
-                ret.matchedGroup(_UnaryRule, {o:point}, v);
-                if (v.status == RDF.DISPOSITION.FAIL || v.status == RDF.DISPOSITION.ZERO)
-                    ; // v.status = RDF.DISPOSITION.FAIL; -- avoid dispatch below
-                else if (v.status == RDF.DISPOSITION.NONE) {
-                    // if (inOpt) v.status = RDF.DISPOSITION.NONE; else
-                    if (_UnaryRule.opt)
-                        v.status = RDF.DISPOSITION.PASS;
-                    else
-                        v.status = RDF.DISPOSITION.FAIL;
-                } else if (v.status != RDF.DISPOSITION.FAIL)
-                    v.status = schema.dispatch(0, 'post', _UnaryRule.codes, v, v.matches);
-                return ret;
-            }
-        };
-        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
-            var lead = pad(depth, '    ');
-            var countSelect = '';
-            var counter = undefined;
-            if (inOpt) {
-                counter = counters.incr(label.lex + "_c");
-                countSelect = " (COUNT(*) AS " + counter + ")";
-            }
-            var ret = this.rule.SPARQLvalidation(schema, label, prefixes, depth+1, counters, this.opt ? true : false);
-            ret.prepend(lead + "{\n"); // SELECT ?" + label.lex + countSelect + " {\n"
-            ret.append(lead + "}\n"); // GROUP BY ?" + label.lex;
-            // ret += SPARQLCardinality(this.opt ? 0 : 1, 1) + "}\n";
-            return ret;
-        },
-            this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
-                return this.rule.SPARQLdataDump(schema, label, prefixes, depth, variables);
-            },
-            this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
-                return this.rule.SPARQLremainingTriples(schema, label, as, prefixes, depth, counters);
-            },
-            this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-                if (this.ruleID)
-                    return sePrefix + ":ruleGroup " + this.ruleID.toString();
-                var lead = pad(depth, '    ');
-                var seFix = lead + sePrefix + ":";
-                var rsFix = lead + rsPrefix + ":";
-                var ret = '';
-                ret += sePrefix + ":ruleGroup " + "[\n";
-                ret += lead + ResourceShapeCardinality(this.opt === undefined ? 1 : 0, 1, sePrefix, rsPrefix, seFix, rsFix);
-                ret += lead + "    " + this.rule.toResourceShapes_inline(schema, db, prefixes, sePrefix, rsPrefix, depth+1);
-                ret += lead + "]";
-                return ret;
-            };
-        this.toResourceShapes_standalone = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            if (!this.ruleID)
-                return '';
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += this.ruleID.toString() + "\n";
-            ret += lead + ResourceShapeCardinality(this.opt === undefined ? 1 : 0, 1, sePrefix, rsPrefix, seFix, rsFix);
-            ret += this.rule.toResourceShapes_standalone(schema, db, prefixes, sePrefix, rsPrefix, depth);
-            ret += ".\n";
-            return ret;
-        };
-//    UnaryRule: function (rule, opt, codes, _pos) {
-        this.toSExpression = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(GroupRule " + (this.opt?":optional":"") +"\n" +
-                this.rule.toSExpression(depth+1) +
-                codesToSExpression(this.codes, depth+1) + lead + ")\n";
-        };
-        this.toHaskell = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(GroupRule " + (this.opt?":optional":"") +"\n" +
-                this.rule.toHaskell(depth+1) +
-                codesToHaskell(this.codes, depth+1) + lead + ")\n";
-        };
-    },
-
-    IncludeRule: function (include, _pos) {
-        this._ = 'IncludeRule'; this.include = include; this._pos = _pos;
-        this.ruleID = undefined;
-        this.setRuleID = function (ruleID) { this.ruleID = ruleID; };
-        this.label = undefined;
-        this.setLabel = function (label) {  };
-        this.toKey = function () { return this.label.toString() + ' ' + this.toString(); };
-        this.toString = function (orig) {
-            return '& ' + this.include.toString(orig);
-        };
-        this.colorize = function (charmap, idMap, termStringToIds) {
-            // @@@ hilight include this.rule.colorize(charmap, idMap, termStringToIds);
-        };
-        this.validate = function (schema, point, inOpt, db, validatorStuff) {
-            return schema.validatePoint(point, this.include, db, validatorStuff, false);
-        };
-        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
-            return schema.ruleMap[this.include].SPARQLvalidation(schema, label, prefixes, depth, counters, false);
-        },
-            this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
-                return schema.ruleMap[this.include].SPARQLdataDump(schema, label, prefixes, depth, variables);
-            },
-            this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
-                return schema.ruleMap[this.include].SPARQLremainingTriples(schema, label, as, prefixes, depth, counters);
-            },
-            this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-                return schema.ruleMap[this.include].toResourceShapes_inline(schema, db, prefixes, sePrefix, rsPrefix, depth);
-            };
-        this.toResourceShapes_standalone = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            return schema.ruleMap[this.include].toResourceShapes_standalone(schema, db, prefixes, sePrefix, rsPrefix, depth);
-        };
-//    IncludeRule: function (include) {
-        this.toSExpression = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead +
-                "(IncludeRule " +
-                this.parent +
-                ")\n";
-        };
-        this.toHaskell = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead +
-                "(Includerule " +
-                this.parent +
-                ")\n";
-        };
-    },
-
-    // Place-holder rule for e.g. empty parent classes.
-    EmptyRule: function (_pos) {
-        this._ = 'EmptyRule'; this._pos = _pos;
-        this.ruleID = undefined;
-        this.setRuleID = function (ruleID) { this.ruleID = ruleID; };
-        this.label = undefined;
-        this.setLabel = function (label) {  };
-        this.toKey = function () { return "@@empty@@"; };
-        this.toString = function () {
-            return "";
-        };
-        this.colorize = function (charmap, idMap, termStringToIds) {
-        };
-        this.validate = function (schema, point, inOpt, db, validatorStuff) {
-            var ret = new RDF.ValRes();
-            ret.status = inOpt ? RDF.DISPOSITION.NONE : RDF.DISPOSITION.PASS; // nod agreeably
-            return validatorStuff.async ? Promise.resolve(ret) : ret;
-        };
-        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
-            return new RDF.QueryClause(undefined, "");
-        },
-            this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
-                return new RDF.QueryClause(undefined, "");
-            },
-            this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
-                return new RDF.QueryClause(undefined, "");
-            },
-            this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-                return "";
-            };
-        this.toResourceShapes_standalone = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            return "";
-        };
-//    EmptyRule: function () {
-        this.toSExpression = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(EmptyRule)";
-        };
-        this.toHaskell = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "Emptyrule";
-        };
-    },
-
-    AndRule: function (conjoints, _pos) {
-        this._ = 'AndRule'; this.conjoints = conjoints; this._pos = _pos;
-        this.ruleID = undefined;
-        this.setRuleID = function (ruleID) { this.ruleID = ruleID; };
-        this.label = undefined;
-        this.setLabel = function (label) { this.label = label; this.conjoints.map(function (r) { r.setLabel(label); }) ;};
-        this.toKey = function () { return this.label.toString() + ' ' + this.toString(); };
-        this.toString = function (orig) {
-            return this.conjoints.map(function (conj) {
-                return '    ' + conj.toString(orig);
-            }).join(",\n");
-        };
-        this.colorize = function (charmap, idMap, termStringToIds) {
-            // var ruleId = "r" + idMap.add(this.toKey());
-            for (var i = 0; i < this.conjoints.length; ++i) {
-                var conj = this.conjoints[i];
-                conj.colorize(charmap, idMap, termStringToIds);
-            }
-        };
-
-        // AndRule: vs=conjoints.map(validity(_,p,g,o)); if(âˆƒð•—) return ð•—;
-        // if(âˆƒð•¡âˆ§âˆƒâˆ…) return ð•—; if(âˆ„ð•¡âˆ§âˆ„âˆ…) return ðœƒ else if(âˆƒð•¡) return ð•¡ else return âˆ…
-        // Note, this FAILs an empty disjunction.
-        this.validate = function (schema, point, inOpt, db, validatorStuff) {
-            var ret = new RDF.ValRes();
-            var seenFail = false;
-            var allPass = RDF.DISPOSITION.PASS;
-            var passes = [];
-            var empties = [];
-            var resOrPromises = []; // list of results or promises of results.
-            this.conjoints.forEach(function (conj) {
-                var resOrPromise = conj.validate(schema, point, inOpt, db, validatorStuff);
-                if (validatorStuff.async)
-                    resOrPromises.push(resOrPromise.then(testConjunct));
-                else
-                    resOrPromises.push(testConjunct(resOrPromise));
-                function testConjunct (r) {
-                    if (r.status == RDF.DISPOSITION.FAIL)
-                        seenFail = true;
-                    if (r.status == RDF.DISPOSITION.PASS)
-                    // seenPass = true;
-                        passes.push(r);
-                    else
-                        allPass = RDF.DISPOSITION.NONE;
-                    if (r.status == RDF.DISPOSITION.NONE)
-                    // seenEmpty = true;
-                        empties.push(r);
-                    return r;
-                }
-            });
-            var _AndRule = this;
-            return validatorStuff.async ?
-                Promise.all(resOrPromises).then(testAggregate) :
-                testAggregate(resOrPromises);
-            function testAggregate (rz) {
-                rz.forEach(function (r) {
-                    ret.add(r);
-                });
-                if (passes.length && empties.length)
-                { ret.status = RDF.DISPOSITION.FAIL; ret.error_mixedOpt(passes, empties, _AndRule); }
-                else if (seenFail)
-                    ret.status = RDF.DISPOSITION.FAIL;
-                else if (!passes.length && !empties.length)
-                    ret.status = RDF.DISPOSITION.ZERO;
-                else
-                    ret.status = allPass;
-                return ret;
-            }
-        };
-        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
-            var ret = '';
-            var subs = [];
-            var firstNonZero = undefined;
-            for (var i = 0; i < this.conjoints.length; ++i) {
-                var sub = this.conjoints[i].SPARQLvalidation(schema, label, prefixes, depth, counters, inOpt);
-                ret += sub.sparql;
-                if (inOpt) {
-                    subs.push(sub);
-                    if (firstNonZero === undefined && sub.min !== 0)
-                        firstNonZero = i;
-                }
-            }
-            if (inOpt) {
-                var empty = subs.map(function (s) {
-                    return s.counter + "=0";
-                }).join(" && ");
-                var nonEmpty = subs.map(function (s) {
-                    var r = s.counter + ">=" + s.min;
-                    if (s.max !== undefined)
-                        r += "&&"+s.counter + "<=" + s.max;
-                    return r;
-                }).join(" && ");
-                ret += pad(depth, '    ') + "FILTER (" + empty + " || " + nonEmpty + ")\n";
-            }
-
-            var qc;
-            if (inOpt) {
-                qc = new RDF.QueryClause(subs[firstNonZero].variable, ret);
-                qc.min = subs[firstNonZero].min;
-                qc.max = subs[firstNonZero].max;
-            } else
-                qc = new RDF.QueryClause(undefined, ret);
-            return qc;
-        },
-            this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
-                var ret = '';
-                var subs = [];
-                var firstNonZero = undefined;
-                for (var i = 0; i < this.conjoints.length; ++i) {
-                    var sub = this.conjoints[i].SPARQLdataDump(schema, label, prefixes, depth, variables);
-                    ret += sub.sparql;
-                }
-                return new RDF.QueryClause(undefined, ret);
-            },
-            this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
-                var ret = '';
-                for (var i = 0; i < this.conjoints.length; ++i) {
-                    var sub = this.conjoints[i].SPARQLremainingTriples(schema, label, as, prefixes, depth, counters);
-                    ret += sub.sparql;
-                    if (i !== this.conjoints.length - 1)
-                        ret += " UNION\n";
-                }
-                return new RDF.QueryClause(undefined, ret);
-            },
-            this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-                if (this.ruleID)
-                    return rsPrefix + ":conjoint " + this.ruleID.toString();
-                var lead = pad(depth, '    ');
-                var ret = '';
-                for (var i = 0; i < this.conjoints.length; ++i) {
-                    if (i > 0)
-                        ret += lead;
-                    ret += this.conjoints[i].toResourceShapes_inline(schema, db, prefixes, sePrefix, rsPrefix, depth) + " ;\n";
-                }
-                return ret;
-            };
-        this.toResourceShapes_standalone = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            if (!this.ruleID)
-                return '';
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += this.ruleID.toString() + "\n";
-            for (var i = 0; i < this.conjoints.length; ++i)
-                ret += this.conjoints[i].toResourceShapes_standalone(schema, db, prefixes, sePrefix, rsPrefix, depth);
-            return ret;
-        };
-        this.toSExpression = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(AndRule\n" +
-                this.conjoints.map(function(conj) {
-                    return conj.toSExpression(depth+1);
-                }).join("") +
-                lead + ")\n";
-        };
-        this.toHaskell = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(And\n" +
-                this.conjoints.map(function(conj) {
-                    return conj.toHaskell(depth+1);
-                }).join("") +
-                lead + ")\n";
-        };
-        this.prepend = function (elts) {
-            this.conjoints = elts.concat(this.conjoints);
-        };
-    },
-
-    OrRule: function (disjoints, _pos) {
-        this._ = 'OrRule'; this.disjoints = disjoints; this._pos = _pos;
-        this.ruleID = undefined;
-        this.setRuleID = function (ruleID) { this.ruleID = ruleID; };
-        this.label = undefined;
-        this.setLabel = function (label) { this.label = label; this.disjoints.map(function (r) { r.setLabel(label); }) ;};
-        this.toKey = function () { return (this.label ? this.label.toString() + ' ' : '') + this.toString(); };
-        this.req_lev = undefined;
-        this.setReqLevel = function (req_lev) { this.req_lev = req_lev; };
-        this.toString = function (orig) {
-            var ret = '';
-            if (this.req_lev) {
-              ret += '`' + this.req_lev + '` ';
-            }
-            ret += '(' + this.disjoints.map(function (disj) {
-                    return '(' + disj.toString(orig) + ')';
-                }).join("|\n") + ')';
-            return ret;
-        },
-            this.colorize = function (charmap, idMap, termStringToIds) {
-                // var ruleId = "r" + idMap.add(this.toKey());
-                for (var i = 0; i < this.disjoints.length; ++i) {
-                    var disj = this.disjoints[i];
-                    disj.colorize(charmap, idMap, termStringToIds);
-                }
-            };
-        // âˆƒ!x -> true if there's exactly one x in vs
-        // OrRule: vs=disjoints.map(validity(_,p,g,o)); if(âˆ„ð•¡âˆ§âˆ„âˆ…âˆ§âˆ„ðœƒ) return ð•—;
-        // if(âˆƒ!ð•¡) return ð•¡; if(âˆƒ!ðœƒ) return ðœƒ else return ð•—;
-        this.validate = function (schema, point, inOpt, db, validatorStuff) {
-            var ret = new RDF.ValRes();
-            var allErrors = true;
-            var passCount = 0;
-            var indefCount = 0;
-            var failures = [];
-            var promises = [];
-            this.disjoints.forEach(function (disj) {
-                var resOrPromise = disj.validate(schema, point, inOpt, db, validatorStuff);
-                if (validatorStuff.async)
-                    promises.push(resOrPromise.then(testExclusiveness));
-                else
-                    testExclusiveness(resOrPromise);
-                function testExclusiveness (r) {
-                    if (r.status == RDF.DISPOSITION.FAIL)
-                        failures.push(r);
-                    else {
-                        allErrors = false;
-                        ret.add(r);
-                        if (r.status == RDF.DISPOSITION.PASS)
-                            ++passCount;
-                        else if (r.status == RDF.DISPOSITION.ZERO)
-                            ++indefCount;
-                    }
-                }
-            });
-            var _OrRule = this;
-            return validatorStuff.async ? Promise.all(promises).then(checkResult) : checkResult();
-            function checkResult () {
-                if (allErrors || passCount > 1)
-                    ret.status = RDF.DISPOSITION.FAIL;
-                else if (passCount)
-                    ret.status = RDF.DISPOSITION.PASS;
-                else if (indefCount)
-                    ret.status = RDF.DISPOSITION.ZERO;
-                else
-                    ret.status = RDF.DISPOSITION.FAIL;
-                if (ret.status === RDF.DISPOSITION.FAIL)
-                    ret.error_or(failures, _OrRule);
-                return ret;
-            }
-        };
-        this.SPARQLvalidation = function (schema, label, prefixes, depth, counters, inOpt) {
-            var lead1 = pad(depth, '    ');
-            var lead2 = pad(depth+1, '    ');
-            var countSelect = '';
-            var counter = undefined;
-            if (inOpt) {
-                counter = counters.incr(label.lex + "_c");
-                countSelect = " (COUNT(*) AS " + counter + ")";
-            }
-            var ret = lead1 + "{ SELECT ?" + label.lex + countSelect + " WHERE {\n" + lead2 + "{\n";
-            for (var i = 0; i < this.disjoints.length; ++i) {
-                if (i !== 0)
-                    ret += lead2 + "} UNION {\n";
-                ret += this.disjoints[i].SPARQLvalidation(schema, label, prefixes, depth+2, counters, inOpt).sparql;
-            }
-            ret += lead2 + "}\n" +
-            lead1 + "} GROUP BY ?" + label.lex + " HAVING (COUNT(*) = 1)}\n"; // make sure we pass only one side of the union
-            return new RDF.QueryClause(counter, ret);
-        };
-        this.SPARQLdataDump = function (schema, label, prefixes, depth, variables) {
-            var lead1 = pad(depth, '    ');
-            var ret = lead1 + "OPTIONAL {\n";
-            for (var i = 0; i < this.disjoints.length; ++i) {
-                if (i !== 0)
-                    ret += lead1 + "} OPTIONAL {\n";
-                ret += this.disjoints[i].SPARQLdataDump(schema, label, prefixes, depth+1, variables).sparql;
-            }
-            ret += lead1 + "}\n";
-            return new RDF.QueryClause(undefined, ret);
-        };
-        this.SPARQLremainingTriples = function (schema, label, as, prefixes, depth, counters) {
-            var ret = '';
-            for (var i = 0; i < this.disjoints.length; ++i) {
-                var sub = this.disjoints[i].SPARQLremainingTriples(schema, label, as, prefixes, depth, counters);
-                ret += sub.sparql;
-                if (i !== this.disjoints.length - 1)
-                    ret += " UNION\n";
-            }
-            return new RDF.QueryClause(undefined, ret);
-        },
-            this.toResourceShapes_inline = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-                if (this.ruleID)
-                    return rsPrefix + ":disjoint " + this.ruleID.toString();
-                var lead = pad(depth, '    ');
-                var seFix = lead + sePrefix + ":";
-                var rsFix = lead + rsPrefix + ":";
-                var ret = '';
-                ret += sePrefix + ":choice " + "[\n";
-                for (var i = 0; i < this.disjoints.length; ++i) {
-                    if (i > 0)
-                        ret += "\n";
-                    if (this.disjoints[i]._ === 'AndRule') {
-                        ret += "    " + seFix + "ruleGroup [\n";
-                        ret += lead + "        " + this.disjoints[i].toResourceShapes_inline(schema, db, prefixes, sePrefix, rsPrefix, depth+2);
-                        ret += lead + "    ] ;\n";
-                    } else
-                        ret += lead + "    " + this.disjoints[i].toResourceShapes_inline(schema, db, prefixes, sePrefix, rsPrefix, depth+1) + " ;";
-                }
-                ret += lead + "]";
-                return ret;
-            };
-        this.toResourceShapes_standalone = function (schema, db, prefixes, sePrefix, rsPrefix, depth) {
-            if (!this.ruleID)
-                return '';
-            var lead = pad(depth, '    ');
-            var seFix = lead + sePrefix + ":";
-            var rsFix = lead + rsPrefix + ":";
-            var ret = '';
-            ret += this.ruleID.toString() + "\n";
-            for (var i = 0; i < this.disjoints.length; ++i)
-                ret += this.disjoints[i].toResourceShapes_standalone(schema, db, prefixes, sePrefix, rsPrefix, depth+1);
-            return ret;
-        };
-        this.toSExpression = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(OrRule\n" +
-                this.disjoints.map(function(disj) {
-                    return disj.toSExpression(depth+1);
-                }).join("") +
-                lead + ")\n";
-        };
-        this.toHaskell = function (depth) {
-            var lead = pad(depth, '    ');
-            return lead + "(Or\n" +
-                this.disjoints.map(function(disj) {
-                    return disj.toHaskell(depth+1);
-                }).join("") +
-                lead + ")\n";
-        };
-    },
-
-    // Example (unsafe) javascript semantic action handler.
-    // Can be used like: schema.eventHandlers = {js: RDF.jsHandler};
-    jsHandler: {
-        _callback: function (code, valRes, context) {
-            eval("function action(_) {" + code + "}");
-            ret = action(context, { message: function (msg) { RDF.message(msg); } });
-            var status = RDF.DISPOSITION.PASS;
-            if (ret === false)
-            { status = RDF.DISPOSITION.FAIL; valRes.error_badEval(code); }
-            return status;
-        },
-        begin: function (code, valRes, context) { return this._callback(code, valRes, context); },
-        post: function (code, valRes, context) { return this._callback(code, valRes, context); }
-    },
-
-    // Example XML generator.
-    // Can be used like:
-    //   schema.eventHandlers = {GenX: RDF.GenXHandler(document.implementation,
-    //                                                 new XMLSerializer())};
-    GenXHandler: function (DOMImplementation, XMLSerializer) {
-        return {
-            _DOMImplementation:DOMImplementation,
-            _XMLSerializer:XMLSerializer,
-            when: 1,
-            text: null,
-            _stack: [], // {top:el1, bottom:eln} for some path el1/el2/eln
-            _doc: null,
-            _parse: function (str) {
-                var index = 0;
-                var name = "unspecifiedTag";
-                var ns = "";
-                var attr = false;
-                var val = function (v) { return v; };
-                str = str.trim();
-                var m = str.match(/^(?:\[([0-9-]+)\])?(@)?([^ \t]*)(?:[ \t]+(\$|=|!)([^ \t]*)(?:[ \t]+(\$|=|!)([^ \t]*)(?:[ \t]+(\$|=|!)([^ \t]*))?)?)?/);
-                if (m === null)
-                    throw "\"" + str + "\" is not a valid GenX instruction.";
-                if (m[1])
-                    index = parseInt(m[1]);
-                if (m[2])
-                    attr = true;
-                var parents = m[3].split('/');
-                if (parents) {
-                    name = parents.pop();
-                    if (name[0] == '@') {
-                        attr = true;
-                        name = name.substr(1);
-                    }
-                } else {
-                    parents = [];
-                    name = m[3];
-                }
-                for (i = 4; i < m.length; i += 2)
-                    if (m[i] == '$') {
-                        ns = m[i+1];
-                    } else if (m[i] == '=') {
-                        var pr = "val = function (v) { return v.substr(";
-                        var po = "); }";
-                        var m2;
-                        if ((m2 = m[i+1].match(/^substr\(([0-9]+)\)$/)))
-                            eval(pr + m2[1] + po);
-                        else if ((m2 = m[i+1].match(/^substr\(([0-9]+),([0-9]+)\)$/)))
-                            eval(pr + m2[1] + ", " + m2[2] + po);
-                        else if (m[i+1] === '')
-                            eval("val = function (v) { return ''; };");
-                        else
-                            throw "\"" + m[i+1] + "\" is unsupported";
-                    } else if (m[i] == '!' && m[i+1] == 'debugger') {
-                        debugger;
-                    }
-                return { index:index, ns:ns, attr:attr, name:name, parents:parents, val:val };
-            },
-            _assign: function (now, p, val) {
-                var parents = [];
-                for (var i = 0; i < p.parents.length; ++i) {
-                    var newEl = this._createElement(p.ns, p.parents[i]);
-                    parents.push(newEl);
-                    now.appendChild(newEl);
-                    now = newEl;
-                }
-                val = p.val(val);
-                if (p.attr) {
-                    if (p.index > 0)
-                        now = now.childNodes[p.index];
-                    else if (p.index < 0)
-                        now = now.childNodes[now.childNodes.length+p.index];
-                    now.setAttribute(p.name, val);
-                    return null;
-                } else {
-                    element = this._createElement(p.ns, p.name);
-                    if (val !== '')
-                        element.appendChild(this._doc.createTextNode(val));
-                    if (parents.length) {
-                        now.appendChild(element);
-                        return {top:parents[0], bottom:element};
-                    } else
-                        return {top:element, bottom:element};
-                }
-            },
-            _createElement: function (ns, name) {
-                var newEl;
-                if (this._doc === null) {
-                    this._doc = this._DOMImplementation.createDocument
-                    (ns, name, undefined);
-                    if (ns !== undefined) // unnecessary in chromium. nec in https://github.com/jindw/xmldom
-                        this._doc.childNodes[0].setAttribute("xmlns", ns);
-                    newEl = this._doc.childNodes[0];
-                } else {
-                    newEl = this._doc.createElement(name);
-                }
-                return newEl;
-            },
-            _ensureRoot: function (code) {
-                if (this._stack.length === 0) {
-                    throw "GenX directive \""+code+"\" requires a GenX begin action before the start, e.g. %GenX{ MyRootElement $http://a.example/ %}\nstart = ...";
-                }
-            },
-            // Begin and End FindTypes functions are called without a
-            // corresponding code in the schema.
-            beginFindTypes: function () {
-                var el = this._createElement("http://www.w3.org/2013/ShEx/", "findTypesRoot");
-                // Unconditionally push a findTypesRoot element.
-                this._stack.push({top:el, bottom:el});
-            },
-            endFindTypes: function () {
-                var now = this._stack[this._stack.length-1];
-                // See if there's anything but a findTypesRoot.
-                if (this._doc.children[0].children.length !== 0)
-                    this.text = this._XMLSerializer.serializeToString(this._doc);
-            },
-
-            begin: function (code, valRes, context) {
-                var p = this._parse(code);
-                if (this._stack.length) { // in a findtypes container
-                    var now = this._stack[this._stack.length-1];
-                    var elements = this._assign(now.bottom, p, '');
-                    this._stack.push(elements);
-                } else {
-                    var el = this._createElement(p.ns, p.name);
-                    this._stack.push({top:el, bottom:el});
-                }
-            },
-            end: function (code, valRes, context) {
-                var now = this._stack.pop();
-                RDF.message(this._doc);
-                if (this._stack.length) { // in a findtypes container
-                    if (context.status == RDF.DISPOSITION.PASS)
-                        this._stack[this._stack.length-1].bottom.appendChild(now.top);
-                } else {
-                    this.text = this._XMLSerializer.serializeToString(this._doc);
-                }
-            },
-            enter: function (code, valRes, context) {
-                this._ensureRoot(code);
-                var now = this._stack[this._stack.length-1];
-                var p = this._parse(code);
-                if (p.attr) {
-                    now.bottom.setAttribute(p.name, context.o.lex);
-                } else {
-                    var elements = this._assign(now.bottom, p, context.o.lex);
-                    this._stack.push(elements);
-                }
-            },
-            exit: function (code, valRes, context) {
-                var p = this._parse(code);
-                if (p.attr) {
-                    // was set on the way in.
-                } else {
-                    var now = this._stack.pop();
-                    if (this._stack.length) {
-                        var target = this._stack[this._stack.length-1].bottom;
-                        if (p.index)
-                            target = target.childNodes[p.index];
-                        target.appendChild(now.top);
-                    }
-                }
-            },
-            visit: function (code, valRes, context) {
-                this._ensureRoot(code);
-                var now = this._stack[this._stack.length-1];
-                var p = this._parse(code);
-                var elements = this._assign(now.bottom, p, context.o.lex);
-                if (elements)
-                    now.bottom.appendChild(elements.bottom);
-            }
-        };
-    },
-
-    // Example JSON generator.
-    // Can be used like:
-    //   schema.eventHandlers = {GenJ: RDF.GenJHandler()};
-    GenJHandler: function () {
-        return {
-            when: 1,
-            text: null,
-            _stack: [],
-            _context: null,
-            _doc: null,
-            _needId: false,
-            _nsToPrefix: null,
-            _parse: function (str) {
-                var name = "unspecifiedTag";
-                var subjId = false;
-                str = str.trim();
-                var m = str.match(/^([^ @\t]*)?[ \t]*(\@id)?/);
-                if (m === null)
-                    throw "\"" + str + "\" is not a valid GenJ instruction.";
-                name = m[1];
-                if (m[2])
-                    subjId = true;
-                return { subjId:subjId, name:name };
-            },
-            _getNamespace: function (iri) {
-                var slash = iri.lastIndexOf('/');
-                var end = iri.lastIndexOf('#');
-                if (slash == -1 && end == -1)
-                    return 'iri';
-                if (slash > end)
-                    end = slash;
-                var ns = iri.substr(0, end+1);
-                var lname = iri.substr(end+1);
-                if (ns in this._nsToPrefix) {
-                    return this._nsToPrefix[ns]+':'+lname;
-                } else {
-                    var prefix = 'ns'+Object.keys(this._nsToPrefix).length;
-                    this._nsToPrefix[ns] = prefix;
-                    this._context[prefix] = ns;
-                    return prefix+':'+lname;
-                }
-            },
-            _registerPredicate: function (tag, iri, dt) {
-                var pname = this._getNamespace(iri);
-                if (dt) {
-                    this._context[tag] = { '@id': pname, '@type': this._getNamespace(dt) };
-                } else {
-                    this._context[tag] = pname;
-                }
-            },
-            _assign: function (now, attr, value) {
-                if (attr in now) {
-                    if (!(now[attr] instanceof Array))
-                        now[attr] = [now[attr]];
-                    now[attr].push(value);
-                } else
-                    now[attr] = value;
-            },
-            begin: function (code, valRes, context) {
-                this._stack.splice(0, this._stack.length);
-                var p = this._parse(code);
-                if (p.subjId)
-                    this._needId = true;
-                this._context = {};
-                this._nsToPrefix = {};
-                this._doc = { '@context': this._context };
-                this._stack.push(this._doc);
-            },
-            end: function (code, valRes, context) {
-                RDF.message(this._doc);
-                this.text = JSON.stringify(this._doc);
-            },
-            enter: function (code, valRes, context) {
-                var now = this._stack[this._stack.length-1];
-                var p = this._parse(code);
-                var element = {};
-                this._registerPredicate(p.name, context.p.lex, null);
-                this._assign(now, p.name, element);
-                if (p.subjId)
-                    this._needId = true;
-                this._stack.push(element);
-            },
-            exit: function (code, valRes, context) {
-                var now = this._stack.pop();
-            },
-            visit: function (code, valRes, context) {
-                var now = this._stack[this._stack.length-1];
-                if (this._needId) {
-                    now['@id'] = context.s.lex;
-                    this._needId = false;
-                }
-                var p = this._parse(code);
-                this._assign(now, p.name, context.o.lex);
-                this._registerPredicate(p.name, context.p.lex,
-                    context.o._ == 'RDFLiteral' && context.o.datatype &&
-                    context.o.datatype.lex != 'http://www.w3.org/2001/XMLSchema#string' ?
-                        context.o.datatype.lex :
-                        null);
-            }
-        };
-    },
-
-    // Simple normalizer.
-    // Can be used like:
-    //   schema.eventHandlers = {GenN: RDF.GenNHandler()};
-    // invoke with
-    //   %GenN{ %}
-    GenNHandler: function () {
-        function _add (code, valRes, context) {
-            this._doc.push(RDF.Triple(context.s, context.p, context.o));
-        }
-        return {
-            when: 1,
-            text: null,
-            _doc: null,
-            begin: function (code, valRes, context) {
-                context.register(["visit", "link"]);
-                this._doc = [];
-            },
-            end: function (code, valRes, context) {
-                this.text = this._doc.map(function (t) {
-                    return t.toString()+"\n";
-                }).join('');
-            },
-            link: _add,
-            visit: _add
-        };
-    },
-
-    // RDF rewriter.
-    // Can be used like:
-    //   schema.eventHandlers = {GenR: RDF.GenRHandler()};
-    // invoke with
-    //   %GenR{"always":true%}
-    //  always: whether to default to outputing a triple if there's no code.
-    GenRHandler: function () {
-        return {
-            when: 1,
-            text: null,
-            begin: function (code, valRes, context) {
-
-                var conf = {};
-                try {
-                    var ob = JSON.parse('{'+code+'}');
-                    conf = ob;
-                } catch (e) {}
-
-                function Var (lex) {
-                    this._ = 'Var'; this.lex = lex;
-                }
-                var varMap = {};
-                function resolveVar (term) {
-                    if (term._ == 'Var')
-                        return term.lex in varMap ?
-                            varMap[term.lex] :
-                            null;
-                    return term;
-                }
-
-                var doc = [];
-                var iriResolver = context.iriResolver;
-
-                var _add = function (code, valRes, context) {
-                    var i;
-                    var RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-                    var XSD_NS = 'http://www.w3.org/2001/XMLSchema#'
-                    var skipSpace = function () {
-                        var Space = /^[ \t\n\r\v]+/;
-                        var s = code.substr(i).match(Space);
-                        if (s)
-                            i += s[0].length;
-                    };
-                    function getToken () {
-                        var Token = /^[a-zA-Z_][a-zA-Z0-9_.-]*/;
-                        var Double = /^[+-]?(?:[0-9]+\.[0-9]*[eE][+-]?[0-9]+|\.[0-9]+[eE][+-]?[0-9]+|[0-9]+[eE][+-]?[0-9]+)/;
-                        var Decimal = /^[+-]?[0-9]*\.[0-9]+/;
-                        var Integer = /^[+-]?[0-9]+/;
-                        var ch = code[i];
-                        var token = null;
-                        if (ch == '\'' || ch == '"') {
-                            var delim = ch;
-                            var end1 = code.indexOf(delim, i+1);
-                            while (code[end1-1] == '/' && end1 < code.length)
-                                end1 = code.indexIf(delim, end1+1);
-                            if (end1 == -1)
-                                throw code.substr(i);
-                            var ret1 = RDF.RDFLiteral(code.substr(i+1, end1-i-1), undefined, undefined, RDF.Position0());
-                            i = end1+1;
-                            return ret1;
-                        } else if (ch.match(Integer)) {
-                            var val = code.substr(i).match(Integer);
-                            val = val[0]; // guaranteed to match at least one char.
-                            i += val.length;
-                            var ret2 = RDF.RDFLiteral(val, undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-                            return ret2;
-                        } else if (ch == '_' && code[i+1] == ':') {
-                            var s1 = code.substr(i+2).match(Token)[0];
-                            i += 2+s1.length;
-                            return RDF.BNode(s1, RDF.Position0());
-                        } else if (ch == '<') {
-                            var end2 = code.indexOf('>', i);
-                            if (end2 == -1)
-                                throw code.substr(i);
-                            var s2 = code.substr(i+1, end2-i-1);
-                            i = end2+1;
-                            return RDF.IRI(iriResolver.getAbsoluteIRI(s2), RDF.Position0());
-                        } else if (ch == 'a' && !code[i+1].match(/[a-zA-Z_0-9]/)) {
-                            ++i;
-                            return RDF.IRI(iriResolver.getAbsoluteIRI(RDF_NS+"type"), RDF.Position0());
-                        } else if (ch == '||') { // maybe "a" || "b" is close to EBV("a") || EBV("b")
-                            ++i;
-                            return {_:'Op', f: function (l, r) {
-                                return RDF.RDFLiteral(l.lex || r.lex, undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()))
-                            }};
-                        } else if (ch == '&&') { // maybe "a" && "b" is close to EBV("a") && EBV("b")
-                            ++i;
-                            return {_:'Op', f: function (l, r) {
-                                return RDF.RDFLiteral(l.lex && r.lex, undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()))
-                            }};
-                        } else if (ch == '+') {
-                            ++i;
-                            return {_:'Op', f: function (l, r) {
-                                return RDF.RDFLiteral(l.lex + (+r.lex), undefined, l.datatype)
-                            }};
-                        } else if (ch == '-') {
-                            ++i;
-                            return {_:'Op', f: function (l, r) {
-                                return RDF.RDFLiteral(l.lex - (+r.lex), undefined, l.datatype)
-                            }};
-                        } else if (ch == '*') {
-                            ++i;
-                            return {_:'Op', f: function (l, r) {
-                                return RDF.RDFLiteral(l.lex * (+r.lex), undefined, l.datatype)
-                            }};
-                        } else if (ch == '/') {
-                            ++i;
-                            return {_:'Op', f: function (l, r) {
-                                return RDF.RDFLiteral(l.lex / (+r.lex), undefined, l.datatype)
-                            }};
-                        } else if (ch == ':') {
-                            var lname = code.substr(++i).match(Token);
-                            i += lname[0].length;
-                            return RDF.IRI(iriResolver.getAbsoluteIRI(iriResolver.getPrefix("")+lname[0]), RDF.Position0());
-                        } else if (ch.match(Token)) {
-                            var first = code.substr(i).match(Token);
-                            first = first[0]; // guaranteed to match at least one char.
-                            i += first.length;
-                            // A token might start
-                            if (code[i] == ':') {
-                                // a pname,
-                                var lname = code.substr(++i).match(Token);
-                                lname = lname ? lname[0] : '';
-                                i += lname.length;
-                                return RDF.IRI(iriResolver.getAbsoluteIRI(iriResolver.getPrefix(first)+lname), RDF.Position0());
-                            } else if (code[i] == '(') {
-                                // a function,
-                                first = first.toUpperCase();
-                                ++i;
-                                skipSpace();
-                                var params = [];
-                                while (code[i] != ')') {
-                                    var t = getToken();
-                                    if (t._ === 'Op')
-                                        params[params.length-1] = t.f(params[params.length-1], getToken());
-                                    else
-                                        params.push(resolveVar(t));
-                                    skipSpace();
-                                    if (code[i] == ',') {
-                                        ++i;
-                                        skipSpace();
-                                    }
-                                }
-                                ++i;
-                                skipSpace();
-
-                                var guid = (function() { // http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript#answer-105074
-                                    function s4() {
-                                        return Math.floor((1 + Math.random()) * 0x10000)
-                                            .toString(16)
-                                            .substring(1);
-                                    }
-                                    return function() {
-                                        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-                                            s4() + '-' + s4() + s4() + s4();
-                                    };
-                                })();
-                                var numerics = [
-                                    XSD_NS+"integer",
-                                    XSD_NS+"decimal",
-                                    XSD_NS+"float",
-                                    XSD_NS+"double",
-                                    XSD_NS+"nonPositiveInteger",
-                                    XSD_NS+"negativeInteger",
-                                    XSD_NS+"long",
-                                    XSD_NS+"int",
-                                    XSD_NS+"short",
-                                    XSD_NS+"byte",
-                                    XSD_NS+"nonNegativeInteger",
-                                    XSD_NS+"unsignedLong",
-                                    XSD_NS+"unsignedInt",
-                                    XSD_NS+"unsignedShort",
-                                    XSD_NS+"unsignedByte",
-                                    XSD_NS+"positiveInteger"
-                                ];
-                                // http://stackoverflow.com/questions/2731579/convert-an-xml-schema-date-string-to-a-javascript-date#question
-                                var xmlDateToJavascriptDate = function(xmlDate) {
-                                    // It's times like these you wish Javascript supported multiline regex specs
-                                    var re = /^([0-9]{4,})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(\.[0-9]+)?(Z|([+-])([0-9]{2}):([0-9]{2}))?$/;
-                                    var match = xmlDate.match(re);
-                                    if (!match)
-                                        return null;
-
-                                    var all = match[0];
-                                    var year = match[1];  var month = match[2];  var day = match[3];
-                                    var hour = match[4];  var minute = match[5]; var second = match[6];
-                                    var milli = match[7];
-                                    var z_or_offset = match[8];  var offset_sign = match[9];
-                                    var offset_hour = match[10]; var offset_minute = match[11];
-
-                                    if (offset_sign) { // ended with +xx:xx or -xx:xx as opposed to Z or nothing
-                                        var direction = (offset_sign == "+" ? 1 : -1);
-                                        hour =   parseInt(hour)   + parseInt(offset_hour)   * direction;
-                                        minute = parseInt(minute) + parseInt(offset_minute) * direction;
-                                    }
-                                    var utcDate = Date.UTC(year, Number(month)-1, day, hour, minute, second, (milli || 0));
-                                    return new Date(utcDate);
-                                }
-                                if (false) {
-// Functions on RDF Terms 17.4.2 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-rdfTerms
-//     isIRI 17.4.2.1 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-isIRI
-                                } else if (first == "ISIRI") {
-                                    return RDF.RDFLiteral(params[0]._ == 'IRI' ? 'true' : 'false', undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     isBlank 17.4.2.2 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-isBlank
-                                } else if (first == "ISBLANK") {
-                                    return RDF.RDFLiteral(params[0]._ == 'BNode' ? 'true' : 'false', undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     isLiteral 17.4.2.3 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-isLiteral
-                                } else if (first == "ISLITERAL") {
-                                    return RDF.RDFLiteral(params[0]._ == 'RDFLiteral' ? 'true' : 'false', undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     isNumeric 17.4.2.4 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-isNumeric
-                                } else if (first == "ISNUMERIC") {
-                                    return RDF.RDFLiteral(numerics.indexOf(params[0].datatype.lex) == -1 ? 'false' : 'true', undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     str 17.4.2.5 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-str
-                                } else if (first == "STR") {
-                                    return RDF.RDFLiteral(params[0].lex, undefined, undefined, RDF.Position0());
-//     lang 17.4.2.6 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-lang
-                                } else if (first == "LANG") {
-                                    return RDF.RDFLiteral(params[0].langtag, undefined, undefined, RDF.Position0());
-//     datatype 17.4.2.7 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-datatype
-                                } else if (first == "DATATYPE") {
-                                    return RDF.IRI(params[0].datatype, RDF.Position0());
-//     IRI 17.4.2.8 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-iri
-                                } else if (first == "IRI") {
-                                    return RDF.IRI(iriResolver.getAbsoluteIRI(params[0].lex), RDF.Position0());
-//     BNODE 17.4.2.9 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-bnode
-                                } else if (first == "BNODE") {
-                                    return RDF.BNode(params[0].lex, RDF.Position0());
-//     STRDT 17.4.2.10 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-strdt
-                                } else if (first == "STRDT") {
-                                    function pad (str, max) {
-                                        return str.length < max ? pad("0" + str, max) : str;
-                                    }
-                                    var lex = params[0].lex;
-                                    var target = params[1];
-                                    if (target.lex === "http://www.w3.org/2001/XMLSchema#time") {
-                                        var m = lex.match(/^([0-9]+):([0-9]+):([0-9]+)(.*)$/);
-                                        if (m)
-                                            lex = ""+pad(m[1], 2)+":"+pad(m[2], 2)+":"+pad(m[3], 2)+m[4];
-                                    }
-                                    else if (target.lex === "http://www.w3.org/2001/XMLSchema#date") {
-                                        var m = lex.match(/^([0-9]+)-([0-9]+)-([0-9]+)(.*)$/);
-                                        if (m)
-                                            lex = ""+m[1]+"-"+pad(m[2], 2)+"-"+pad(m[3], 2)+m[4];
-                                    }
-
-                                    return RDF.RDFLiteral(lex, undefined, target, RDF.Position0());
-//     STRLANG 17.4.2.11 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-strlang
-                                } else if (first == "STRLANG") {
-                                    return RDF.RDFLiteral(params[0].lex, RDF.LangTag(params[1].lex, RDF.Position0()), undefined, RDF.Position0());
-//     UUID 17.4.2.12 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-uuid
-                                } else if (first == "STRLEN") {
-                                    return RDF.IRI("urn:uuid:"+guid(), RDF.Position0());
-//     STRUUID 17.4.2.13 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-struuid
-                                } else if (first == "STRLEN") {
-                                    return RDF.RDFLiteral(guid(), undefined, undefined, RDF.Position0());
-// Functions on Strings 17.4.3 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-strings
-//     STRLEN 17.4.3.2 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-strlen
-                                } else if (first == "STRLEN") {
-                                    return RDF.RDFLiteral(params[0].lex.length, undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-//     SUBSTR 17.4.3.3 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-substr
-                                } else if (first == "SUBSTR") {
-                                    var substring = params.length == 3 ?
-                                        params[0].lex.substr(params[1].lex, params[2].lex) :
-                                        params[0].lex.substr(params[1].lex);
-                                    return RDF.RDFLiteral(substring, undefined, undefined, RDF.Position0());
-//     UCASE 17.4.3.4 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-ucase
-                                } else if (first == "UCASE") {
-                                    return RDF.RDFLiteral(params[0].lex.toUpperCase(), undefined, undefined, RDF.Position0());
-//     LCASE 17.4.3.5 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-lcase
-                                } else if (first == "LCASE") {
-                                    return RDF.RDFLiteral(params[0].lex.toLowerCase(), undefined, undefined, RDF.Position0());
-//     STRSTARTS 17.4.3.6 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-strstarts
-                                } else if (first == "STRSTARTS") {
-                                    return RDF.RDFLiteral(params[0].lex.indexOf(params[1].lex) === 0 ? 'true' : 'false', undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     STRENDS 17.4.3.7 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-strends
-                                } else if (first == "STRENDS") {
-                                    return RDF.RDFLiteral(params[0].lex.lastIndexOf(params[1].lex) == params[0].lex.length - params[1].lex.length ? 'true' : 'false', undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     CONTAINS 17.4.3.8 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-contains
-                                } else if (first == "CONTAINS") {
-                                    return RDF.RDFLiteral(params[0].lex.indexOf(params[1].lex) != -1 ? 'true' : 'false', undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     STRBEFORE 17.4.3.9 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-strbefore
-                                } else if (first == "STRBEFORE") {
-                                    return RDF.RDFLiteral(params[0].lex.substr(0, params[0].lex.indexOf(params[1].lex)), RDF.Position0());
-//     STRAFTER 17.4.3.10 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-strafter
-                                } else if (first == "STRAFTER") {
-                                    return RDF.RDFLiteral(params[0].lex.substr(params[0].lex.indexOf(params[1].lex) + params[1].lex.length), undefined, undefined, RDF.Position0());
-//     ENCODE_FOR_URI 17.4.3.11 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-encode
-                                } else if (first == "ENCODE_FOR_URI") {
-                                    return RDF.RDFLiteral(encodeURIComponent(params[0].lex), undefined, undefined, RDF.Position0());
-//     CONCAT 17.4.3.12 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-concat
-                                } else if (first == "CONCAT") {
-                                    var concat = params.map(function (p) { return p.lex; }).join('');
-                                    return RDF.RDFLiteral(concat, undefined, undefined, RDF.Position0());
-//     langMatches 17.4.3.13 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-langMatches
-                                } else if (first == "LANGMATCHES") {
-                                    var tag = params[0].lex.toUpperCase();
-                                    var pattern = params[1].lex.toUpperCase();
-                                    var val = "false";
-                                    if (tag == pattern)
-                                        val = "true";
-                                    else if (pattern == "*")
-                                        val = tag === '' ? "false" : "true";
-                                    else (tag.substr(0, pattern.length) == pattern && (tag.length == pattern.length || tag[pattern.length] == '-'))
-                                    val == "true";
-                                    return RDF.RDFLiteral(val, undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     REGEX 17.4.3.14 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-regex
-                                } else if (first == "REGEX") {
-                                    var re = params.length == 3 ?
-                                        new RegExp(params[1].lex, params[2].lex) :
-                                        new RegExp(params[1].lex);
-                                    return RDF.RDFLiteral(params[0].lex.match(re) != -1 ? 'true' : 'false', undefined, RDF.IRI(XSD_NS+"boolean", RDF.Position0()), RDF.Position0());
-//     REPLACE 17.4.3.15 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-replace
-                                } else if (first == "SUBSTR") {
-                                    var re = params.length == 3 ?
-                                        new RegExp(params[1].lex, params[2].lex) :
-                                        new RegExp(params[1].lex);
-                                    return RDF.RDFLiteral(params[0].lex.replace(re), undefined, undefined, RDF.Position0());
-// Functions on Numerics 17.4.4 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-numerics
-//     abs 17.4.4.1 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-abs
-                                } else if (first == "ABS") {
-                                    var v = Math.abs(params[0].lex);
-                                    return RDF.RDFLiteral(v, undefined, params[0].datatype, RDF.Position0());
-//     round 17.4.4.2 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-round
-                                } else if (first == "ROUND") {
-                                    var v = Math.round(params[0].lex);
-                                    return RDF.RDFLiteral(v, undefined, params[0].datatype, RDF.Position0());
-//     ceil 17.4.4.3 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-ceil
-                                } else if (first == "CEIL") {
-                                    var v = Math.ceil(params[0].lex);
-                                    return RDF.RDFLiteral(v, undefined, params[0].datatype, RDF.Position0());
-//     floor 17.4.4.4 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-floor
-                                } else if (first == "FLOOR") {
-                                    var v = Math.floor(params[0].lex);
-                                    return RDF.RDFLiteral(v, undefined, params[0].datatype, RDF.Position0());
-//     RAND 17.4.4.5 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#idp2130040
-                                } else if (first == "RAND") {
-                                    var v = Math.random();
-                                    return RDF.RDFLiteral(v, undefined, RDF.IRI(XSD_NS+"double", RDF.Position0()), RDF.Position0());
-// Functions on Dates and Times 17.4.5 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-date-time
-//     now 17.4.5.1 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-now
-                                } else if (first == "NOW") {
-                                    var now = new Date();
-                                    function AddZero(num) {
-                                        return (num >= 0 && num < 10) ? "0" + num : num + "";
-                                    }
-                                    var strDateTime = [[now.getUTCFullYear(), AddZero(now.getUTCMonth() + 1), AddZero(now.getUTCDate())].join("-"),
-                                            [AddZero(now.getUTCHours()), AddZero(now.getUTCMinutes()), AddZero(now.getUTCSeconds())].join(":")]
-                                            .join("T")+"+"+AddZero(Math.floor(now.getUTCTimezoneOffset()/60))+":"+AddZero(now.getUTCTimezoneOffset()%60);
-                                    return RDF.RDFLiteral(strDateTime, undefined, RDF.IRI(XSD_NS+"dateTime"), RDF.Position0());
-//     year 17.4.5.2 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-year
-                                } else if (first == "YEAR") {
-                                    var d = xmlDateToJavascriptDate(params[0].lex);
-                                    return RDF.RDFLiteral(d.getUTCFullYear(), undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-//     month 17.4.5.3 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-month
-                                } else if (first == "MONTH") {
-                                    var d = xmlDateToJavascriptDate(params[0].lex);
-                                    return RDF.RDFLiteral(d.getUTCMonth()+1, undefined, RDF.IRI(XSD_NS+"integer"), RDF.Position0());
-//     day 17.4.5.4 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-day
-                                } else if (first == "DAY") {
-                                    var d = xmlDateToJavascriptDate(params[0].lex);
-                                    return RDF.RDFLiteral(d.getUTCDate(), undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-//     hours 17.4.5.5 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-hours
-                                } else if (first == "HOURS") {
-                                    var d = xmlDateToJavascriptDate(params[0].lex);
-                                    return RDF.RDFLiteral(d.getUTCHours(), undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-//     minutes 17.4.5.6 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-minutes
-                                } else if (first == "MINUTES") {
-                                    var d = xmlDateToJavascriptDate(params[0].lex);
-                                    return RDF.RDFLiteral(d.getUTCMinutes(), undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-//     seconds 17.4.5.7 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-seconds
-                                } else if (first == "SECONDS") {
-                                    var d = xmlDateToJavascriptDate(params[0].lex);
-                                    return RDF.RDFLiteral(d.getUTCSeconds(), undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-//     timezone 17.4.5.8 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-timezone
-                                } else if (first == "TIMEZONE") {
-                                    var re = /^([0-9]{4,})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(\.[0-9]+)?(Z|([+-])([0-9]{2}):([0-9]{2}))?$/;
-                                    var match = params[0].lex.match(re);
-                                    var z_or_offset = match[8];  var offset_sign = match[9];
-                                    var offset_hour = match[10]; var offset_minute = match[11];
-                                    var lex = "PT0S";
-                                    if (z_or_offset != "Z") {
-                                        lex = (offset_sign == "-" ? "-" : "") + "PT"
-                                        + (offset_hour === 0 ? "" : offset_hour/1+"H")
-                                        + (offset_minute === 0 ? "" : offset_minute/1+"M");
-                                    }
-                                    return RDF.RDFLiteral(lex, undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-//     tz 17.4.5.9 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-tz
-                                } else if (first == "TZ") {
-                                    var re = /^([0-9]{4,})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(\.[0-9]+)?(Z|([+-])([0-9]{2}):([0-9]{2}))?$/;
-                                    var match = params[0].lex.match(re);
-                                    var z_or_offset = match[8];
-                                    return RDF.RDFLiteral((z_or_offset || ""), undefined, RDF.IRI(XSD_NS+"integer", RDF.Position0()), RDF.Position0());
-// Hash Functions 17.4.6 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-hash
-//     MD5 17.4.6.1 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-md5
-//     SHA1 17.4.6.2 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-sha1
-//     SHA256 17.4.6.3 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-sha256
-//     SHA384 17.4.6.4 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-sha384
-//     SHA512 17.4.6.5 http://www.w3.org/TR/2013/REC-sparql11-query-20130321/#func-sha512
-
-                                } else {
-                                    throw first;
-                                }
-                            } else {
-                                // or a variable name
-                                // return new this.Var(s, RDF.Position0());
-                                // js scoping is such a PITA!
-                                return {_: 'Var', lex: first};
-                            }
-                        } else {
-                            throw code.substr(i);
-                        }
-                    }
-                    if (code) {
-
-                        for (i = 0; i < code.length; ) {
-                            var start = i;
-                            varMap['s'] = context.s;
-                            varMap['p'] = context.p;
-                            varMap['o'] = context.o;
-                            skipSpace();
-                            if (i == code.length)
-                                continue;
-                            var lvalue = getToken();
-                            skipSpace();
-                            var ch = code[i];
-                            if (ch == '=') {
-                                ++i;
-                                skipSpace();
-                                if (lvalue._ != 'Var')
-                                    throw (code.substr(i));
-                                var v = resolveVar(getToken());
-                                varMap[lvalue.lex] = v;
-                            } else {
-                                var s = resolveVar(lvalue);
-                                var p = resolveVar(getToken());
-                                skipSpace();
-                                var o = resolveVar(getToken());
-                                try {
-                                    doc.push(RDF.Triple(s, p, o));
-                                } catch (e) {
-                                    message("Skipping: \"" + e + "\"\n"
-                                    +"while instantiating \"" + code.substr(start, i-start) + "\".");
-                                }
-                            }
-                            skipSpace();
-                            if (code[i] == '.') {
-                                ++i;
-                                skipSpace();
-                            }
-                        }
-                    } else if ('always' in conf && conf['always'] == true) {
-                        doc.push(RDF.Triple(context.s, context.p, context.o));
-                    }
-                }
-
-                this.link = _add;
-                this.visit = _add;
-                this.end = function (code, valRes, context) {
-                    RDF.message(doc);
-                    this.text = doc.map(function (t) {
-                        return t.toString()+"\n";
-                    }).join('');
-                }
-                if ('always' in conf && conf['always'] == true)
-                    context.register(["visit", "link"]);
-            },
-            link: null,
-            visit: null
-        };
-    },
-
-    Schema: function (_pos) {
-        this._ = 'Schema'; this._pos = _pos;
-        this.ruleMap = {};
-        this.ruleLabels = [];
-        this.startRule = undefined;
-        this.eventHandlers = {};
-        this.derivedShapes = {}; // Map parent name to array of 1st generation childrens' rules.
-        this.isVirtualShape = {};
-        this.init = {};
-        this.comments = [];
-
-        this.hasDerivedShape = function (parent, child) {
-            if (!(parent.toString() in this.derivedShapes))
-                this.derivedShapes[parent.toString()] = [];
-            this.derivedShapes[parent.toString()].push(child);
-        }
-        this.markVirtual = function (shape) {
-            this.isVirtualShape[shape.label.toString()] = true;
-        }
-        this.getRuleMapClosure = function (name) {
-            var key = name.toString();
-            var _Schema = this;
-            // @@ inject hierarchy here
-            //    this.derivedShapes = {};
-            //    this.isVirtualShape = {};
-
-            // Ugly late-binding of names 'cause they're not known when hasDerivedShape is called.
-            // probably over-complicated way to concatonate descendents.
-            function children (parent) {
-                return _Schema.derivedShapes[parent]
-                    ? [parent].concat(_Schema.derivedShapes[parent].map(function (el) {
-                    return children(el.label.toString());
-                }).reduce(function (a, b) { return [].concat(a, b) } ))
-                    : [parent];
-            }
-            var disjoints = children(key);
-            disjoints = disjoints.filter(function (el) {
-                return !_Schema.isVirtualShape[el];
-            });
-            if (disjoints.length === 0)
-                throw "no available shape or derived shapes for " + key;
-            disjoints = disjoints.map(function (el) {
-                return _Schema.ruleMap[el];
-            });
-            if (disjoints.length === 1)
-                return disjoints[0];
-            return new RDF.OrRule(disjoints, RDF.Position2(this.ruleMap[key].line, this.ruleMap[key].column));
-        };
-        this.serializeRule = function (label) {
-            var ret = '';
-            var rule = this.ruleMap[label];
-            if (rule._ == 'UnaryRule') {
-                ret += label + ' {\n' + rule.rule.toString() + '\n}';
-                Object.keys(rule.codes).map(function (k) { ret += ' %' + k + '{' + rule.codes[k] + '%}'; })
-                ret += "\n\n";
-            } else if (rule._ == 'IncludeRule') {
-                ret += ": ";
-                rule.parents.forEach(function (p) { ret += p.toString(); });
-                ret += label + ' {\n' + rule.rule.toString() + '\n}';
-                ret += "\n\n";
-            } else {
-                ret += label + ' {\n' + rule.toString() + '\n}\n\n';
-            }
-            return ret;
-        };
-        this.toString = function (orig) {
-            var ret = '';
-
-            var Schema = this;
-            if (this.init)
-                Object.keys(this.init).map(function (k) { ret += Schema.init[k] + "\n"; })
-            if (this.startRule)
-                ret += "start = " + this.startRule.toString(orig) + "\n\n";
-            for (var label in this.ruleMap)
-                ret += this.serializeRule(label);
-            return ret;
-        };
-        this.add = function (label, rule) {
-            var key = label.toString();
-            if (this.ruleMap[key])
-                throw "unexpected duplicate rule label: " + key;
-            this.ruleLabels.push(label);
-            this.ruleMap[key] = rule;
-        }
-        this.addComment = function (c) {
-            this.comments.push(c);
-        },
-            this.colorize = function (charmap) {
-                var idMap = IntStringMap();
-                var termStringToIds = StringIdMap();
-                var ruleId = "init";
-                //this.label.assignId(charmap, ruleId+"_s"); // @@ could idMap.addMember(...), but result is more noisy
-                var AtomicRule = this;
-                Object.keys(this.init).map(function (k) {
-                    var code = AtomicRule.init[k];
-                    charmap.insertBefore(code._pos.offset, "<span id='"+ruleId+"_"+k+"' class='code'>", 0);
-                    charmap.insertAfter(code._pos.offset+code._pos.width, "</span>", 0);
-                });
-                for (var i = 0; i < this.ruleLabels.length; ++i) {
-                    var label = this.ruleLabels[i];
-                    this.ruleMap[label.toString()].colorize(charmap, idMap, termStringToIds);
-                    // colorizing assigns ids; add to term map after colorizing
-                    termStringToIds.add(label.toString(true), label.id);
-                }
-                if (this.startRule) {
-                    this.startRule.assignId(charmap, "start");
-                    termStringToIds.add(this.startRule.toString(true), this.startRule.id);
-                }
-                // for (var label in this.ruleMap)
-                //     this.ruleMap[label].colorize(charmap, idMap, termStringToIds);
-                var commentId = "sc";
-                for (var i = 0; i < this.comments.length; ++i) {
-                    var comment = this.comments[i];
-                    charmap.insertBefore(comment._pos.offset, "<span id='"+commentId+"_"+i+"' class='comment'>", 0);
-                    charmap.insertAfter(comment._pos.offset+comment._pos.width, "</span>", 0);
-                };
-                return {idMap:idMap, termStringToIds:termStringToIds};
-            };
-        this.termResults = {}; // temp cache hack -- makes schema validation non-reentrant
-        this.validatePoint = function (point, as, db, validatorStuff, subShapes) {
-            // cyclic recursion guard says "am i verifying point as an as in this closure mode?"
-            // with closure: start=<a> <a> { <p1> @<a> } / <s1> <p1> <s1> .
-            //  w/o closure: start={ <p1> @<a> } VIRTUAL <a> { <p2> (1) } <b> & <a> {  } ! <s1> <p1> [ <p2> 2 ] .
-            var asStr = as.toString();
-            if (!(asStr in this.ruleMap))
-                throw "rule " + asStr + " not found in schema";
-            var key = point.toString() + ' @' + asStr + "," + subShapes;
-            var resOrPromise = this.termResults[key];
-            if (resOrPromise === undefined) {
-                var tmp = new RDF.ValRes(); // temporary empty solution
-                tmp.status = RDF.DISPOSITION.PASS; // matchedEmpty(this.ruleMap[asStr]);
-                this.termResults[key] = validatorStuff.async ? Promise.resolve(tmp) : tmp;
-
-                var closedSubGraph;
-                if (validatorStuff.closedShapes)
-                    closedSubGraph = db.triplesMatching(point, null, null);
-
-                var rule = subShapes ? this.getRuleMapClosure(as) : this.ruleMap[asStr];
-                resOrPromise = rule.validate(this, point, false, db, validatorStuff);
-
-                // Make sure we used all of the closedSubGraph.
-                if (validatorStuff.closedShapes) {
-                    
-                    checkRemaining = function checkRemaining (res) {
-                        if (res.passed()) {
-                            var remaining = closedSubGraph.filter(function (t) {
-                                var r = res.triples();
-                                for (var i = 0; i < r.length; ++i)
-                                    if (r[i] === t)
-                                        return false;
-                                return true;
-                            });
-                            if (remaining.length)
-                            { res.status = RDF.DISPOSITION.FAIL; res.error_noMatchExtra(rule, remaining); }
-                        }
-                        return res;
-                    }
-                    
-                    if (validatorStuff.async)
-                        resOrPromise = resOrPromise.then(checkRemaining).catch(function (e) {
-                            debugger;
-                            return Promise.reject(e);
-                        });
-                    else
-                        checkRemaining(resOrPromise);
-                }
-                this.termResults[key] = resOrPromise;
-            }
-            return validatorStuff.async ? resOrPromise.then(function (res) { return Promise.resolve(res); }) : resOrPromise;
-        };
-
-        this.closeShapes = function (point, as, db, validatorStuff, subShapes) {
-            var _Schema = this;
-            var resOrPromise = this.validatePoint(point, as, db, validatorStuff, subShapes);
-            return validatorStuff.async ?
-                resOrPromise.then(post).catch(function (e) {
-                    debugger;
-                    return Promise.reject(e);
-                }) :
-                post(resOrPromise);
-            function post (ret) {
-                if (ret.status == RDF.DISPOSITION.PASS) {
-                    _Schema.dispatch(1, 'begin', _Schema.init, null, {iriResolver: validatorStuff.iriResolver});
-                    var what = ret.postInvoke(_Schema, validatorStuff);
-                    _Schema.dispatch(1, 'end', _Schema.init, null, ret);
-                    var seen = ret.triples();
-                    var missed = ret.misses.filter(function (m) { // triplesMatch
-                        return seen.filter(function (t) {
-                            return m.triple.toString() == t.toString();
-                        }).length ? false : true;
-                    })
-                    if (missed.length) {
-                        ret.status = RDF.DISPOSITION.FAIL;
-                        ret.errors = missed;
-                    }
-                }
-                return ret;
-            }
-        };
-
-        // usual interface for validating a pointed graph
-        this.validate = function (point, as, db, validatorStuff, subShapes) {
-            var callbacksAlwaysInvoked = this.alwaysInvoke;
-            this.dispatch(0, 'begin', this.init, null, {
-                iriResolver: validatorStuff.iriResolver,
-                register: function (handlerName, events) {
-                    if (!Array.isArray(events))
-                        events = [events];
-                    for (var i = 0; i < events.length; ++i) {
-                        var event = events[i];
-                        if (!(event in callbacksAlwaysInvoked))
-                            callbacksAlwaysInvoked[event] = [];
-                        callbacksAlwaysInvoked[event].push(handlerName);
-                    }
-                }
-            });
-            var schema = this;
-            var resOrPromise = this.closeShapes(point, as, db, validatorStuff, subShapes);
-            function post (ret) {
-                schema.dispatch(0, 'end', this.init, null, ret);
-                return ret;
-            }
-            return validatorStuff.async ?
-                resOrPromise.then(function (ret) {
-                    post(ret);
-                    return ret;
-                }).catch(function (e) {
-                    debugger;
-                    return Promise.reject(e);
-                }) :
-                post(resOrPromise);
-        };
-
-        this.findTypes = function (db, subjects, validatorStuff) {
-            var ret = new RDF.ValRes(); // accumulate validation successes.
-            ret.status = RDF.DISPOSITION.PASS;
-
-            for (var handler in this.handlers)
-                if ('beginFindTypes' in this.handlers[handler])
-                    this.handlers[handler]['beginFindTypes']();
-            // For each (distinct) subject node s,
-            var promises = [];
-            var schema = this;
-            subjects.forEach(function (s) {
-                // for each rule label ruleLabel,
-                schema.ruleLabels.forEach(function (ruleLabel) {
-
-                    // if the labeled rule not VIRTUAL,
-                    if (!schema.isVirtualShape[ruleLabel.toString()]) {
-
-                        // var closedSubGraph = db.triplesMatching(s, null, null); @@ needed?
-
-                        var instSh = RDF.IRI("http://open-services.net/ns/core#instanceShape", RDF.Position0());
-                        var nestedValidatorStuff = validatorStuff.push(s, instSh);
-                        var resOrPromise = schema.validate(s, ruleLabel, db, nestedValidatorStuff, false);
-                        
-                        function postValidate (res) {
-                            // If it passed or is indeterminate,
-                            if (res.status !== RDF.DISPOSITION.FAIL) {
-
-                                // record the success.
-                                RDF.message(s.toString() + " is a " + ruleLabel.toString());
-                                var t = RDF.Triple(s, RDF.IRI("http://open-services.net/ns/core#instanceShape", RDF.Position0()), ruleLabel);
-                                ret.matchedTree(schema.ruleMap[ruleLabel], t, res);
-                            }
-                        }
-                        
-                        if (validatorStuff.async) {
-                            resOrPromise.then(postValidate).catch(function (e) {
-                                console.dir(e);
-                                debugger;
-                                RDF.message(e);
-                            });
-                            promises.push(resOrPromise);
-                        } else {
-                            postValidate(resOrPromise);
-                        }
-                        
-		    }
-                });
-            });
-            function invokeHandlers () {
-                for (var handler in schema.handlers)
-                    if ('endFindTypes' in schema.handlers[handler])
-                        schema.handlers[handler]['endFindTypes']();
-                return ret;
-            }
-            return validatorStuff.async ? Promise.all(promises).then(invokeHandlers) : invokeHandlers();
-        };
-        this.dispatch = function (when, event, codes, valRes, context) {
-            var handlers = this.handlers;
-            function callHandler (handlerName, event, code, valRes, context) {
-                // add handlerName to register closure.
-                var f = null;
-                if (context && "register" in context) {
-                    f = context.register;
-                    context.register = function (events) {
-                        f(handlerName, events);
-                    };
-                }
-
-                // invoke
-                var ret = null;
-                var error = null;
-                try {
-                    ret = handlers[handlerName][event](code, valRes, context);
-                } catch (e) {
-                    var message =
-                        [["actionCategory", RDF.actionCategory.ACTION],
-                            ["text", "exception invoking:"],
-                            ["code", "handlers["+handlerName+"]["+event+"](\""+code+"\", valRes, "+context+")"],
-                            ["text", "[["],
-                            ["NestedError", e],
-                            ["text", "]]"]
-                        ];
-                    error = RDF.StructuredError(message);
-                }
-
-                // restore old register function
-                if (f)
-                    context.register = f;
-                if (error)
-                    throw error;
-                return ret;
-            }
-            if (event in this.alwaysInvoke)
-                for (var i = 0; i < this.alwaysInvoke[event].length; ++i) {
-                    var handlerName = this.alwaysInvoke[event][i];
-                    if (!(handlerName in codes)) { // Skip handlers which will be called below.
-                        var ex = callHandler(handlerName, event, null, valRes, context);
-                        if (ex == RDF.DISPOSITION.FAIL)
-                            return RDF.DISPOSITION.FAIL;
-                    }
-                }
-            for (var handlerName in codes)
-                if (this.handlers[handlerName] && this.handlers[handlerName][event] && this.handlers[handlerName].when === when) {
-                    var ex = callHandler(handlerName, event, codes[handlerName].code, valRes, context);
-                    if (ex == RDF.DISPOSITION.FAIL)
-                        return RDF.DISPOSITION.FAIL;
-                }
-            return RDF.DISPOSITION.PASS;
-        };
-        this.seen = {};
-        this.SPARQLvalidation2 = function (func, prefixes, prepend, append) {
-            if (!this.startRule)
-                throw "schema needs a startRule";
-            var start = this.startRule.toString();
-            this.seen = {};
-            this.seen[start] = start;
-            var counters = {
-                state: {},
-                incr: function (label) {
-                    if (this.state[label] === undefined)
-                        this.state[label] = 0;
-                    return "?" + label + this.state[label]++;
-                }
-            };
-            try {
-                return prepend
-                    + func(this.ruleMap[start], this, this.startRule, prefixes, 1, counters, false).sparql
-                    + append;
-            } catch (e) {
-                var m = "failed to generate SPARQL validation query because:\n" + e;
-                RDF.message(m);
-                return m;
-            }
-        };
-        this.SPARQLvalidation = function (prefixes) {
-            return this.SPARQLvalidation2(
-                function (rule, schema, label, prefixes, depth, counters, inOpt) {
-                    return rule.SPARQLvalidation(schema, label, prefixes, depth, counters, inOpt);
-                }, prefixes,
-                RDF.SPARQLprefixes(prefixes) + "ASK {\n", "}\n");
-        }
-        this.SPARQLremainingTriples = function (prefixes) {
-            var ret = this.SPARQLvalidation2(
-                function (rule, schema, label, prefixes, depth, counters, inOpt) {
-                    return rule.SPARQLvalidation(schema, label, prefixes, depth, counters, inOpt);
-                }, prefixes,
-                RDF.SPARQLprefixes(prefixes) + "\
-SELECT ?s ?p ?o {\n\
-  { ?s ?p ?o } MINUS\n\
-  {\n","    {\n");
-            ret += this.SPARQLvalidation2(
-                function (rule, schema, label, prefixes, depth, counters, inOpt) {
-                    return rule.SPARQLremainingTriples(schema, label, "?"+label.lex, prefixes, depth, counters);
-                }, prefixes, "", "");
-            ret += "\n\
-    }\n\
-  }\n\
-}\n";
-            return ret;
-        }
-        this.SPARQLvalidation3 = function (label, prefixes, depth, counters) {
-            var start = label.toString();
-            if (this.seen[start])
-                throw new RDF.ValidationRecursion(this.seen[start]);
-            if (!this.ruleMap[start])
-                throw new RDF.UnknownRule(start);
-
-            this.seen[start] = label;
-            return this.ruleMap[start].SPARQLvalidation(this, label, prefixes, depth, counters, false)
-        };
-        this.SPARQLdataDump3 = function (start, label, prefixes, depth, counters) {
-            if (this.seen[start])
-                throw new RDF.ValidationRecursion(this.seen[start]);
-            if (!this.ruleMap[start])
-                throw new RDF.UnknownRule(start);
-
-            this.seen[start] = label;
-            return this.ruleMap[start].SPARQLdataDump(this, label, prefixes, depth, counters, false)
-        };
-        this.SPARQLremainingTriples3 = function (label, as, prefixes, depth, counters) {
-            var start = label.toString();
-            if (this.seen[start])
-                throw new RDF.ValidationRecursion(this.seen[start]);
-            if (!this.ruleMap[start])
-                throw new RDF.UnknownRule(start);
-
-            this.seen[start] = label;
-            return this.ruleMap[start].SPARQLremainingTriples(this, label, as, prefixes, depth, counters)
-        };
-        this.SPARQLdataDump = function (prefixes) {
-            var variables = [];
-            var ret = this.SPARQLvalidation2(
-                function (rule, schema, label, prefixes, depth, counters, inOpt) {
-                    return rule.SPARQLdataDump(schema, {lex:'start'}, // <-- dirty hack to emulate RDF term
-                        prefixes, depth, variables);
-                }, prefixes, '');
-            ret = RDF.SPARQLprefixes(prefixes) + "SELECT "+Object.keys(variables).map(function (s) { return '?'+s; }).join(' ')+" {\n" + ret + "}\n";
-            return ret;
-        }
-        this.toResourceShapes = function (prefixes, sePrefix, rsPrefix) {
-            var ret = RDF.SPARQLprefixes(prefixes);
-            dbCopy = this.db.clone();
-            for (var label in this.ruleMap) {
-                var rule = this.ruleMap[label];
-                ret += label + " a " + rsPrefix + ":ResourceShape ;\n"
-                ret += "    " + rule.toResourceShapes_inline(this, dbCopy, prefixes, sePrefix, rsPrefix, 1) + " .\n";
-            }
-            for (var label in this.ruleMap) {
-                var rule = this.ruleMap[label];
-                ret += rule.toResourceShapes_standalone(this, dbCopy, prefixes, sePrefix, rsPrefix, 1);
-            }
-            if (dbCopy.length() !== 0)
-                ret += "# remaining triples:\n" + dbCopy.toString();
-            return ret;
-        };
-        this.toSExpression = function (depth) {
-            if (depth === undefined) depth=0;
-            var Schema = this;
-            return "(Schema\n"
-                + Object.keys(this.ruleMap).map(function (k) {
-                    return "'(" + k + "\n"
-                        + Schema.ruleMap[k].toSExpression(depth+1)
-                        +" )\n"
-                }).join("")+")";
-        };
-        this.toHaskell = function (depth) {
-            if (depth === undefined) depth=0;
-            var Schema = this;
-            return "(Schema\n"
-                + Object.keys(this.ruleMap).map(function (k) {
-                    return "(" + k + "->\n"
-                        + Schema.ruleMap[k].toHaskell(depth+1)
-                        +" )\n"
-                }).join("")+")";
-        };
-        this.partition = function (includes, looseEnds, needed) {
-            looseEnds = typeof looseEnds !== 'undefined' ? looseEnds : {};
-            needed = typeof needed !== 'undefined' ? needed : {};
-            var uses = {};
-            var Schema = this; // this is apparently unavailable in _walk.
-            function _walk (rule, parents) {
-                function _dive (into) {
-                    if (parents.indexOf(into) === -1) {
-                        parents.map(function (p) {
-                            if (uses[p] === undefined)
-                                uses[p] = [];
-                            uses[p].push(into);
-                        });
-                        var next = Schema.ruleMap[into];
-                        if (next === undefined) {
-                            if (looseEnds[into] === undefined)
-                                looseEnds[into] = { p:[] };
-                            var p = parents[parents.length-1];
-                            if (looseEnds[into][p] === undefined)
-                                looseEnds[into][p] = [];
-                            looseEnds[into][p].push(rule.toString());
-                        } else {
-                            parents.push(into);
-                            _walk(next, parents);
-                            parents.pop();
-                        }
-                    }
-                };
-                switch (rule._) {
-                    case "AtomicRule":
-                        if (rule.valueClass._== "ValueReference")
-                            _dive(rule.valueClass.label.toString());
-                        break;
-                    case "UnaryRule":
-                        _walk(rule.rule, parents);
-                        break;
-                    case "IncludeRule":
-                        _dive(rule.include.toString());
-                        break;
-                    case "EmptyRule":
-                        break;
-                    case "AndRule":
-                        for (var conj = 0; conj < rule.conjoints.length; ++conj)
-                            _walk(rule.conjoints[conj], parents);
-                        break;
-                    case "OrRule":
-                        for (var disj = 0; disj < rule.disjoints.length; ++disj)
-                            _walk(rule.disjoints[disj], parents);
-                        break;
-                    default: throw "what's a \"" + rule._ + "\"?"
-                }
-            };
-            for (var ri = 0; ri < this.ruleLabels.length; ++ri) {
-                var ruleLabel = this.ruleLabels[ri];
-                if (!this.isVirtualShape[ruleLabel.toString()])
-                    _walk(this.ruleMap[ruleLabel], [ruleLabel]); // this.getRuleMapClosure
-            }
-
-            //for (var p in uses) {
-            for (var i = 0; i < includes.length; ++i) {
-                var p = includes[i];
-                needed[p] = true;
-                for (var c in uses[p]) needed[uses[p][c]] = true;
-            }
-
-
-            ret = new RDF.Schema(this._pos);
-            ret.startRule = this.startRule;
-            ret.eventHandlers = this.eventHandlers;
-            ret.derivedShapes = {};
-            ret.isVirtualShape = {};
-            ret.init = this.init;
-            for (var ri = 0; ri < this.ruleLabels.length; ++ri) {
-                var ruleLabel = this.ruleLabels[ri];
-                var ruleLabelStr = ruleLabel.toString();
-                if (needed[ruleLabelStr]) {
-                    ret.derivedShapes[ruleLabelStr] = this.derivedShapes[ruleLabelStr];
-                    if (this.isVirtualShape[ruleLabelStr])
-                        ret.isVirtualShape[ruleLabelStr] = true;
-                    ret.add(ruleLabel, this.ruleMap[ruleLabelStr]);
-                }
-            }
-            return ret;
-        };
-    },
-
-    ValRes: function () {
-        function renderRule (rule, triple, depth, schemaIdMap, dataIdMap, solutions, classNames) {
-            var sOrdinal = solutions.length;
-            var rs = rule.toString(true);
-            var rOrdinal = schemaIdMap.getInt(rule.toKey());
-            var tOrdinal = '';
-            var to;
-            if (triple) {
-                var ts = triple.toString();
-                // May be called with no renderable data.
-                tOrdinal = dataIdMap ? dataIdMap.getInt(ts) : null;
-                var to = triple.s.toString(true) + " " + triple.p.toString(true) + " " + triple.o.toString(true) + " .";
-                solutions.push({rule:rOrdinal, triple:tOrdinal});
-            } else {
-                solutions.push({rule:rOrdinal});
-            }
-
-            var ret = pad(depth)
-                + "<span id=\"s"+sOrdinal+"\" onClick='hilight(["+sOrdinal+"], ["+rOrdinal+"], ["+tOrdinal+"]);'>";
-
-            ret += "<span class='" + (classNames['schema'] || 'schema') + "'>"
-            + rs.replace(/</gm, '&lt;').replace(/>/gm, '&gt;')
-            + "</span>"
-
-            if (triple)
-                ret += " matched by "
-                + "<span class='" + (classNames['data'] || 'data') + "'>"
-                + to.replace(/</gm, '&lt;').replace(/>/gm, '&gt;')
-                + "</span>";
-
-            ret += "</span>";
-            return ret;
-        }
-        function renderFailure (rule, triple, depth, schemaIdMap, dataIdMap, solutions, classNames, lead, mid) {
-            var sOrdinal = solutions.length;
-            var rs = rule.toString();
-            var rOrdinal = schemaIdMap.getInt(rule.toKey());
-
-            // Dance akwardly around the non-indexing of non-atomic rules.
-            if (rOrdinal !== undefined)
-                classNames.addErrorClass("r", [rOrdinal]);
-            else
-                rOrdinal = '';
-            // otherwise would just     classNames.addErrorClass("r", [rOrdinal]);
-
-            // document.getElementById("r"+rOrdinal).classList.add("error");
-            var tOrdinal = '', ts;
-            if (triple) {
-                ts = triple.toString();
-                if (dataIdMap) {
-                    tOrdinal = dataIdMap.getInt(ts)
-                    classNames.addErrorClass("", dataIdMap.getMembers(tOrdinal));
-                    // document.getElementById("t"+tOrdinal).classList.add("error");
-                }
-            }
-            var newSolution = {};
-            if (rOrdinal !== '') newSolution["rule"] = rOrdinal;
-            if (tOrdinal !== '') newSolution["triple"] = tOrdinal;
-
-            var ret = pad(depth)
-                + "<span id=\"s"+sOrdinal+"\" onClick='hilight(["+sOrdinal+"], ["+rOrdinal+"], ["+tOrdinal+"]);' class=\"error\">" + lead;
-
-            if (triple)
-                ret += "<span class='" + (classNames['data'] || 'data') + "'>"
-                + ts.replace(/</gm, '&lt;').replace(/>/gm, '&gt;')
-                + "</span>";
-
-            ret += mid
-            + "<span class='" + (classNames['schema'] || 'schema') + "'>"
-            + rs.replace(/</gm, '&lt;').replace(/>/gm, '&gt;')
-            + "</span>"
-
-            ret += "</span>";
-            return ret;
-        }
-        RuleMatch = function (rule, triple) {
-            this._ = 'RuleMatch'; this.status = RDF.DISPOSITION.PASS; this.rule = rule; this.triple = triple;
-            this.toString = function (depth) {
-                return pad(depth) + this.rule.toString() + " matched by "
-                    + this.triple.toString();
-            };
-            this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                return renderRule(this.rule, this.triple, depth, schemaIdMap, dataIdMap, solutions, classNames);
-            };
-            this.postInvoke = function (schema, validatorStuff) {
-                schema.dispatch(1, 'link', this.rule.codes, null, this.triple);
-                schema.dispatch(1, 'visit', this.rule.codes, this.rule, this.triple);
-                schema.dispatch(1, 'post', this.rule.codes, this.rule, this.triple);
-                return [this.triple];
-            }
-            this.triples = function () {
-                return [this.triple];
-            }
-        },
-            RuleMatchTree = function (rule, triple, r) {
-                this._ = 'RuleMatchTree'; this.status = RDF.DISPOSITION.PASS; this.rule = rule; this.triple = triple; this.r = r;
-                this.toString = function (depth) {
-                    return pad(depth) + this.rule.toString() + " matched by "
-                        + this.triple.toString() + "\n" + this.r.toString(depth+1);
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return renderRule(this.rule, this.triple, depth, schemaIdMap, dataIdMap, solutions, classNames)
-                        + "\n" + this.r.toHTML(depth+1, schemaIdMap, dataIdMap, solutions, classNames);
-                };
-                this.postInvoke = function (schema, validatorStuff) {
-                    schema.dispatch(1, 'link', this.rule.codes, null, this.triple);
-                    schema.dispatch(1, 'enter', this.rule.codes, this.rule, this.triple);
-                    var ret = this.r.postInvoke(schema, validatorStuff);
-                    schema.dispatch(1, 'exit', this.rule.codes, this.rule, this);
-                    schema.dispatch(1, 'post', this.rule.codes, this.rule, this.triple);
-                    ret.unshift(this.triple);
-                    return ret;
-                }
-                this.triples = function () {
-                    var ret = this.r.triples();
-                    ret.unshift(this.triple);
-                    return ret;
-                }
-            },
-            RuleMatchEmpty = function (rule) {
-                this._ = 'RuleMatchEmpty'; this.status = RDF.DISPOSITION.PASS; this.rule = rule;
-                this.toString = function (depth) {
-                    return pad(depth) + this.rule.toString() + " permitted to not match";
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return pad(depth) + renderRule(this.rule, undefined, depth, schemaIdMap, dataIdMap, solutions, classNames) + " permitted to not match";
-                };
-                this.postInvoke = function (schema, validatorStuff) {
-                    return [];
-                }
-                this.triples = function () {
-                    return [];
-                }
-            },
-            RuleMatchGroup = function (rule, point, r) {
-                this._ = 'RuleMatchGroup'; this.status = RDF.DISPOSITION.PASS; this.rule = rule; this.point = point; this.r = r;
-                this.toString = function (depth) {
-                    return this.r.toString(depth);
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return this.r.toHTML(depth, schemaIdMap, dataIdMap, solutions, classNames);
-                };
-                this.postInvoke = function (schema, validatorStuff) {
-                    schema.dispatch(1, 'enter', this.rule.codes, this.rule, {o:this.point});
-                    var ret = this.r.postInvoke(schema, validatorStuff);
-                    schema.dispatch(1, 'exit', this.rule.codes, this.rule, null);
-                    return ret;
-                }
-                this.triples = function () {
-                    return this.r.triples();
-                }
-            },
-            this._ = 'ValRes'; this.matches = []; this.errors = [], this.misses = [], this.tripleToRules = {};
-        this.postInvoke = function (schema, validatorStuff) {
-            var ret = [];
-            if (this.status != RDF.DISPOSITION.FAIL)
-                for (var i = 0; i < this.matches.length; ++i)
-                    if (this.matches[i].status == RDF.DISPOSITION.PASS) {
-                        ret = ret.concat(this.matches[i].postInvoke(schema, validatorStuff));
-                    }
-            return ret;
-        }
-        this.triples = function () {
-            var ret = [];
-            if (this.status != RDF.DISPOSITION.FAIL)
-                for (var i = 0; i < this.matches.length; ++i)
-                    if (this.matches[i].status == RDF.DISPOSITION.PASS)
-                        ret = ret.concat(this.matches[i].triples());
-            return ret;
-        }
-
-        this.tripleToRule = function (triple, rm) {
-            var key = triple.toString();
-            if (!this.tripleToRules[key])
-                this.tripleToRules[key] = [];
-            this.tripleToRules[key].push(rm);
-        },
-            this.copyMatchedTriples = function (from) {
-                for (var key in from.tripleToRules) {
-                    if (!this.tripleToRules[key])
-                        this.tripleToRules[key] = [];
-                    for (var i in from.tripleToRules[key])
-                        this.tripleToRules[key].push(from.tripleToRules[key]);
-                }
-            }
-        this.seen = function (triple) {
-            var key = triple.toString();
-            return !!this.tripleToRules[key];
-        },
-            this.matched = function (rule, triple) {
-                var ret = new RuleMatch(rule, triple);
-                this.matches.push(ret);
-                this.tripleToRule(triple, ret);
-                return ret;
-            },
-            this.matchedTree = function (rule, triple, r) {
-                var ret = new RuleMatchTree(rule, triple, r);
-                this.matches.push(ret);
-                this.tripleToRule(triple, ret);
-                this.copyMatchedTriples(r);
-                return ret;
-            },
-            this.matchedEmpty = function (rule) {
-                var ret = new RuleMatchEmpty(rule);
-                this.matches.push(ret);
-                return ret;
-            },
-            this.matchedGroup = function (rule, point, r) {
-                var ret = new RuleMatchGroup(rule, point, r);
-                this.matches.push(ret);
-                return ret;
-            },
-
-            RuleFail = function (rule, triple) {
-                this._ = 'RuleFail'; this.status = RDF.DISPOSITION.FAIL; this.rule = rule; this.triple = triple;
-                this.toString = function (depth) {
-                    return pad(depth) + "expected " + this.triple.toString()
-                        + " to match " + this.rule.toString();
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return renderFailure(this.rule, this.triple, depth, schemaIdMap, dataIdMap, solutions, classNames, "expected ", " to match ");
-                }
-            },
-            this.error_noMatch = function (rule, triple)  {
-                this.errors.push(new RuleFail(rule, triple));
-            },
-            RuleFailTree = function (rule, triple, r) {
-                this._ = 'RuleFailTree'; this.status = RDF.DISPOSITION.FAIL; this.rule = rule; this.triple = triple; this.r = r;
-                this.toString = function (depth) {
-                    return pad(depth) + "expected " + this.triple.toString()
-                        + " to match " + this.rule.toString()
-                        + "\n" + r.toString(depth+1);
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return renderFailure(this.rule, this.triple, depth, schemaIdMap, dataIdMap, solutions, classNames, "expected ", " to match ")
-                        + "\n" + this.r.toHTML(depth+1, schemaIdMap, dataIdMap, solutions, classNames);
-                }
-            },
-            this.error_noMatchTree = function (rule, triple, r)  {
-                this.errors.push(new RuleFailTree(rule, triple, r));
-            },
-
-            RuleFailExtra = function (rule, triples) {
-                this._ = 'RuleFailExtra'; this.status = RDF.DISPOSITION.FAIL; this.rule = rule; this.triples = triples;
-                this.toString = function (depth) {
-                    return pad(depth) + "expected " + this.triples.toString()
-                        + " to be covered by " + this.rule.toString();
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return renderFailure(this.rule, this.triples[0], depth, schemaIdMap, dataIdMap, solutions, classNames, "expected ", " to be covered by ");
-                }
-            },
-            this.error_noMatchExtra = function (rule, triples, r)  {
-                this.errors.push(new RuleFailExtra(rule, triples, r));
-            },
-
-            RuleFailValue = function (rule, triple) {
-                this._ = 'RuleFailValue'; this.status = RDF.DISPOSITION.FAIL; this.rule = rule; this.triple = triple;
-                this.toString = function (depth) {
-                    return pad(depth) + "expected object of " + this.triple.toString()
-                        + " to match value of " + this.rule.toString();
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return renderFailure(this.rule, this.triple, depth, schemaIdMap, dataIdMap, solutions, classNames, "expected object of ", " to match value of ");
-                }
-            },
-            this.error_wrongValue = function (rule, triple)  {
-                this.errors.push(new RuleFailValue(rule, triple));
-            },
-            RuleFailEval = function (codeObj, solution) {
-                this._ = 'RuleFailEval'; this.codeObj = codeObj; this.solution = solution;
-                this.toString = function (depth) {
-                    return pad(depth) + "eval of {" + this.codeObj + "} rejected [[\n"
-                        + solution.matches.map(function (m) {
-                            return m.toString(depth+1)+"\n";
-                        }).join("") + "    ]]";
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    var sOrdinal = solutions.length;
-                    solutions.push({}); // @@ needed?
-
-                    var ret = pad(depth)
-                        + "<span id=\"s"+sOrdinal+"\" onClick='hilight(["+sOrdinal+"], [], []);' class=\"error\">"
-                        + "eval of {" + this.codeObj + "} rejected [[\n"
-                        + solution.matches.map(function (m) {
-                            return m.toString(2).replace(/</gm, '&lt;').replace(/>/gm, '&gt;')+"\n";
-                        }).join("") + "    ]]"
-                        + "</span>";
-                    return ret;
-                }
-            },
-            this.error_badEval = function (codeObj)  {
-                this.errors.push(new RuleFailEval(codeObj, this));
-            },
-            RuleFailMax = function (max, rule, triple) {
-                this._ = 'RuleFailMax'; this.max = max; this.status = RDF.DISPOSITION.FAIL; this.rule = rule; this.triple = triple;
-                this.toString = function (depth) {
-                    return pad(depth) + this.triple.toString()
-                        + " exceeds max cardinality " + this.max
-                        + " of " + this.rule.toString();
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return renderFailure(this.rule, this.triple, depth, schemaIdMap, dataIdMap, solutions, classNames, "", " exceeds max cardinality " + this.max + " of ");
-                }
-            },
-            this.error_aboveMax = function (max, rule, triple)  {
-                this.errors.push(new RuleFailMax(max, rule, triple));
-            },
-            RuleFailMin = function (min, rule) {
-                this._ = 'RuleFailMin'; this.min = min; this.status = RDF.DISPOSITION.FAIL; this.rule = rule;
-                this.toString = function (depth) {
-                    return pad(depth) + "expected at least " + this.min
-                        + " matches of " + this.rule.toString();
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return pad(depth) + renderFailure(this.rule, undefined, depth, schemaIdMap, dataIdMap, solutions, classNames, "expected at least " + this.min + " matches of ", "");
-                }
-            },
-            this.error_belowMin = function (min, rule) {
-                this.errors.push(new RuleFailMin(min, rule));
-            },
-            RuleFailOr = function (failures, rule) {
-                this._ = 'RuleFailOr'; this.failures = failures; this.status = RDF.DISPOSITION.FAIL; this.rule = rule;
-                this.toString = function (depth) {
-                    return pad(depth) + "no matches of " + this.rule.toString()
-                        + "[[" + this.failures.map(function (f) {
-                            return pad(depth+1) + f.toString(depth+1);
-                        }).join("\n|  ") + "]]";
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return pad(depth) + renderFailure(this.rule, undefined, depth, schemaIdMap, dataIdMap, solutions, classNames, "no matches of ", "")
-                        + "[[" + this.failures.map(function (f) {
-                            return pad(depth+1) + f.toHTML(depth+1, schemaIdMap, dataIdMap, solutions, classNames);
-                        }).join("\n|  ") + "]]";
-                }
-            },
-            this.error_or = function (failures, rule) {
-                this.errors.push(new RuleFailOr(failures, rule));
-            },
-
-            RuleFailMixedOpt = function (passes, empties, rule) {
-                this._ = 'RuleFailMixedOpt'; this.passes = passes; this.empties = empties; this.status = RDF.DISPOSITION.FAIL; this.rule = rule;
-                this.toString = function (depth) {
-                    return pad(depth) + "mixed matches of " + this.rule.toString() + "\n"
-                        + "passed: [[" + this.passes.map(function (f) {
-                            return pad(depth+1) + f.toString(depth+1);
-                        }).join("\n|  ") + "]]\n"
-                        + "empty: [[" + this.empties.map(function (f) {
-                            return pad(depth+1) + f.toString(depth+1);
-                        }).join("\n|  ") + "]]";
-                };
-                this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                    return pad(depth) + renderFailure(this.rule, undefined, depth, schemaIdMap, dataIdMap, solutions, classNames, "mixed matches of ", "\n")
-                        + "passed: [[" + this.passes.map(function (f) {
-                            return pad(depth+1) + f.toHTML(depth+1, schemaIdMap, dataIdMap, solutions, classNames);
-                        }).join("\n|  ") + "]]\n"
-                        + "empty: [[" + this.empties.map(function (f) {
-                            return pad(depth+1) + f.toHTML(depth+1, schemaIdMap, dataIdMap, solutions, classNames);
-                        }).join("\n|  ") + "]]";
-                }
-            },
-            this.error_mixedOpt = function (passes, empties, rule) {
-                this.errors.push(new RuleFailMixedOpt(passes, empties, rule));
-            },
-
-            this.add = function (res) {
-                for (var i = 0; i < res.matches.length; ++i)
-                    this.matches.push(res.matches[i]);
-                for (var i = 0; i < res.errors.length; ++i)
-                    this.errors.push(res.errors[i]);
-                if (res.status == RDF.DISPOSITION.FAIL)
-                    this.copyMatchedTriples(res);
-                for (var i = 0; i < res.misses.length; ++i)
-                    this.misses.push(res.misses[i]);
-            },
-            this.missed = function (res) {
-                this.misses.push.apply(this.misses, res.errors)
-            },
-            this.passed = function () {
-                return this.status == RDF.DISPOSITION.PASS;
-                return this.matches.length > 0 && this.errors.length === 0;
-            },
-            this.toString = function (depth) {
-                // don't bother indenting group rules (for now)
-                if (this.errors.length === 0 && this.matches.length === 1 && this.matches[0]._ === "RuleMatchGroup")
-                    return this.matches[0].toString(depth);
-
-                var p = pad(depth);
-                var ret = p + (this.passed() ? "PASS {\n" : "FAIL {\n");
-                if (this.errors.length > 0)
-                    ret += "Errors:\n" + this.errors.map(function (e) { return ' â˜¹ ' + p + e.toString(depth+1) + "\n"; }).join("") + "Matches:\n";
-                ret += this.matches.map(function (m) {
-                    return m.toString(depth+1);
-                }).join("\n");
-                return ret + "\n" + p + "}";
-            },
-            this.toHTML = function (depth, schemaIdMap, dataIdMap, solutions, classNames) {
-                var p = pad(depth);
-                var ret = p + (this.passed() ? "PASS {\n" : "<span class='error'>FAIL</span> {\n");
-                if (this.errors.length > 0)
-                    ret += "Errors:\n" + this.errors.map(function (e) { return ' â˜¹ ' + p + e.toHTML(depth+1, schemaIdMap, dataIdMap, solutions, classNames) + "\n"; }).join("") + "Matches:\n";
-                ret += this.matches.map(function (m) { return m.toHTML(depth+1, schemaIdMap, dataIdMap, solutions, classNames); }).join("\n");
-                return ret + "\n" + p + "}";
-            }
-    },
-
-    ValidatorStuff: function (iriResolver, closedShapes, async) {
-        return {
-            _: 'ValidatorStuff',
-            iriResolver: iriResolver,
-            closedShapes: closedShapes,
-            async: async,
-            pointStack: [],
-            push: function (node, predicate) {
-                var nestedValidatorStuff = RDF.ValidatorStuff(this.iriResolver, this.closedShapes, this.async);
-                this.pointStack.forEach(function (elt) {
-                    nestedValidatorStuff.pointStack.push(elt);
-                });
-                nestedValidatorStuff.pointStack.push([predicate, node]);
-                return nestedValidatorStuff;
-            }
-        };
-    },
-
-//    curSchema: new this.Schema()
-};
-
-// enumerate inheritance
-RDF.IRI.prototype.origText = origText;
-RDF.RDFLiteral.prototype.origText = origText;
-RDF.LangTag.prototype.origText = origText;
-RDF.BNode.prototype.origText = origText;
-
-module.exports = RDF;
-
-},{"promise":201}],2:[function(require,module,exports){
 var Promise = require('promise');
-
-// var RDF = require('../includes/Erics_RDF.js');
-var n3 = require('n3');
-// var N3 = require('n3');
-// var N3Util = N3.Util;
-var DefaultBase = "http://127.0.0.1:8888/doc/Issue1";
-
-exports.parseData = function parseData(dataText) {
-    console.log('parsing data');
-    return parseDataShexjs(dataText);
-    // return parseWithN3(dataText);
-};
-
-
-function parseDataShexjs(dataText){
-    return new Promise(function (resolve, reject) {
-
-        var db = n3.Store();
-        n3.Parser({documentIRI: DefaultBase, format: "text/turtle"}).parse(dataText, function (error, triple, prefixes) {
-            if (error) {
-                // throw Error("error parsing " + data + ": " + error);
-                reject(parseN3Error(error));
-            } else if (triple) {
-                db.addTriple(triple)
-            console.log(triple.subject, triple.predicate, triple.object, '.');
-            } else {
-                resolve({db: db, triples:db.triples});
-                
-                // resolve({db: db, resolver: resolver, resources: db.uniqueSubjects(), triples:db.triples});
-            }
-        });
-        
-    });
-}
-
-// function parseNode(text, prefixes) {
-
-//     if (prefixes && N3Util.isPrefixedName(text)) {
-//         text = N3Util.expandPrefixedName(text, prefixes);
-//     }
-
-//     if (N3Util.isLiteral(text)) {
-//         return RDF.RDFLiteral(
-//             N3Util.getLiteralValue(text),
-//             RDF.LangTag(N3Util.getLiteralLanguage(text)),
-//             RDF.IRI(N3Util.getLiteralType(text))
-//         );
-//     }
-//     else if (N3Util.isIRI(text) || text === "") {
-//         return RDF.IRI(text);
-//     }
-//     else if (N3Util.isBlank(text)) {
-//         return RDF.BNode(text);
-//     }
-//     throw new Error("Unknown Type of Node");
-// }
-
-// exports.parseNode = parseNode;
-
-// function parseWithN3(dataText) {
-//     var parser = N3.Parser();
-
-//     return new Promise(function (resolve, reject) {
-//         var resolver = RDF.createIRIResolver();
-//         var db = RDF.Dataset();
-
-//         parser.parse(dataText, function (error, N3triple, prefixes) {
-//             if (error) reject(parseN3Error(error));
-//             else if (N3triple) {
-//                 var triple = RDF.Triple(
-//                     parseNode(N3triple.subject),
-//                     parseNode(N3triple.predicate),
-//                     parseNode(N3triple.object)
-//                 );
-
-//                 triple.line = N3triple.line;
-
-//                 db.push(triple);
-//             }
-//             else {
-//                 resolver.Prefixes = prefixes;
-//                 resolve({db: db, resolver: resolver, resources: db.uniqueSubjects(), triples:db.triples});
-//             }
-//         });
-//     });
-// }
-
-function parseN3Error(error) {
-    var line = error.message.match(/line [0-9]*/g);
-
-    line = (line && line.length > 0 && line[0].length > 5)?Number(line[0].substr(5)):null;
-
-    return {
-        message: error.message,
-        line: line,
-        column: 0
-    }
-}
-
-},{"n3":191,"promise":201}],3:[function(require,module,exports){
-var Promise = require('promise');
-
-var dataParser = require("./dataParser.js");
-var schemaParser = require("./schemaParser.js");
-var validator = require("./validator.js");
-var shapeFinder = require("./shapeFinder.js");
-
 var shexjs = require("shex");
 var n3 = require("n3");
 
@@ -4779,313 +106,29 @@ function cleanResult(result, callback){
         solutions = result.solution.solutions;
     }
     console.log('errors',errors,'passed',errors.length === 0);
-    return callback({
+    var clean_result = {
             errors: errors,
             matches: solutions,
             startingResource: 'startingResource',
             passed: errors.length === 0
-        });
+        };
+    console.log('clean_result',clean_result);
+    return callback(clean_result);
 }
 
-function cleanupValidation(valRes, resolver, startingResource, cb) {
+function parseN3Error(error) {
+    var line = error.message.match(/line [0-9]*/g);
 
-    return valRes.then(function(valRes) {
-        var errors = valRes.errors.map(errorFormatter);
+    line = (line && line.length > 0 && line[0].length > 5)?Number(line[0].substr(5)):null;
 
-        cb({
-            errors: errors,
-            matches: valRes.matches,
-            startingResource: startingResource,
-            passed: errors.length === 0
-        });
-    });
-
-}
-},{"./dataParser.js":2,"./schemaParser.js":4,"./shapeFinder.js":5,"./validator.js":7,"n3":191,"promise":201,"shex":257}],4:[function(require,module,exports){
-var Promise = require('promise');
-
-// var shexSchemaParser = require('../includes/shexParser.js');
-// var RDF = require('../includes/Erics_RDF.js');
-var shexjs = require('shex');
-exports.parseSchema = function parseSchema(base,schemaText) {
-    return new Promise(function (resolve, reject) {
-        var resolver = RDF.createIRIResolver();
-        var schema;
-        var schema2;
-        try {
-            schema = shexjs.Parser.construct(base).parse(schemaText);
-            // schema = shexSchemaParser.parse(schemaText, {iriResolver: resolver, bnodeScope:RDF.createBNodeScope()});
-            console.log(schema);
-            console.log(schema2);
-        }
-        catch (e) {
-            reject(e);
-        }
-
-        // var shapes = schema.ruleLabels.map(function (rule) {
-        //     return rule.toString();
-        // });
-
-        // var shapes = schema.shapes;
-
-        // resolve({schema: schema, resolver: resolver, shapes: shapes});
-        resolve({schema: schema, resolver: resolver, shapes: schema.shapes});
-
-    });
-};
-
-},{"promise":201,"shex":257}],5:[function(require,module,exports){
-var RDF = require('../includes/Erics_RDF.js');
-
-function findShapes(schema, schemaResolver, db, closedShapes, findShapesResult) {
-    schema.alwaysInvoke = {};
-
-    schema.startingNode = null;
-
-    var shapes = schema.findTypes(
-        db,
-        db.uniqueSubjects(),
-        RDF.ValidatorStuff(schemaResolver, closedShapes, true)
-    );
-
-    return cleanShapes(shapes, db, findShapesResult);
-
-}
-
-function cleanShapes(shapes, db, findShapesResult) {
-
-    return shapes.then(function(shapes) {
-        var result = {};
-
-        db.uniqueSubjects().forEach(function(subject) {
-            result[subject] = null;
-        });
-
-        shapes.matches.forEach(function(match) {
-            result[match.triple.s.toString()] = match.triple.o.toString();
-        });
-
-        findShapesResult(result);
-    });
-
-
-}
-
-module.exports.findShapes = findShapes
-
-},{"../includes/Erics_RDF.js":1}],6:[function(require,module,exports){
-var RDF = require('../includes/Erics_RDF.js');
-
-function formatError(fail) {
-    
     return {
-        name: fail._,
-        triple : fail,
-        req_lev: fail.rule.req_lev,
-        description: errorToString(fail),
-        line: getLine(fail)
-    };
-}
-
-function errorToString(fail) {
-    if (fail._ === "RuleFailMin") {
-        if (fail.min == fail.max) {
-            return "Needs "+ fail.min + fail.rule.nameClass.term._pos._orig;
-        }
-        else if (fail.max == undefined){
-            return "Needs at least "+ fail.min + " " + fail.rule.nameClass.term._pos._orig
-            + " with type " + fail.rule.valueClass._pos._orig;
-        }
-        else if (fail.min != undefined && fail.max != undefined) {
-            return "Needs between "+ fail.min + " and " + fail.max + " "
-            + fail.rule.nameClass.term._pos._orig + " with type "
-            + fail.rule.valueClass._pos._orig;
-        }
-        else{
-            return "RuleFailMin - if you get this message contact someone"
-        }
-    }
-    else if (fail._ === "RuleFailMax") {
-        if (fail.min != undefined && fail.max != undefined) {
-            return "Needs between "+ fail.min + " and " + fail.max + " "
-            + fail.rule.nameClass.term._pos._orig + " with type "
-            + fail.rule.valueClass._pos._orig;
-        }
-        else if (fail.max != undefined) {
-            return "Cannot have more than " + fail.max + " " + fail.rule.nameClass.term._pos._orig
-            + " of type " + fail.rule.valueClass._pos._orig;
-        }
-        else{
-            return "RuleFailMax - if you get this message contact someone";
-        }
-    }
-    else if (fail._ === "RuleFailMixedOpt") {
-        return "RuleFailMixedOpt - if you get this message contact someone";
-    }
-    else if (fail._ === "RuleFailOr") {
-        if (fail.failures && fail.rule.disjoints) {
-            //if the number of values is the same as the number of disjoints
-            //then we can (maybe) guess that all the options are missing
-            if (fail.failures.length === fail.rule.disjoints.length) {
-                var retString = "Needs at least one of : ";
-                fail.failures.forEach(function(f){
-                    //making some strong assumptions here
-                    retString += "\t Property " + f.errors[0].rule._pos._orig;
-                });
-                return retString;
-            }
-            //when there are less failures than disjoints, that means that
-            //there are failures-disjoints violations of the or rule (maybe)
-            else if (fail.failures.length < fail.rule.disjoints.length) {
-                var retString = "Can have either:\n ";
-                fail.rule.disjoints.forEach(function(d){
-                    //dont show all possible values, only ones which are present
-                    //in the data
-                    if (!disjointInFailures(d,this.fail.failures)){
-                        retString += "\t Property " + d.nameClass.term._pos._orig
-                        + " with type " + d.valueClass._pos._orig +" or \n";
-                    }
-                }.bind({fail: fail}));
-                // remove last occurence of or
-                var n = retString.lastIndexOf('or');
-                return retString.substring(0,n);
-                
-            }
-            
-        }
-
-        else {
-            return "RuleFailOr - if you get this message contact someone";
-        }
-    }
-    else if (fail._ === "RuleFailTree") {
-        return "RuleFailTree - if you get this message contact someone";
-    }
-    else if (fail._ === "RuleFailValue") {
-        return "RuleFailValue - if you get this message contact someone";
-    }
-    else if (fail._ === "RuleFailExtra") {
-        //this is wrong
-        var retString = "";
-        fail.triples.forEach(function(t){
-           retString += t.p.lex + " is not a valid property \n";
-        });
-        return retString;
-        //return fail.triples[0].p.lex.split('/').slice(-2).join(":") + " is not a valid property";
-    }
-    else if (fail._ === "RuleFail") {
-        // Maybe replace this with the non expanded types - it's unclear
-        // which would be better
-        return "Property " + fail.rule.nameClass.term._pos._orig
-        + " has a value with type: " + fail.triple.o.datatype 
-        + " instead of the expected type: " + fail.rule.valueClass.toString();
+        message: error.message,
+        line: line,
+        column: 0
     }
 }
 
-function disjointInFailures(disjoint,failures){
-    var contains = false;
-    failures.forEach(function(f){
-        f.errors.forEach(function(e){
-            console.log("Disjoint property failing: " + e.rule.nameClass.term._pos._orig + " at requirement level " + e.rule.req_lev);
-            if (disjoint.nameClass.term._pos._orig ===
-                e.rule.nameClass.term._pos._orig)
-                contains = true;
-        });
-    });
-    return contains;
-}
-
-function getLine(fail) {
-    if(fail.triples && fail.triples[0]) {
-        return fail.triples[0].line
-    }
-
-    if(fail.triple) {
-        return fail.triple.line
-    }
-}
-
-
-module.exports = formatError;
-
-},{"../includes/Erics_RDF.js":1}],7:[function(require,module,exports){
-var RDF = require('../includes/Erics_RDF.js');
-var dataParser = require("./dataParser.js");
-var errorFormatter = require("./validationErrorFormatter.js");
-var shexjs = require("shex");
-var Promise = require("promise");
-
-function validate(schema,
-                  schemaResolver,
-                  startingResources,
-                  db,
-                  dbResolver,
-                  closedShapes,
-                  validationResult){
-    console.log(schema,db);
-    console.log('validator instantiated');
-
-    var validationPromises = [];
-
-    // var result = shexjs.Validator.construct(schema).validate(db, startingResources, shape);
-
-    return result
-}
-
-// function validate(schema,
-//                   schemaResolver,
-//                   startingResources,
-//                   db,
-//                   dbResolver,
-//                   closedShapes,
-//                   validationResult) {
-
-
-//     schema.alwaysInvoke = {};
-
-//     var validationPromises = [];
-
-//     for (var startingResource in startingResources) {
-
-//         if(!startingResources.hasOwnProperty(startingResource) || !startingResources[startingResource]) continue;
-
-//         var startingNode = dataParser.parseNode(startingResource, dbResolver.Prefixes);
-
-//         var instSh = RDF.IRI("http://open-services.net/ns/core#instanceShape");
-
-//         var validation = schema.validate(
-//             startingNode,
-//             startingResources[startingResource],
-//             db,
-//             RDF.ValidatorStuff(schemaResolver, closedShapes, true).push(startingNode, instSh),
-//             true
-//         );
-
-//         validationPromises.push(cleanupValidation(validation, dbResolver, startingNode, validationResult));
-
-//     }
-
-//     return Promise.all(validationPromises);
-// }
-
-// function cleanupValidation(valRes, resolver, startingResource, cb) {
-
-//     return valRes.then(function(valRes) {
-//         var errors = valRes.errors.map(errorFormatter);
-
-//         cb({
-//             errors: errors,
-//             matches: valRes.matches,
-//             startingResource: startingResource,
-//             passed: errors.length === 0
-//         });
-//     });
-
-// }
-
-module.exports.validate = validate;
-
-},{"../includes/Erics_RDF.js":1,"./dataParser.js":2,"./validationErrorFormatter.js":6,"promise":201,"shex":257}],8:[function(require,module,exports){
+},{"n3":185,"promise":195,"shex":251}],2:[function(require,module,exports){
 'use strict';
 
 var KEYWORDS = [
@@ -5136,7 +179,7 @@ module.exports = function (metaSchema, keywordsJsonPointers) {
   return metaSchema;
 };
 
-},{}],9:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 'use strict';
 
 var compileSchema = require('./compile')
@@ -5640,7 +683,7 @@ function setLogger(self) {
 
 function noop() {}
 
-},{"./$data":8,"./cache":10,"./compile":15,"./compile/async":12,"./compile/error_classes":13,"./compile/formats":14,"./compile/resolve":16,"./compile/rules":17,"./compile/schema_obj":18,"./compile/util":20,"./keyword":44,"./patternGroups":45,"./refs/$data.json":46,"./refs/json-schema-draft-06.json":47,"co":101,"fast-json-stable-stringify":114}],10:[function(require,module,exports){
+},{"./$data":2,"./cache":4,"./compile":9,"./compile/async":6,"./compile/error_classes":7,"./compile/formats":8,"./compile/resolve":10,"./compile/rules":11,"./compile/schema_obj":12,"./compile/util":14,"./keyword":38,"./patternGroups":39,"./refs/$data.json":40,"./refs/json-schema-draft-06.json":41,"co":95,"fast-json-stable-stringify":108}],4:[function(require,module,exports){
 'use strict';
 
 
@@ -5668,7 +711,7 @@ Cache.prototype.clear = function Cache_clear() {
   this._cache = {};
 };
 
-},{}],11:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 //all requires must be explicit because browserify won't work with dynamic requires
@@ -5701,7 +744,7 @@ module.exports = {
   validate: require('../dotjs/validate')
 };
 
-},{"../dotjs/_limit":21,"../dotjs/_limitItems":22,"../dotjs/_limitLength":23,"../dotjs/_limitProperties":24,"../dotjs/allOf":25,"../dotjs/anyOf":26,"../dotjs/const":27,"../dotjs/contains":28,"../dotjs/dependencies":30,"../dotjs/enum":31,"../dotjs/format":32,"../dotjs/items":33,"../dotjs/multipleOf":34,"../dotjs/not":35,"../dotjs/oneOf":36,"../dotjs/pattern":37,"../dotjs/properties":38,"../dotjs/propertyNames":39,"../dotjs/ref":40,"../dotjs/required":41,"../dotjs/uniqueItems":42,"../dotjs/validate":43}],12:[function(require,module,exports){
+},{"../dotjs/_limit":15,"../dotjs/_limitItems":16,"../dotjs/_limitLength":17,"../dotjs/_limitProperties":18,"../dotjs/allOf":19,"../dotjs/anyOf":20,"../dotjs/const":21,"../dotjs/contains":22,"../dotjs/dependencies":24,"../dotjs/enum":25,"../dotjs/format":26,"../dotjs/items":27,"../dotjs/multipleOf":28,"../dotjs/not":29,"../dotjs/oneOf":30,"../dotjs/pattern":31,"../dotjs/properties":32,"../dotjs/propertyNames":33,"../dotjs/ref":34,"../dotjs/required":35,"../dotjs/uniqueItems":36,"../dotjs/validate":37}],6:[function(require,module,exports){
 'use strict';
 
 var MissingRefError = require('./error_classes').MissingRef;
@@ -5793,7 +836,7 @@ function compileAsync(schema, meta, callback) {
   }
 }
 
-},{"./error_classes":13}],13:[function(require,module,exports){
+},{"./error_classes":7}],7:[function(require,module,exports){
 'use strict';
 
 var resolve = require('./resolve');
@@ -5829,7 +872,7 @@ function errorSubclass(Subclass) {
   return Subclass;
 }
 
-},{"./resolve":16}],14:[function(require,module,exports){
+},{"./resolve":10}],8:[function(require,module,exports){
 'use strict';
 
 var util = require('./util');
@@ -5966,7 +1009,7 @@ function regex(str) {
   }
 }
 
-},{"./util":20}],15:[function(require,module,exports){
+},{"./util":14}],9:[function(require,module,exports){
 'use strict';
 
 var resolve = require('./resolve')
@@ -6348,7 +1391,7 @@ function vars(arr, statement) {
   return code;
 }
 
-},{"../dotjs/validate":43,"./error_classes":13,"./resolve":16,"./util":20,"co":101,"fast-deep-equal":113,"fast-json-stable-stringify":114}],16:[function(require,module,exports){
+},{"../dotjs/validate":37,"./error_classes":7,"./resolve":10,"./util":14,"co":95,"fast-deep-equal":107,"fast-json-stable-stringify":108}],10:[function(require,module,exports){
 'use strict';
 
 var url = require('url')
@@ -6621,7 +1664,7 @@ function resolveIds(schema) {
   return localRefs;
 }
 
-},{"./schema_obj":18,"./util":20,"fast-deep-equal":113,"json-schema-traverse":148,"url":480}],17:[function(require,module,exports){
+},{"./schema_obj":12,"./util":14,"fast-deep-equal":107,"json-schema-traverse":142,"url":474}],11:[function(require,module,exports){
 'use strict';
 
 var ruleModules = require('./_rules')
@@ -6681,7 +1724,7 @@ module.exports = function rules() {
   return RULES;
 };
 
-},{"./_rules":11,"./util":20}],18:[function(require,module,exports){
+},{"./_rules":5,"./util":14}],12:[function(require,module,exports){
 'use strict';
 
 var util = require('./util');
@@ -6692,7 +1735,7 @@ function SchemaObject(obj) {
   util.copy(obj, this);
 }
 
-},{"./util":20}],19:[function(require,module,exports){
+},{"./util":14}],13:[function(require,module,exports){
 'use strict';
 
 // https://mathiasbynens.be/notes/javascript-encoding
@@ -6714,7 +1757,7 @@ module.exports = function ucs2length(str) {
   return length;
 };
 
-},{}],20:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 'use strict';
 
 
@@ -6983,7 +2026,7 @@ function unescapeJsonPointer(str) {
   return str.replace(/~1/g, '/').replace(/~0/g, '~');
 }
 
-},{"./ucs2length":19,"fast-deep-equal":113}],21:[function(require,module,exports){
+},{"./ucs2length":13,"fast-deep-equal":107}],15:[function(require,module,exports){
 'use strict';
 module.exports = function generate__limit(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7134,7 +2177,7 @@ module.exports = function generate__limit(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],22:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 module.exports = function generate__limitItems(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7212,7 +2255,7 @@ module.exports = function generate__limitItems(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],23:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 module.exports = function generate__limitLength(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7295,7 +2338,7 @@ module.exports = function generate__limitLength(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],24:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 module.exports = function generate__limitProperties(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7373,7 +2416,7 @@ module.exports = function generate__limitProperties(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],25:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 module.exports = function generate_allOf(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7418,7 +2461,7 @@ module.exports = function generate_allOf(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],26:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 module.exports = function generate_anyOf(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7493,7 +2536,7 @@ module.exports = function generate_anyOf(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],27:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 module.exports = function generate_const(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7550,7 +2593,7 @@ module.exports = function generate_const(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],28:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 module.exports = function generate_contains(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7633,7 +2676,7 @@ module.exports = function generate_contains(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],29:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 module.exports = function generate_custom(it, $keyword, $ruleType) {
   var out = ' ';
@@ -7861,7 +2904,7 @@ module.exports = function generate_custom(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],30:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 module.exports = function generate_dependencies(it, $keyword, $ruleType) {
   var out = ' ';
@@ -8030,7 +3073,7 @@ module.exports = function generate_dependencies(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],31:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 module.exports = function generate_enum(it, $keyword, $ruleType) {
   var out = ' ';
@@ -8097,7 +3140,7 @@ module.exports = function generate_enum(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],32:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 module.exports = function generate_format(it, $keyword, $ruleType) {
   var out = ' ';
@@ -8248,7 +3291,7 @@ module.exports = function generate_format(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],33:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 module.exports = function generate_items(it, $keyword, $ruleType) {
   var out = ' ';
@@ -8390,7 +3433,7 @@ module.exports = function generate_items(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],34:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 'use strict';
 module.exports = function generate_multipleOf(it, $keyword, $ruleType) {
   var out = ' ';
@@ -8468,7 +3511,7 @@ module.exports = function generate_multipleOf(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],35:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 module.exports = function generate_not(it, $keyword, $ruleType) {
   var out = ' ';
@@ -8553,7 +3596,7 @@ module.exports = function generate_not(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],36:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 'use strict';
 module.exports = function generate_oneOf(it, $keyword, $ruleType) {
   var out = ' ';
@@ -8625,7 +3668,7 @@ module.exports = function generate_oneOf(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],37:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 'use strict';
 module.exports = function generate_pattern(it, $keyword, $ruleType) {
   var out = ' ';
@@ -8701,7 +3744,7 @@ module.exports = function generate_pattern(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],38:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 'use strict';
 module.exports = function generate_properties(it, $keyword, $ruleType) {
   var out = ' ';
@@ -9171,7 +4214,7 @@ module.exports = function generate_properties(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],39:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 module.exports = function generate_propertyNames(it, $keyword, $ruleType) {
   var out = ' ';
@@ -9254,7 +4297,7 @@ module.exports = function generate_propertyNames(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],40:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 'use strict';
 module.exports = function generate_ref(it, $keyword, $ruleType) {
   var out = ' ';
@@ -9379,7 +4422,7 @@ module.exports = function generate_ref(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],41:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 'use strict';
 module.exports = function generate_required(it, $keyword, $ruleType) {
   var out = ' ';
@@ -9649,7 +4692,7 @@ module.exports = function generate_required(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],42:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 'use strict';
 module.exports = function generate_uniqueItems(it, $keyword, $ruleType) {
   var out = ' ';
@@ -9722,7 +4765,7 @@ module.exports = function generate_uniqueItems(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],43:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 'use strict';
 module.exports = function generate_validate(it, $keyword, $ruleType) {
   var out = '';
@@ -10182,7 +5225,7 @@ module.exports = function generate_validate(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],44:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 'use strict';
 
 var IDENTIFIER = /^[a-z_$][a-z0-9_$-]*$/i;
@@ -10319,7 +5362,7 @@ function removeKeyword(keyword) {
   return this;
 }
 
-},{"./dotjs/custom":29}],45:[function(require,module,exports){
+},{"./dotjs/custom":23}],39:[function(require,module,exports){
 'use strict';
 
 var META_SCHEMA_ID = 'http://json-schema.org/draft-06/schema';
@@ -10357,7 +5400,7 @@ module.exports = function (ajv) {
   ajv.RULES.all.properties.implements.push('patternGroups');
 };
 
-},{}],46:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 module.exports={
     "$schema": "http://json-schema.org/draft-06/schema#",
     "$id": "https://raw.githubusercontent.com/epoberezkin/ajv/master/lib/refs/$data.json#",
@@ -10376,7 +5419,7 @@ module.exports={
     "additionalProperties": false
 }
 
-},{}],47:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 module.exports={
     "$schema": "http://json-schema.org/draft-06/schema#",
     "$id": "http://json-schema.org/draft-06/schema#",
@@ -10532,13 +5575,13 @@ module.exports={
     "default": {}
 }
 
-},{}],48:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 'use strict';
 module.exports = function () {
 	return /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nqry=><]/g;
 };
 
-},{}],49:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 'use strict';
 
 function assembleStyles () {
@@ -10605,7 +5648,7 @@ Object.defineProperty(module, 'exports', {
 	get: assembleStyles
 });
 
-},{}],50:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (process){
 
 // Use the fastest possible means to execute a task in a future turn
@@ -10722,7 +5765,7 @@ module.exports = asap;
 
 
 }).call(this,require('_process'))
-},{"_process":437}],51:[function(require,module,exports){
+},{"_process":431}],45:[function(require,module,exports){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
 
@@ -10737,7 +5780,7 @@ module.exports = {
 
 };
 
-},{}],52:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
 var errors = require('./errors');
@@ -10766,7 +5809,7 @@ for (var e in errors) {
     module.exports[e] = errors[e];
 }
 
-},{"./errors":51,"./reader":53,"./types":54,"./writer":55}],53:[function(require,module,exports){
+},{"./errors":45,"./reader":47,"./types":48,"./writer":49}],47:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
@@ -11031,7 +6074,7 @@ Reader.prototype._readTag = function(tag) {
 module.exports = Reader;
 
 }).call(this,require("buffer").Buffer)
-},{"./errors":51,"./types":54,"assert":315,"buffer":350}],54:[function(require,module,exports){
+},{"./errors":45,"./types":48,"assert":309,"buffer":344}],48:[function(require,module,exports){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
 
@@ -11069,7 +6112,7 @@ module.exports = {
   Context: 128
 };
 
-},{}],55:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
@@ -11389,7 +6432,7 @@ Writer.prototype._ensure = function(len) {
 module.exports = Writer;
 
 }).call(this,require("buffer").Buffer)
-},{"./errors":51,"./types":54,"assert":315,"buffer":350}],56:[function(require,module,exports){
+},{"./errors":45,"./types":48,"assert":309,"buffer":344}],50:[function(require,module,exports){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
 // If you have no idea what ASN.1 or BER is, see this:
@@ -11411,7 +6454,7 @@ module.exports = {
 
 };
 
-},{"./ber/index":52}],57:[function(require,module,exports){
+},{"./ber/index":46}],51:[function(require,module,exports){
 (function (Buffer,process){
 // Copyright (c) 2012, Mark Cavage. All rights reserved.
 // Copyright 2015 Joyent, Inc.
@@ -11626,7 +6669,7 @@ function _setExports(ndebug) {
 module.exports = _setExports(process.env.NODE_NDEBUG);
 
 }).call(this,{"isBuffer":require("../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":407,"_process":437,"assert":315,"stream":473,"util":485}],58:[function(require,module,exports){
+},{"../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":401,"_process":431,"assert":309,"stream":467,"util":479}],52:[function(require,module,exports){
 
 /*!
  *  Copyright 2010 LearnBoost <dev@learnboost.com>
@@ -11840,7 +6883,7 @@ function canonicalizeResource (resource) {
 }
 module.exports.canonicalizeResource = canonicalizeResource
 
-},{"crypto":360,"url":480}],59:[function(require,module,exports){
+},{"crypto":354,"url":474}],53:[function(require,module,exports){
 (function (process,Buffer){
 var aws4 = exports,
     url = require('url'),
@@ -12176,7 +7219,7 @@ aws4.sign = function(request, credentials) {
 }
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"./lru":60,"_process":437,"buffer":350,"crypto":360,"querystring":447,"url":480}],60:[function(require,module,exports){
+},{"./lru":54,"_process":431,"buffer":344,"crypto":354,"querystring":441,"url":474}],54:[function(require,module,exports){
 module.exports = function(size) {
   return new LruCache(size)
 }
@@ -12274,7 +7317,7 @@ function DoublyLinkedNode(key, val) {
   this.next = null
 }
 
-},{}],61:[function(require,module,exports){
+},{}],55:[function(require,module,exports){
 'use strict';
 
 var crypto_hash_sha512 = require('tweetnacl').lowlevel.crypto_hash;
@@ -12832,7 +7875,7 @@ module.exports = {
       pbkdf: bcrypt_pbkdf
 };
 
-},{"tweetnacl":292}],62:[function(require,module,exports){
+},{"tweetnacl":286}],56:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var SomePromiseArray = Promise._SomePromiseArray;
@@ -12855,7 +7898,7 @@ Promise.prototype.any = function () {
 
 };
 
-},{}],63:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 "use strict";
 var firstLineError;
 try {throw new Error(); } catch (e) {firstLineError = e;}
@@ -13007,7 +8050,7 @@ Async.prototype._reset = function () {
 module.exports = new Async();
 module.exports.firstLineError = firstLineError;
 
-},{"./queue.js":88,"./schedule.js":91,"./util.js":98}],64:[function(require,module,exports){
+},{"./queue.js":82,"./schedule.js":85,"./util.js":92}],58:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise) {
 var rejectThis = function(_, e) {
@@ -13081,7 +8124,7 @@ Promise.bind = function (thisArg, value) {
 };
 };
 
-},{}],65:[function(require,module,exports){
+},{}],59:[function(require,module,exports){
 "use strict";
 var cr = Object.create;
 if (cr) {
@@ -13206,7 +8249,7 @@ Promise.prototype.get = function (propertyName) {
 };
 };
 
-},{"./util.js":98}],66:[function(require,module,exports){
+},{"./util.js":92}],60:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var errors = require("./errors.js");
@@ -13256,7 +8299,7 @@ Promise.prototype.fork = function (didFulfill, didReject, didProgress) {
 };
 };
 
-},{"./async.js":63,"./errors.js":73}],67:[function(require,module,exports){
+},{"./async.js":57,"./errors.js":67}],61:[function(require,module,exports){
 (function (process){
 "use strict";
 module.exports = function() {
@@ -13753,7 +8796,7 @@ return CapturedTrace;
 };
 
 }).call(this,require('_process'))
-},{"./async.js":63,"./util.js":98,"_process":437}],68:[function(require,module,exports){
+},{"./async.js":57,"./util.js":92,"_process":431}],62:[function(require,module,exports){
 "use strict";
 module.exports = function(NEXT_FILTER) {
 var util = require("./util.js");
@@ -13821,7 +8864,7 @@ CatchFilter.prototype.doFilter = function (e) {
 return CatchFilter;
 };
 
-},{"./errors.js":73,"./es5.js":74,"./util.js":98}],69:[function(require,module,exports){
+},{"./errors.js":67,"./es5.js":68,"./util.js":92}],63:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, CapturedTrace, isDebugging) {
 var contextStack = [];
@@ -13861,7 +8904,7 @@ Promise.prototype._popContext = Context.prototype._popContext;
 return createContext;
 };
 
-},{}],70:[function(require,module,exports){
+},{}],64:[function(require,module,exports){
 (function (process){
 "use strict";
 module.exports = function(Promise, CapturedTrace) {
@@ -14027,7 +9070,7 @@ return function() {
 };
 
 }).call(this,require('_process'))
-},{"./async.js":63,"./errors.js":73,"./util.js":98,"_process":437}],71:[function(require,module,exports){
+},{"./async.js":57,"./errors.js":67,"./util.js":92,"_process":431}],65:[function(require,module,exports){
 "use strict";
 var util = require("./util.js");
 var isPrimitive = util.isPrimitive;
@@ -14092,7 +9135,7 @@ Promise.prototype.thenThrow = function (reason) {
 };
 };
 
-},{"./util.js":98}],72:[function(require,module,exports){
+},{"./util.js":92}],66:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var PromiseReduce = Promise.reduce;
@@ -14106,7 +9149,7 @@ Promise.each = function (promises, fn) {
 };
 };
 
-},{}],73:[function(require,module,exports){
+},{}],67:[function(require,module,exports){
 "use strict";
 var es5 = require("./es5.js");
 var Objectfreeze = es5.freeze;
@@ -14219,7 +9262,7 @@ module.exports = {
     Warning: Warning
 };
 
-},{"./es5.js":74,"./util.js":98}],74:[function(require,module,exports){
+},{"./es5.js":68,"./util.js":92}],68:[function(require,module,exports){
 var isES5 = (function(){
     "use strict";
     return this === undefined;
@@ -14301,7 +9344,7 @@ if (isES5) {
     };
 }
 
-},{}],75:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var PromiseMap = Promise.map;
@@ -14315,7 +9358,7 @@ Promise.filter = function (promises, fn, options) {
 };
 };
 
-},{}],76:[function(require,module,exports){
+},{}],70:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, NEXT_FILTER, tryConvertToPromise) {
 var util = require("./util.js");
@@ -14415,7 +9458,7 @@ Promise.prototype.tap = function (handler) {
 };
 };
 
-},{"./util.js":98}],77:[function(require,module,exports){
+},{"./util.js":92}],71:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           apiRejection,
@@ -14553,7 +9596,7 @@ Promise.spawn = function (generatorFunction) {
 };
 };
 
-},{"./errors.js":73,"./util.js":98}],78:[function(require,module,exports){
+},{"./errors.js":67,"./util.js":92}],72:[function(require,module,exports){
 "use strict";
 module.exports =
 function(Promise, PromiseArray, tryConvertToPromise, INTERNAL) {
@@ -14662,7 +9705,7 @@ Promise.join = function () {
 
 };
 
-},{"./util.js":98}],79:[function(require,module,exports){
+},{"./util.js":92}],73:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           PromiseArray,
@@ -14797,7 +9840,7 @@ Promise.map = function (promises, fn, options, _filter) {
 
 };
 
-},{"./async.js":63,"./util.js":98}],80:[function(require,module,exports){
+},{"./async.js":57,"./util.js":92}],74:[function(require,module,exports){
 "use strict";
 module.exports =
 function(Promise, INTERNAL, tryConvertToPromise, apiRejection) {
@@ -14843,7 +9886,7 @@ Promise.prototype._resolveFromSyncValue = function (value) {
 };
 };
 
-},{"./util.js":98}],81:[function(require,module,exports){
+},{"./util.js":92}],75:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var util = require("./util.js");
@@ -14904,7 +9947,7 @@ Promise.prototype.nodeify = function (nodeback, options) {
 };
 };
 
-},{"./async.js":63,"./util.js":98}],82:[function(require,module,exports){
+},{"./async.js":57,"./util.js":92}],76:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, PromiseArray) {
 var util = require("./util.js");
@@ -14982,7 +10025,7 @@ Promise.prototype._progressUnchecked = function (progressValue) {
 };
 };
 
-},{"./async.js":63,"./util.js":98}],83:[function(require,module,exports){
+},{"./async.js":57,"./util.js":92}],77:[function(require,module,exports){
 (function (process){
 "use strict";
 module.exports = function() {
@@ -15745,7 +10788,7 @@ require('./filter.js')(Promise, INTERNAL);
 };
 
 }).call(this,require('_process'))
-},{"./any.js":62,"./async.js":63,"./bind.js":64,"./call_get.js":65,"./cancel.js":66,"./captured_trace.js":67,"./catch_filter.js":68,"./context.js":69,"./debuggability.js":70,"./direct_resolve.js":71,"./each.js":72,"./errors.js":73,"./filter.js":75,"./finally.js":76,"./generators.js":77,"./join.js":78,"./map.js":79,"./method.js":80,"./nodeify.js":81,"./progress.js":82,"./promise_array.js":84,"./promise_resolver.js":85,"./promisify.js":86,"./props.js":87,"./race.js":89,"./reduce.js":90,"./settle.js":92,"./some.js":93,"./synchronous_inspection.js":94,"./thenables.js":95,"./timers.js":96,"./using.js":97,"./util.js":98,"_process":437}],84:[function(require,module,exports){
+},{"./any.js":56,"./async.js":57,"./bind.js":58,"./call_get.js":59,"./cancel.js":60,"./captured_trace.js":61,"./catch_filter.js":62,"./context.js":63,"./debuggability.js":64,"./direct_resolve.js":65,"./each.js":66,"./errors.js":67,"./filter.js":69,"./finally.js":70,"./generators.js":71,"./join.js":72,"./map.js":73,"./method.js":74,"./nodeify.js":75,"./progress.js":76,"./promise_array.js":78,"./promise_resolver.js":79,"./promisify.js":80,"./props.js":81,"./race.js":83,"./reduce.js":84,"./settle.js":86,"./some.js":87,"./synchronous_inspection.js":88,"./thenables.js":89,"./timers.js":90,"./using.js":91,"./util.js":92,"_process":431}],78:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise,
     apiRejection) {
@@ -15889,7 +10932,7 @@ PromiseArray.prototype.getActualLength = function (len) {
 return PromiseArray;
 };
 
-},{"./util.js":98}],85:[function(require,module,exports){
+},{"./util.js":92}],79:[function(require,module,exports){
 "use strict";
 var util = require("./util.js");
 var maybeWrapAsError = util.maybeWrapAsError;
@@ -16014,7 +11057,7 @@ PromiseResolver.prototype.toJSON = function () {
 
 module.exports = PromiseResolver;
 
-},{"./errors.js":73,"./es5.js":74,"./util.js":98}],86:[function(require,module,exports){
+},{"./errors.js":67,"./es5.js":68,"./util.js":92}],80:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var THIS = {};
@@ -16323,7 +11366,7 @@ Promise.promisifyAll = function (target, options) {
 };
 
 
-},{"./errors":73,"./promise_resolver.js":85,"./util.js":98}],87:[function(require,module,exports){
+},{"./errors":67,"./promise_resolver.js":79,"./util.js":92}],81:[function(require,module,exports){
 "use strict";
 module.exports = function(
     Promise, PromiseArray, tryConvertToPromise, apiRejection) {
@@ -16404,7 +11447,7 @@ Promise.props = function (promises) {
 };
 };
 
-},{"./es5.js":74,"./util.js":98}],88:[function(require,module,exports){
+},{"./es5.js":68,"./util.js":92}],82:[function(require,module,exports){
 "use strict";
 function arrayMove(src, srcIndex, dst, dstIndex, len) {
     for (var j = 0; j < len; ++j) {
@@ -16496,7 +11539,7 @@ Queue.prototype._resizeTo = function (capacity) {
 
 module.exports = Queue;
 
-},{}],89:[function(require,module,exports){
+},{}],83:[function(require,module,exports){
 "use strict";
 module.exports = function(
     Promise, INTERNAL, tryConvertToPromise, apiRejection) {
@@ -16545,7 +11588,7 @@ Promise.prototype.race = function () {
 
 };
 
-},{"./util.js":98}],90:[function(require,module,exports){
+},{"./util.js":92}],84:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           PromiseArray,
@@ -16695,7 +11738,7 @@ Promise.reduce = function (promises, fn, initialValue, _each) {
 };
 };
 
-},{"./async.js":63,"./util.js":98}],91:[function(require,module,exports){
+},{"./async.js":57,"./util.js":92}],85:[function(require,module,exports){
 (function (process,global){
 "use strict";
 var schedule;
@@ -16734,7 +11777,7 @@ if (util.isNode && typeof MutationObserver === "undefined") {
 module.exports = schedule;
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./util":98,"_process":437}],92:[function(require,module,exports){
+},{"./util":92,"_process":431}],86:[function(require,module,exports){
 "use strict";
 module.exports =
     function(Promise, PromiseArray) {
@@ -16776,7 +11819,7 @@ Promise.prototype.settle = function () {
 };
 };
 
-},{"./util.js":98}],93:[function(require,module,exports){
+},{"./util.js":92}],87:[function(require,module,exports){
 "use strict";
 module.exports =
 function(Promise, PromiseArray, apiRejection) {
@@ -16903,7 +11946,7 @@ Promise.prototype.some = function (howMany) {
 Promise._SomePromiseArray = SomePromiseArray;
 };
 
-},{"./errors.js":73,"./util.js":98}],94:[function(require,module,exports){
+},{"./errors.js":67,"./util.js":92}],88:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 function PromiseInspection(promise) {
@@ -16999,7 +12042,7 @@ Promise.prototype.reason = function() {
 Promise.PromiseInspection = PromiseInspection;
 };
 
-},{}],95:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var util = require("./util.js");
@@ -17085,7 +12128,7 @@ function doThenable(x, then, context) {
 return tryConvertToPromise;
 };
 
-},{"./util.js":98}],96:[function(require,module,exports){
+},{"./util.js":92}],90:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var util = require("./util.js");
@@ -17151,7 +12194,7 @@ Promise.prototype.timeout = function (ms, message) {
 
 };
 
-},{"./util.js":98}],97:[function(require,module,exports){
+},{"./util.js":92}],91:[function(require,module,exports){
 "use strict";
 module.exports = function (Promise, apiRejection, tryConvertToPromise,
     createContext) {
@@ -17366,7 +12409,7 @@ module.exports = function (Promise, apiRejection, tryConvertToPromise,
 
 };
 
-},{"./errors.js":73,"./util.js":98}],98:[function(require,module,exports){
+},{"./errors.js":67,"./util.js":92}],92:[function(require,module,exports){
 (function (process){
 "use strict";
 var es5 = require("./es5.js");
@@ -17691,7 +12734,7 @@ try {throw new Error(); } catch (e) {ret.lastLineError = e;}
 module.exports = ret;
 
 }).call(this,require('_process'))
-},{"./es5.js":74,"_process":437}],99:[function(require,module,exports){
+},{"./es5.js":68,"_process":431}],93:[function(require,module,exports){
 function Caseless (dict) {
   this.dict = dict || {}
 }
@@ -17760,7 +12803,7 @@ module.exports.httpify = function (resp, headers) {
   return c
 }
 
-},{}],100:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 (function (process){
 'use strict';
 var escapeStringRegexp = require('escape-string-regexp');
@@ -17880,7 +12923,7 @@ module.exports.stripColor = stripAnsi;
 module.exports.supportsColor = supportsColor;
 
 }).call(this,require('_process'))
-},{"_process":437,"ansi-styles":49,"escape-string-regexp":110,"has-ansi":138,"strip-ansi":282,"supports-color":283}],101:[function(require,module,exports){
+},{"_process":431,"ansi-styles":43,"escape-string-regexp":104,"has-ansi":132,"strip-ansi":276,"supports-color":277}],95:[function(require,module,exports){
 
 /**
  * slice() reference.
@@ -18119,7 +13162,7 @@ function isObject(val) {
   return Object == val.constructor;
 }
 
-},{}],102:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 (function (Buffer){
 var util = require('util');
 var Stream = require('stream').Stream;
@@ -18312,7 +13355,7 @@ CombinedStream.prototype._emitError = function(err) {
 };
 
 }).call(this,{"isBuffer":require("../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":407,"./defer.js":103,"delayed-stream":105,"stream":473,"util":485}],103:[function(require,module,exports){
+},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":401,"./defer.js":97,"delayed-stream":99,"stream":467,"util":479}],97:[function(require,module,exports){
 (function (process){
 module.exports = defer;
 
@@ -18342,7 +13385,7 @@ function defer(fn)
 }
 
 }).call(this,require('_process'))
-},{"_process":437}],104:[function(require,module,exports){
+},{"_process":431}],98:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -18453,7 +13496,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":407}],105:[function(require,module,exports){
+},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":401}],99:[function(require,module,exports){
 var Stream = require('stream').Stream;
 var util = require('util');
 
@@ -18562,7 +13605,7 @@ DelayedStream.prototype._checkIfMaxDataSizeExceeded = function() {
   this.emit('error', new Error(message));
 };
 
-},{"stream":473,"util":485}],106:[function(require,module,exports){
+},{"stream":467,"util":479}],100:[function(require,module,exports){
 (function (Buffer){
 var crypto = require("crypto");
 var BigInteger = require("jsbn").BigInteger;
@@ -18623,7 +13666,7 @@ exports.ECKey = function(curve, key, isPublic)
 
 
 }).call(this,require("buffer").Buffer)
-},{"./lib/ec.js":107,"./lib/sec.js":108,"buffer":350,"crypto":360,"jsbn":147}],107:[function(require,module,exports){
+},{"./lib/ec.js":101,"./lib/sec.js":102,"buffer":344,"crypto":354,"jsbn":141}],101:[function(require,module,exports){
 // Basic Javascript Elliptic Curve implementation
 // Ported loosely from BouncyCastle's Java EC code
 // Only Fp curves implemented for now
@@ -19186,7 +14229,7 @@ var exports = {
 
 module.exports = exports
 
-},{"jsbn":147}],108:[function(require,module,exports){
+},{"jsbn":141}],102:[function(require,module,exports){
 // Named EC curves
 
 // Requires ec.js, jsbn.js, and jsbn2.js
@@ -19358,7 +14401,7 @@ module.exports = {
   "secp256r1":secp256r1
 }
 
-},{"./ec.js":107,"jsbn":147}],109:[function(require,module,exports){
+},{"./ec.js":101,"jsbn":141}],103:[function(require,module,exports){
 (function (process,global){
 /*!
  * @overview es6-promise - a tiny implementation of Promises/A+.
@@ -20334,7 +15377,7 @@ module.exports = {
 
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":437}],110:[function(require,module,exports){
+},{"_process":431}],104:[function(require,module,exports){
 'use strict';
 
 var matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
@@ -20347,7 +15390,7 @@ module.exports = function (str) {
 	return str.replace(matchOperatorsRe, '\\$&');
 };
 
-},{}],111:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 'use strict';
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -20435,7 +15478,7 @@ module.exports = function extend() {
 	return target;
 };
 
-},{}],112:[function(require,module,exports){
+},{}],106:[function(require,module,exports){
 (function (process){
 /*
  * extsprintf.js: extended POSIX-style sprintf
@@ -20622,7 +15665,7 @@ function dumpException(ex)
 }
 
 }).call(this,require('_process'))
-},{"_process":437,"assert":315,"util":485}],113:[function(require,module,exports){
+},{"_process":431,"assert":309,"util":479}],107:[function(require,module,exports){
 'use strict';
 
 module.exports = function equal(a, b) {
@@ -20667,7 +15710,7 @@ module.exports = function equal(a, b) {
   return false;
 };
 
-},{}],114:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 'use strict';
 
 module.exports = function (data, opts) {
@@ -20728,7 +15771,7 @@ module.exports = function (data, opts) {
     })(data);
 };
 
-},{}],115:[function(require,module,exports){
+},{}],109:[function(require,module,exports){
 module.exports = ForeverAgent
 ForeverAgent.SSL = ForeverAgentSSL
 
@@ -20868,11 +15911,11 @@ function createConnectionSSL (port, host, options) {
   return tls.connect(options);
 }
 
-},{"http":474,"https":403,"net":300,"tls":300,"util":485}],116:[function(require,module,exports){
+},{"http":468,"https":397,"net":294,"tls":294,"util":479}],110:[function(require,module,exports){
 /* eslint-env browser */
 module.exports = typeof self == 'object' ? self.FormData : window.FormData;
 
-},{}],117:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 module.exports={
   "$id": "afterRequest.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -20904,7 +15947,7 @@ module.exports={
   }
 }
 
-},{}],118:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 module.exports={
   "$id": "beforeRequest.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -20936,7 +15979,7 @@ module.exports={
   }
 }
 
-},{}],119:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 module.exports={
   "$id": "browser.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -20958,7 +16001,7 @@ module.exports={
   }
 }
 
-},{}],120:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 module.exports={
   "$id": "cache.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -20981,7 +16024,7 @@ module.exports={
   }
 }
 
-},{}],121:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 module.exports={
   "$id": "content.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21012,7 +16055,7 @@ module.exports={
   }
 }
 
-},{}],122:[function(require,module,exports){
+},{}],116:[function(require,module,exports){
 module.exports={
   "$id": "cookie.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21050,7 +16093,7 @@ module.exports={
   }
 }
 
-},{}],123:[function(require,module,exports){
+},{}],117:[function(require,module,exports){
 module.exports={
   "$id": "creator.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21072,7 +16115,7 @@ module.exports={
   }
 }
 
-},{}],124:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 module.exports={
   "$id": "entry.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21127,7 +16170,7 @@ module.exports={
   }
 }
 
-},{}],125:[function(require,module,exports){
+},{}],119:[function(require,module,exports){
 module.exports={
   "$id": "har.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21142,7 +16185,7 @@ module.exports={
   }
 }
 
-},{}],126:[function(require,module,exports){
+},{}],120:[function(require,module,exports){
 module.exports={
   "$id": "header.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21164,7 +16207,7 @@ module.exports={
   }
 }
 
-},{}],127:[function(require,module,exports){
+},{}],121:[function(require,module,exports){
 'use strict'
 
 module.exports = {
@@ -21188,7 +16231,7 @@ module.exports = {
   timings: require('./timings.json')
 }
 
-},{"./afterRequest.json":117,"./beforeRequest.json":118,"./browser.json":119,"./cache.json":120,"./content.json":121,"./cookie.json":122,"./creator.json":123,"./entry.json":124,"./har.json":125,"./header.json":126,"./log.json":128,"./page.json":129,"./pageTimings.json":130,"./postData.json":131,"./query.json":132,"./request.json":133,"./response.json":134,"./timings.json":135}],128:[function(require,module,exports){
+},{"./afterRequest.json":111,"./beforeRequest.json":112,"./browser.json":113,"./cache.json":114,"./content.json":115,"./cookie.json":116,"./creator.json":117,"./entry.json":118,"./har.json":119,"./header.json":120,"./log.json":122,"./page.json":123,"./pageTimings.json":124,"./postData.json":125,"./query.json":126,"./request.json":127,"./response.json":128,"./timings.json":129}],122:[function(require,module,exports){
 module.exports={
   "$id": "log.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21226,7 +16269,7 @@ module.exports={
   }
 }
 
-},{}],129:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 module.exports={
   "$id": "page.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21260,7 +16303,7 @@ module.exports={
   }
 }
 
-},{}],130:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 module.exports={
   "$id": "pageTimings.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21280,7 +16323,7 @@ module.exports={
   }
 }
 
-},{}],131:[function(require,module,exports){
+},{}],125:[function(require,module,exports){
 module.exports={
   "$id": "postData.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21325,7 +16368,7 @@ module.exports={
   }
 }
 
-},{}],132:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 module.exports={
   "$id": "query.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21347,7 +16390,7 @@ module.exports={
   }
 }
 
-},{}],133:[function(require,module,exports){
+},{}],127:[function(require,module,exports){
 module.exports={
   "$id": "request.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21406,7 +16449,7 @@ module.exports={
   }
 }
 
-},{}],134:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 module.exports={
   "$id": "response.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21462,7 +16505,7 @@ module.exports={
   }
 }
 
-},{}],135:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 module.exports={
   "$id": "timings.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -21506,7 +16549,7 @@ module.exports={
   }
 }
 
-},{}],136:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 function HARError (errors) {
   var message = 'validation failed'
 
@@ -21525,7 +16568,7 @@ HARError.prototype = Error.prototype
 
 module.exports = HARError
 
-},{}],137:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 var Ajv = require('ajv')
 var HARError = require('./error')
 var schemas = require('har-schema')
@@ -21622,13 +16665,13 @@ exports.timings = function (data) {
   return validate('timings', data)
 }
 
-},{"./error":136,"ajv":9,"har-schema":127}],138:[function(require,module,exports){
+},{"./error":130,"ajv":3,"har-schema":121}],132:[function(require,module,exports){
 'use strict';
 var ansiRegex = require('ansi-regex');
 var re = new RegExp(ansiRegex().source); // remove the `g` flag
 module.exports = re.test.bind(re);
 
-},{"ansi-regex":48}],139:[function(require,module,exports){
+},{"ansi-regex":42}],133:[function(require,module,exports){
 'use strict';
 
 /*
@@ -22423,7 +17466,7 @@ if (typeof module !== 'undefined' && module.exports) {
 /* eslint-enable */
 // $lab:coverage:on$
 
-},{}],140:[function(require,module,exports){
+},{}],134:[function(require,module,exports){
 // Copyright 2015 Joyent, Inc.
 
 var parser = require('./parser');
@@ -22454,7 +17497,7 @@ module.exports = {
   verifyHMAC: verify.verifyHMAC
 };
 
-},{"./parser":141,"./signer":142,"./utils":143,"./verify":144}],141:[function(require,module,exports){
+},{"./parser":135,"./signer":136,"./utils":137,"./verify":138}],135:[function(require,module,exports){
 // Copyright 2012 Joyent, Inc.  All rights reserved.
 
 var assert = require('assert-plus');
@@ -22771,7 +17814,7 @@ module.exports = {
 
 };
 
-},{"./utils":143,"assert-plus":57,"util":485}],142:[function(require,module,exports){
+},{"./utils":137,"assert-plus":51,"util":479}],136:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2012 Joyent, Inc.  All rights reserved.
 
@@ -23176,7 +18219,7 @@ module.exports = {
 };
 
 }).call(this,{"isBuffer":require("../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":407,"./utils":143,"assert-plus":57,"crypto":360,"http":474,"jsprim":153,"sshpk":275,"util":485}],143:[function(require,module,exports){
+},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":401,"./utils":137,"assert-plus":51,"crypto":354,"http":468,"jsprim":147,"sshpk":269,"util":479}],137:[function(require,module,exports){
 // Copyright 2012 Joyent, Inc.  All rights reserved.
 
 var assert = require('assert-plus');
@@ -23290,7 +18333,7 @@ module.exports = {
   }
 };
 
-},{"assert-plus":57,"sshpk":275,"util":485}],144:[function(require,module,exports){
+},{"assert-plus":51,"sshpk":269,"util":479}],138:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -23382,7 +18425,7 @@ module.exports = {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./utils":143,"assert-plus":57,"buffer":350,"crypto":360,"sshpk":275}],145:[function(require,module,exports){
+},{"./utils":137,"assert-plus":51,"buffer":344,"crypto":354,"sshpk":269}],139:[function(require,module,exports){
 module.exports      = isTypedArray
 isTypedArray.strict = isStrictTypedArray
 isTypedArray.loose  = isLooseTypedArray
@@ -23425,7 +18468,7 @@ function isLooseTypedArray(arr) {
   return names[toString.call(arr)]
 }
 
-},{}],146:[function(require,module,exports){
+},{}],140:[function(require,module,exports){
 var stream = require('stream')
 
 
@@ -23454,7 +18497,7 @@ module.exports.isReadable = isReadable
 module.exports.isWritable = isWritable
 module.exports.isDuplex   = isDuplex
 
-},{"stream":473}],147:[function(require,module,exports){
+},{"stream":467}],141:[function(require,module,exports){
 (function(){
 
     // Copyright (c) 2005  Tom Wu
@@ -24813,7 +19856,7 @@ module.exports.isDuplex   = isDuplex
 
 }).call(this);
 
-},{}],148:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 'use strict';
 
 var traverse = module.exports = function (schema, opts, cb) {
@@ -24896,7 +19939,7 @@ function escapeJsonPtr(str) {
   return str.replace(/~/g, '~0').replace(/\//g, '~1');
 }
 
-},{}],149:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 /**
  * JSONSchema Validator - Validates JavaScript objects using JSON Schemas
  *	(http://www.json.com/json-schema-proposal/)
@@ -25171,7 +20214,7 @@ exports.mustBeValid = function(result){
 return exports;
 }));
 
-},{}],150:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 exports = module.exports = stringify
 exports.getSerialize = serializer
 
@@ -25200,9 +20243,9 @@ function serializer(replacer, cycleReplacer) {
   }
 }
 
-},{}],151:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 // Ignore module for browserify (see package.json)
-},{}],152:[function(require,module,exports){
+},{}],146:[function(require,module,exports){
 (function (process,global,__dirname){
 /**
  * A JavaScript implementation of the JSON-LD API.
@@ -33397,7 +28440,7 @@ return factory;
 })();
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},"/node_modules/jsonld/js")
-},{"_process":437,"crypto":151,"es6-promise":109,"http":151,"jsonld-request":151,"pkginfo":151,"request":151,"util":151,"xmldom":151}],153:[function(require,module,exports){
+},{"_process":431,"crypto":145,"es6-promise":103,"http":145,"jsonld-request":145,"pkginfo":145,"request":145,"util":145,"xmldom":145}],147:[function(require,module,exports){
 /*
  * lib/jsprim.js: utilities for primitive JavaScript types
  */
@@ -34134,7 +29177,7 @@ function mergeObjects(provided, overrides, defaults)
 	return (rv);
 }
 
-},{"assert-plus":57,"extsprintf":112,"json-schema":149,"util":485,"verror":298}],154:[function(require,module,exports){
+},{"assert-plus":51,"extsprintf":106,"json-schema":143,"util":479,"verror":292}],148:[function(require,module,exports){
 var arrayEach = require('../internal/arrayEach'),
     baseEach = require('../internal/baseEach'),
     createForEach = require('../internal/createForEach');
@@ -34173,7 +29216,7 @@ var forEach = createForEach(arrayEach, baseEach);
 
 module.exports = forEach;
 
-},{"../internal/arrayEach":156,"../internal/baseEach":160,"../internal/createForEach":169}],155:[function(require,module,exports){
+},{"../internal/arrayEach":150,"../internal/baseEach":154,"../internal/createForEach":163}],149:[function(require,module,exports){
 /** Used as the `TypeError` message for "Functions" methods. */
 var FUNC_ERROR_TEXT = 'Expected a function';
 
@@ -34233,7 +29276,7 @@ function restParam(func, start) {
 
 module.exports = restParam;
 
-},{}],156:[function(require,module,exports){
+},{}],150:[function(require,module,exports){
 /**
  * A specialized version of `_.forEach` for arrays without support for callback
  * shorthands and `this` binding.
@@ -34257,7 +29300,7 @@ function arrayEach(array, iteratee) {
 
 module.exports = arrayEach;
 
-},{}],157:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 var keys = require('../object/keys');
 
 /**
@@ -34291,7 +29334,7 @@ function assignWith(object, source, customizer) {
 
 module.exports = assignWith;
 
-},{"../object/keys":188}],158:[function(require,module,exports){
+},{"../object/keys":182}],152:[function(require,module,exports){
 var baseCopy = require('./baseCopy'),
     keys = require('../object/keys');
 
@@ -34312,7 +29355,7 @@ function baseAssign(object, source) {
 
 module.exports = baseAssign;
 
-},{"../object/keys":188,"./baseCopy":159}],159:[function(require,module,exports){
+},{"../object/keys":182,"./baseCopy":153}],153:[function(require,module,exports){
 /**
  * Copies properties of `source` to `object`.
  *
@@ -34337,7 +29380,7 @@ function baseCopy(source, props, object) {
 
 module.exports = baseCopy;
 
-},{}],160:[function(require,module,exports){
+},{}],154:[function(require,module,exports){
 var baseForOwn = require('./baseForOwn'),
     createBaseEach = require('./createBaseEach');
 
@@ -34354,7 +29397,7 @@ var baseEach = createBaseEach(baseForOwn);
 
 module.exports = baseEach;
 
-},{"./baseForOwn":163,"./createBaseEach":167}],161:[function(require,module,exports){
+},{"./baseForOwn":157,"./createBaseEach":161}],155:[function(require,module,exports){
 var createBaseFor = require('./createBaseFor');
 
 /**
@@ -34373,7 +29416,7 @@ var baseFor = createBaseFor();
 
 module.exports = baseFor;
 
-},{"./createBaseFor":168}],162:[function(require,module,exports){
+},{"./createBaseFor":162}],156:[function(require,module,exports){
 var baseFor = require('./baseFor'),
     keysIn = require('../object/keysIn');
 
@@ -34392,7 +29435,7 @@ function baseForIn(object, iteratee) {
 
 module.exports = baseForIn;
 
-},{"../object/keysIn":189,"./baseFor":161}],163:[function(require,module,exports){
+},{"../object/keysIn":183,"./baseFor":155}],157:[function(require,module,exports){
 var baseFor = require('./baseFor'),
     keys = require('../object/keys');
 
@@ -34411,7 +29454,7 @@ function baseForOwn(object, iteratee) {
 
 module.exports = baseForOwn;
 
-},{"../object/keys":188,"./baseFor":161}],164:[function(require,module,exports){
+},{"../object/keys":182,"./baseFor":155}],158:[function(require,module,exports){
 /**
  * The base implementation of `_.property` without support for deep paths.
  *
@@ -34427,7 +29470,7 @@ function baseProperty(key) {
 
 module.exports = baseProperty;
 
-},{}],165:[function(require,module,exports){
+},{}],159:[function(require,module,exports){
 var identity = require('../utility/identity');
 
 /**
@@ -34468,7 +29511,7 @@ function bindCallback(func, thisArg, argCount) {
 
 module.exports = bindCallback;
 
-},{"../utility/identity":190}],166:[function(require,module,exports){
+},{"../utility/identity":184}],160:[function(require,module,exports){
 var bindCallback = require('./bindCallback'),
     isIterateeCall = require('./isIterateeCall'),
     restParam = require('../function/restParam');
@@ -34511,7 +29554,7 @@ function createAssigner(assigner) {
 
 module.exports = createAssigner;
 
-},{"../function/restParam":155,"./bindCallback":165,"./isIterateeCall":174}],167:[function(require,module,exports){
+},{"../function/restParam":149,"./bindCallback":159,"./isIterateeCall":168}],161:[function(require,module,exports){
 var getLength = require('./getLength'),
     isLength = require('./isLength'),
     toObject = require('./toObject');
@@ -34544,7 +29587,7 @@ function createBaseEach(eachFunc, fromRight) {
 
 module.exports = createBaseEach;
 
-},{"./getLength":170,"./isLength":175,"./toObject":178}],168:[function(require,module,exports){
+},{"./getLength":164,"./isLength":169,"./toObject":172}],162:[function(require,module,exports){
 var toObject = require('./toObject');
 
 /**
@@ -34573,7 +29616,7 @@ function createBaseFor(fromRight) {
 
 module.exports = createBaseFor;
 
-},{"./toObject":178}],169:[function(require,module,exports){
+},{"./toObject":172}],163:[function(require,module,exports){
 var bindCallback = require('./bindCallback'),
     isArray = require('../lang/isArray');
 
@@ -34595,7 +29638,7 @@ function createForEach(arrayFunc, eachFunc) {
 
 module.exports = createForEach;
 
-},{"../lang/isArray":180,"./bindCallback":165}],170:[function(require,module,exports){
+},{"../lang/isArray":174,"./bindCallback":159}],164:[function(require,module,exports){
 var baseProperty = require('./baseProperty');
 
 /**
@@ -34612,7 +29655,7 @@ var getLength = baseProperty('length');
 
 module.exports = getLength;
 
-},{"./baseProperty":164}],171:[function(require,module,exports){
+},{"./baseProperty":158}],165:[function(require,module,exports){
 var isNative = require('../lang/isNative');
 
 /**
@@ -34630,7 +29673,7 @@ function getNative(object, key) {
 
 module.exports = getNative;
 
-},{"../lang/isNative":182}],172:[function(require,module,exports){
+},{"../lang/isNative":176}],166:[function(require,module,exports){
 var getLength = require('./getLength'),
     isLength = require('./isLength');
 
@@ -34647,7 +29690,7 @@ function isArrayLike(value) {
 
 module.exports = isArrayLike;
 
-},{"./getLength":170,"./isLength":175}],173:[function(require,module,exports){
+},{"./getLength":164,"./isLength":169}],167:[function(require,module,exports){
 /** Used to detect unsigned integer values. */
 var reIsUint = /^\d+$/;
 
@@ -34673,7 +29716,7 @@ function isIndex(value, length) {
 
 module.exports = isIndex;
 
-},{}],174:[function(require,module,exports){
+},{}],168:[function(require,module,exports){
 var isArrayLike = require('./isArrayLike'),
     isIndex = require('./isIndex'),
     isObject = require('../lang/isObject');
@@ -34703,7 +29746,7 @@ function isIterateeCall(value, index, object) {
 
 module.exports = isIterateeCall;
 
-},{"../lang/isObject":183,"./isArrayLike":172,"./isIndex":173}],175:[function(require,module,exports){
+},{"../lang/isObject":177,"./isArrayLike":166,"./isIndex":167}],169:[function(require,module,exports){
 /**
  * Used as the [maximum length](http://ecma-international.org/ecma-262/6.0/#sec-number.max_safe_integer)
  * of an array-like value.
@@ -34725,7 +29768,7 @@ function isLength(value) {
 
 module.exports = isLength;
 
-},{}],176:[function(require,module,exports){
+},{}],170:[function(require,module,exports){
 /**
  * Checks if `value` is object-like.
  *
@@ -34739,7 +29782,7 @@ function isObjectLike(value) {
 
 module.exports = isObjectLike;
 
-},{}],177:[function(require,module,exports){
+},{}],171:[function(require,module,exports){
 var isArguments = require('../lang/isArguments'),
     isArray = require('../lang/isArray'),
     isIndex = require('./isIndex'),
@@ -34782,7 +29825,7 @@ function shimKeys(object) {
 
 module.exports = shimKeys;
 
-},{"../lang/isArguments":179,"../lang/isArray":180,"../object/keysIn":189,"./isIndex":173,"./isLength":175}],178:[function(require,module,exports){
+},{"../lang/isArguments":173,"../lang/isArray":174,"../object/keysIn":183,"./isIndex":167,"./isLength":169}],172:[function(require,module,exports){
 var isObject = require('../lang/isObject');
 
 /**
@@ -34798,7 +29841,7 @@ function toObject(value) {
 
 module.exports = toObject;
 
-},{"../lang/isObject":183}],179:[function(require,module,exports){
+},{"../lang/isObject":177}],173:[function(require,module,exports){
 var isArrayLike = require('../internal/isArrayLike'),
     isObjectLike = require('../internal/isObjectLike');
 
@@ -34834,7 +29877,7 @@ function isArguments(value) {
 
 module.exports = isArguments;
 
-},{"../internal/isArrayLike":172,"../internal/isObjectLike":176}],180:[function(require,module,exports){
+},{"../internal/isArrayLike":166,"../internal/isObjectLike":170}],174:[function(require,module,exports){
 var getNative = require('../internal/getNative'),
     isLength = require('../internal/isLength'),
     isObjectLike = require('../internal/isObjectLike');
@@ -34876,7 +29919,7 @@ var isArray = nativeIsArray || function(value) {
 
 module.exports = isArray;
 
-},{"../internal/getNative":171,"../internal/isLength":175,"../internal/isObjectLike":176}],181:[function(require,module,exports){
+},{"../internal/getNative":165,"../internal/isLength":169,"../internal/isObjectLike":170}],175:[function(require,module,exports){
 var isObject = require('./isObject');
 
 /** `Object#toString` result references. */
@@ -34916,7 +29959,7 @@ function isFunction(value) {
 
 module.exports = isFunction;
 
-},{"./isObject":183}],182:[function(require,module,exports){
+},{"./isObject":177}],176:[function(require,module,exports){
 var isFunction = require('./isFunction'),
     isObjectLike = require('../internal/isObjectLike');
 
@@ -34966,7 +30009,7 @@ function isNative(value) {
 
 module.exports = isNative;
 
-},{"../internal/isObjectLike":176,"./isFunction":181}],183:[function(require,module,exports){
+},{"../internal/isObjectLike":170,"./isFunction":175}],177:[function(require,module,exports){
 /**
  * Checks if `value` is the [language type](https://es5.github.io/#x8) of `Object`.
  * (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
@@ -34996,7 +30039,7 @@ function isObject(value) {
 
 module.exports = isObject;
 
-},{}],184:[function(require,module,exports){
+},{}],178:[function(require,module,exports){
 var baseForIn = require('../internal/baseForIn'),
     isArguments = require('./isArguments'),
     isObjectLike = require('../internal/isObjectLike');
@@ -35069,7 +30112,7 @@ function isPlainObject(value) {
 
 module.exports = isPlainObject;
 
-},{"../internal/baseForIn":162,"../internal/isObjectLike":176,"./isArguments":179}],185:[function(require,module,exports){
+},{"../internal/baseForIn":156,"../internal/isObjectLike":170,"./isArguments":173}],179:[function(require,module,exports){
 var isObjectLike = require('../internal/isObjectLike');
 
 /** `Object#toString` result references. */
@@ -35106,7 +30149,7 @@ function isString(value) {
 
 module.exports = isString;
 
-},{"../internal/isObjectLike":176}],186:[function(require,module,exports){
+},{"../internal/isObjectLike":170}],180:[function(require,module,exports){
 /**
  * Checks if `value` is `undefined`.
  *
@@ -35129,7 +30172,7 @@ function isUndefined(value) {
 
 module.exports = isUndefined;
 
-},{}],187:[function(require,module,exports){
+},{}],181:[function(require,module,exports){
 var assignWith = require('../internal/assignWith'),
     baseAssign = require('../internal/baseAssign'),
     createAssigner = require('../internal/createAssigner');
@@ -35174,7 +30217,7 @@ var assign = createAssigner(function(object, source, customizer) {
 
 module.exports = assign;
 
-},{"../internal/assignWith":157,"../internal/baseAssign":158,"../internal/createAssigner":166}],188:[function(require,module,exports){
+},{"../internal/assignWith":151,"../internal/baseAssign":152,"../internal/createAssigner":160}],182:[function(require,module,exports){
 var getNative = require('../internal/getNative'),
     isArrayLike = require('../internal/isArrayLike'),
     isObject = require('../lang/isObject'),
@@ -35221,7 +30264,7 @@ var keys = !nativeKeys ? shimKeys : function(object) {
 
 module.exports = keys;
 
-},{"../internal/getNative":171,"../internal/isArrayLike":172,"../internal/shimKeys":177,"../lang/isObject":183}],189:[function(require,module,exports){
+},{"../internal/getNative":165,"../internal/isArrayLike":166,"../internal/shimKeys":171,"../lang/isObject":177}],183:[function(require,module,exports){
 var isArguments = require('../lang/isArguments'),
     isArray = require('../lang/isArray'),
     isIndex = require('../internal/isIndex'),
@@ -35287,7 +30330,7 @@ function keysIn(object) {
 
 module.exports = keysIn;
 
-},{"../internal/isIndex":173,"../internal/isLength":175,"../lang/isArguments":179,"../lang/isArray":180,"../lang/isObject":183}],190:[function(require,module,exports){
+},{"../internal/isIndex":167,"../internal/isLength":169,"../lang/isArguments":173,"../lang/isArray":174,"../lang/isObject":177}],184:[function(require,module,exports){
 /**
  * This method returns the first argument provided to it.
  *
@@ -35309,7 +30352,7 @@ function identity(value) {
 
 module.exports = identity;
 
-},{}],191:[function(require,module,exports){
+},{}],185:[function(require,module,exports){
 // Replace local require by a lazy loader
 var globalRequire = require;
 require = function () {};
@@ -35337,7 +30380,7 @@ Object.keys(exports).forEach(function (submodule) {
   });
 });
 
-},{"./lib/N3Lexer":192,"./lib/N3Parser":193,"./lib/N3Store":194,"./lib/N3StreamParser":195,"./lib/N3StreamWriter":196,"./lib/N3Util":197,"./lib/N3Writer":198}],192:[function(require,module,exports){
+},{"./lib/N3Lexer":186,"./lib/N3Parser":187,"./lib/N3Store":188,"./lib/N3StreamParser":189,"./lib/N3StreamWriter":190,"./lib/N3Util":191,"./lib/N3Writer":192}],186:[function(require,module,exports){
 // **N3Lexer** tokenizes N3 documents.
 var fromCharCode = String.fromCharCode;
 var immediately = typeof setImmediate === 'function' ? setImmediate :
@@ -35758,7 +30801,7 @@ N3Lexer.prototype = {
 // ## Exports
 module.exports = N3Lexer;
 
-},{}],193:[function(require,module,exports){
+},{}],187:[function(require,module,exports){
 // **N3Parser** parses N3 documents.
 var N3Lexer = require('./N3Lexer');
 
@@ -36675,7 +31718,7 @@ function noop() {}
 // ## Exports
 module.exports = N3Parser;
 
-},{"./N3Lexer":192}],194:[function(require,module,exports){
+},{"./N3Lexer":186}],188:[function(require,module,exports){
 // **N3Store** objects store N3 triples by graph in memory.
 
 var expandPrefixedName = require('./N3Util').expandPrefixedName;
@@ -37463,7 +32506,7 @@ function isString(s) {
 // ## Exports
 module.exports = N3Store;
 
-},{"./N3Util":197}],195:[function(require,module,exports){
+},{"./N3Util":191}],189:[function(require,module,exports){
 // **N3StreamParser** parses an N3 stream into a triple stream.
 var Transform = require('stream').Transform,
     util = require('util'),
@@ -37503,7 +32546,7 @@ util.inherits(N3StreamParser, Transform);
 // ## Exports
 module.exports = N3StreamParser;
 
-},{"./N3Parser.js":193,"stream":473,"util":485}],196:[function(require,module,exports){
+},{"./N3Parser.js":187,"stream":467,"util":479}],190:[function(require,module,exports){
 // **N3StreamWriter** serializes a triple stream into an N3 stream.
 var Transform = require('stream').Transform,
     util = require('util'),
@@ -37534,7 +32577,7 @@ util.inherits(N3StreamWriter, Transform);
 // ## Exports
 module.exports = N3StreamWriter;
 
-},{"./N3Writer.js":198,"stream":473,"util":485}],197:[function(require,module,exports){
+},{"./N3Writer.js":192,"stream":467,"util":479}],191:[function(require,module,exports){
 // **N3Util** provides N3 utility functions.
 
 var Xsd = 'http://www.w3.org/2001/XMLSchema#';
@@ -37683,7 +32726,7 @@ var N3Util = {
 // ## Exports
 module.exports = N3Util;
 
-},{}],198:[function(require,module,exports){
+},{}],192:[function(require,module,exports){
 // **N3Writer** writes N3 documents.
 
 // Matches a literal as represented in memory by the N3 library
@@ -38022,7 +33065,7 @@ function characterReplacer(character) {
 // ## Exports
 module.exports = N3Writer;
 
-},{}],199:[function(require,module,exports){
+},{}],193:[function(require,module,exports){
 var crypto = require('crypto')
   , qs = require('querystring')
   ;
@@ -38160,7 +33203,7 @@ exports.rfc3986 = rfc3986
 exports.generateBase = generateBase
 
 
-},{"crypto":360,"querystring":447}],200:[function(require,module,exports){
+},{"crypto":354,"querystring":441}],194:[function(require,module,exports){
 (function (process){
 // Generated by CoffeeScript 1.12.2
 (function() {
@@ -38200,14 +33243,14 @@ exports.generateBase = generateBase
 
 
 }).call(this,require('_process'))
-},{"_process":437}],201:[function(require,module,exports){
+},{"_process":431}],195:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./lib/core.js')
 require('./lib/done.js')
 require('./lib/es6-extensions.js')
 require('./lib/node-extensions.js')
-},{"./lib/core.js":202,"./lib/done.js":203,"./lib/es6-extensions.js":204,"./lib/node-extensions.js":205}],202:[function(require,module,exports){
+},{"./lib/core.js":196,"./lib/done.js":197,"./lib/es6-extensions.js":198,"./lib/node-extensions.js":199}],196:[function(require,module,exports){
 'use strict';
 
 var asap = require('asap')
@@ -38314,7 +33357,7 @@ function doResolve(fn, onFulfilled, onRejected) {
   }
 }
 
-},{"asap":50}],203:[function(require,module,exports){
+},{"asap":44}],197:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js')
@@ -38329,7 +33372,7 @@ Promise.prototype.done = function (onFulfilled, onRejected) {
     })
   })
 }
-},{"./core.js":202,"asap":50}],204:[function(require,module,exports){
+},{"./core.js":196,"asap":44}],198:[function(require,module,exports){
 'use strict';
 
 //This file contains the ES6 extensions to the core Promises/A+ API
@@ -38439,7 +33482,7 @@ Promise.prototype['catch'] = function (onRejected) {
   return this.then(null, onRejected);
 }
 
-},{"./core.js":202,"asap":50}],205:[function(require,module,exports){
+},{"./core.js":196,"asap":44}],199:[function(require,module,exports){
 'use strict';
 
 //This file contains then/promise specific extensions that are only useful for node.js interop
@@ -38504,14 +33547,14 @@ Promise.prototype.nodeify = function (callback, ctx) {
   })
 }
 
-},{"./core.js":202,"asap":50}],206:[function(require,module,exports){
+},{"./core.js":196,"asap":44}],200:[function(require,module,exports){
 module.exports = require("bluebird/js/main/captured_trace")();
 
-},{"bluebird/js/main/captured_trace":67}],207:[function(require,module,exports){
+},{"bluebird/js/main/captured_trace":61}],201:[function(require,module,exports){
 // See: https://github.com/petkaantonov/bluebird#for-library-authors
 module.exports = require("bluebird/js/main/promise")();
 
-},{"bluebird/js/main/promise":83}],208:[function(require,module,exports){
+},{"bluebird/js/main/promise":77}],202:[function(require,module,exports){
 'use strict';
 
 
@@ -38550,7 +33593,7 @@ module.exports = {
     StatusCodeError: StatusCodeError
 };
 
-},{}],209:[function(require,module,exports){
+},{}],203:[function(require,module,exports){
 'use strict';
 
 var Bluebird = require('./bluebird-fresh.js'),
@@ -38723,7 +33766,7 @@ Bluebird.onPossiblyUnhandledRejection(function (reason, promise) {
 
 module.exports = request;
 
-},{"./bluebird-captured-trace-fresh.js":206,"./bluebird-fresh.js":207,"./errors.js":208,"chalk":100,"lodash/collection/forEach":154,"lodash/lang/isFunction":181,"lodash/lang/isPlainObject":184,"lodash/lang/isString":185,"lodash/lang/isUndefined":186,"lodash/object/assign":187,"lodash/object/keys":188,"request":210}],210:[function(require,module,exports){
+},{"./bluebird-captured-trace-fresh.js":200,"./bluebird-fresh.js":201,"./errors.js":202,"chalk":94,"lodash/collection/forEach":148,"lodash/lang/isFunction":175,"lodash/lang/isPlainObject":178,"lodash/lang/isString":179,"lodash/lang/isUndefined":180,"lodash/object/assign":181,"lodash/object/keys":182,"request":204}],204:[function(require,module,exports){
 // Copyright 2010-2012 Mikeal Rogers
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
@@ -38880,7 +33923,7 @@ Object.defineProperty(request, 'debug', {
   }
 })
 
-},{"./lib/cookies":212,"./lib/helpers":215,"./request":229,"extend":111}],211:[function(require,module,exports){
+},{"./lib/cookies":206,"./lib/helpers":209,"./request":223,"extend":105}],205:[function(require,module,exports){
 'use strict'
 
 var caseless = require('caseless')
@@ -39049,7 +34092,7 @@ Auth.prototype.onResponse = function (response) {
 
 exports.Auth = Auth
 
-},{"./helpers":215,"caseless":99,"uuid":293}],212:[function(require,module,exports){
+},{"./helpers":209,"caseless":93,"uuid":287}],206:[function(require,module,exports){
 'use strict'
 
 var tough = require('tough-cookie')
@@ -39089,7 +34132,7 @@ exports.jar = function (store) {
   return new RequestJar(store)
 }
 
-},{"tough-cookie":284}],213:[function(require,module,exports){
+},{"tough-cookie":278}],207:[function(require,module,exports){
 (function (process){
 'use strict'
 
@@ -39172,7 +34215,7 @@ function getProxyFromURI (uri) {
 module.exports = getProxyFromURI
 
 }).call(this,require('_process'))
-},{"_process":437}],214:[function(require,module,exports){
+},{"_process":431}],208:[function(require,module,exports){
 'use strict'
 
 var fs = require('fs')
@@ -39379,7 +34422,7 @@ Har.prototype.options = function (options) {
 
 exports.Har = Har
 
-},{"extend":111,"fs":300,"har-validator":137,"querystring":447}],215:[function(require,module,exports){
+},{"extend":105,"fs":294,"har-validator":131,"querystring":441}],209:[function(require,module,exports){
 (function (process){
 'use strict'
 
@@ -39449,7 +34492,7 @@ exports.version = version
 exports.defer = defer
 
 }).call(this,require('_process'))
-},{"_process":437,"crypto":360,"json-stringify-safe":150,"safe-buffer":230}],216:[function(require,module,exports){
+},{"_process":431,"crypto":354,"json-stringify-safe":144,"safe-buffer":224}],210:[function(require,module,exports){
 'use strict'
 
 var uuid = require('uuid')
@@ -39563,7 +34606,7 @@ Multipart.prototype.onRequest = function (options) {
 
 exports.Multipart = Multipart
 
-},{"combined-stream":102,"isstream":146,"safe-buffer":230,"uuid":293}],217:[function(require,module,exports){
+},{"combined-stream":96,"isstream":140,"safe-buffer":224,"uuid":287}],211:[function(require,module,exports){
 'use strict'
 
 var url = require('url')
@@ -39713,7 +34756,7 @@ OAuth.prototype.onRequest = function (_oauth) {
 
 exports.OAuth = OAuth
 
-},{"caseless":99,"crypto":360,"oauth-sign":199,"qs":225,"safe-buffer":230,"url":480,"uuid":293}],218:[function(require,module,exports){
+},{"caseless":93,"crypto":354,"oauth-sign":193,"qs":219,"safe-buffer":224,"url":474,"uuid":287}],212:[function(require,module,exports){
 'use strict'
 
 var qs = require('qs')
@@ -39765,7 +34808,7 @@ Querystring.prototype.unescape = querystring.unescape
 
 exports.Querystring = Querystring
 
-},{"qs":225,"querystring":447}],219:[function(require,module,exports){
+},{"qs":219,"querystring":441}],213:[function(require,module,exports){
 'use strict'
 
 var url = require('url')
@@ -39921,7 +34964,7 @@ Redirect.prototype.onResponse = function (response) {
 
 exports.Redirect = Redirect
 
-},{"url":480}],220:[function(require,module,exports){
+},{"url":474}],214:[function(require,module,exports){
 'use strict'
 
 var url = require('url')
@@ -40098,7 +35141,7 @@ Tunnel.defaultProxyHeaderWhiteList = defaultProxyHeaderWhiteList
 Tunnel.defaultProxyHeaderExclusiveList = defaultProxyHeaderExclusiveList
 exports.Tunnel = Tunnel
 
-},{"tunnel-agent":291,"url":480}],221:[function(require,module,exports){
+},{"tunnel-agent":285,"url":474}],215:[function(require,module,exports){
 module.exports={
   "application/1d-interleaved-parityfec": {
     "source": "iana"
@@ -47188,7 +42231,7 @@ module.exports={
   }
 }
 
-},{}],222:[function(require,module,exports){
+},{}],216:[function(require,module,exports){
 /*!
  * mime-db
  * Copyright(c) 2014 Jonathan Ong
@@ -47201,7 +42244,7 @@ module.exports={
 
 module.exports = require('./db.json')
 
-},{"./db.json":221}],223:[function(require,module,exports){
+},{"./db.json":215}],217:[function(require,module,exports){
 /*!
  * mime-types
  * Copyright(c) 2014 Jonathan Ong
@@ -47391,7 +42434,7 @@ function populateMaps (extensions, types) {
   })
 }
 
-},{"mime-db":222,"path":430}],224:[function(require,module,exports){
+},{"mime-db":216,"path":424}],218:[function(require,module,exports){
 'use strict';
 
 var replace = String.prototype.replace;
@@ -47411,7 +42454,7 @@ module.exports = {
     RFC3986: 'RFC3986'
 };
 
-},{}],225:[function(require,module,exports){
+},{}],219:[function(require,module,exports){
 'use strict';
 
 var stringify = require('./stringify');
@@ -47424,7 +42467,7 @@ module.exports = {
     stringify: stringify
 };
 
-},{"./formats":224,"./parse":226,"./stringify":227}],226:[function(require,module,exports){
+},{"./formats":218,"./parse":220,"./stringify":221}],220:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -47600,7 +42643,7 @@ module.exports = function (str, opts) {
     return utils.compact(obj);
 };
 
-},{"./utils":228}],227:[function(require,module,exports){
+},{"./utils":222}],221:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -47812,7 +42855,7 @@ module.exports = function (object, opts) {
     return joined.length > 0 ? prefix + joined : '';
 };
 
-},{"./formats":224,"./utils":228}],228:[function(require,module,exports){
+},{"./formats":218,"./utils":222}],222:[function(require,module,exports){
 'use strict';
 
 var has = Object.prototype.hasOwnProperty;
@@ -48016,7 +43059,7 @@ exports.isBuffer = function isBuffer(obj) {
     return !!(obj.constructor && obj.constructor.isBuffer && obj.constructor.isBuffer(obj));
 };
 
-},{}],229:[function(require,module,exports){
+},{}],223:[function(require,module,exports){
 (function (process){
 'use strict'
 
@@ -49572,7 +44615,7 @@ Request.prototype.toJSON = requestToJSON
 module.exports = Request
 
 }).call(this,require('_process'))
-},{"./lib/auth":211,"./lib/cookies":212,"./lib/getProxyFromURI":213,"./lib/har":214,"./lib/helpers":215,"./lib/multipart":216,"./lib/oauth":217,"./lib/querystring":218,"./lib/redirect":219,"./lib/tunnel":220,"_process":437,"aws-sign2":58,"aws4":59,"caseless":99,"extend":111,"forever-agent":115,"form-data":116,"hawk":139,"http":474,"http-signature":140,"https":403,"is-typedarray":145,"isstream":146,"mime-types":223,"performance-now":200,"safe-buffer":230,"stream":473,"stringstream":281,"url":480,"util":485,"zlib":348}],230:[function(require,module,exports){
+},{"./lib/auth":205,"./lib/cookies":206,"./lib/getProxyFromURI":207,"./lib/har":208,"./lib/helpers":209,"./lib/multipart":210,"./lib/oauth":211,"./lib/querystring":212,"./lib/redirect":213,"./lib/tunnel":214,"_process":431,"aws-sign2":52,"aws4":53,"caseless":93,"extend":105,"forever-agent":109,"form-data":110,"hawk":133,"http":468,"http-signature":134,"https":397,"is-typedarray":139,"isstream":140,"mime-types":217,"performance-now":194,"safe-buffer":224,"stream":467,"stringstream":275,"url":474,"util":479,"zlib":342}],224:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -49636,7 +44679,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":350}],231:[function(require,module,exports){
+},{"buffer":344}],225:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.16 */
 /*
@@ -51373,7 +46416,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"./ShExUtil":234,"_process":437,"fs":300,"path":430}],232:[function(require,module,exports){
+},{"./ShExUtil":228,"_process":431,"fs":294,"path":424}],226:[function(require,module,exports){
 (function (process,__dirname){
 // **ShExLoader** return promise to load ShExC, ShExJ and N3 (Turtle) files.
 
@@ -51730,7 +46773,7 @@ if (typeof require !== "undefined" && typeof exports !== "undefined")
   module.exports = LoadPromise;
 
 }).call(this,require('_process'),"/node_modules/shex/lib")
-},{"../lib/ShExParser":233,"../lib/ShExUtil":234,"_process":437,"fs":300,"jsonld":152,"n3":241,"path":430,"promise":249,"request-promise":209}],233:[function(require,module,exports){
+},{"../lib/ShExParser":227,"../lib/ShExUtil":228,"_process":431,"fs":294,"jsonld":146,"n3":235,"path":424,"promise":243,"request-promise":203}],227:[function(require,module,exports){
 var ShExParser = (function () {
 
 // stolen as much as possible from SPARQL.js
@@ -51794,7 +46837,7 @@ return {
 if (typeof require !== 'undefined' && typeof exports !== 'undefined')
   module.exports = ShExParser;
 
-},{"./ShExJison":231,"./ShExUtil":234}],234:[function(require,module,exports){
+},{"./ShExJison":225,"./ShExUtil":228}],228:[function(require,module,exports){
 // **ShExUtil** provides ShEx utility functions
 
 var ShExUtil = (function () {
@@ -53424,7 +48467,7 @@ return AddShExUtil(AddShExUtil);
 if (typeof require !== 'undefined' && typeof exports !== 'undefined')
   module.exports = ShExUtil; // node environment
 
-},{"n3":241,"util":485}],235:[function(require,module,exports){
+},{"n3":235,"util":479}],229:[function(require,module,exports){
 (function (process){
 /* ShExValidator - javascript module to validate a graph with respect to Shape Expressions
  *
@@ -54646,7 +49689,7 @@ if (typeof require !== "undefined" && typeof exports !== "undefined")
   module.exports = ShExValidator;
 
 }).call(this,require('_process'))
-},{"../lib/regex/nfax-val-1err":237,"../lib/regex/threaded-val-nerr":238,"_process":437,"n3":241}],236:[function(require,module,exports){
+},{"../lib/regex/nfax-val-1err":231,"../lib/regex/threaded-val-nerr":232,"_process":431,"n3":235}],230:[function(require,module,exports){
 // **ShExWriter** writes ShEx documents.
 
 var ShExWriter = (function () {
@@ -55239,7 +50282,7 @@ return ShExWriter;
 if (typeof require !== 'undefined' && typeof exports !== 'undefined')
   module.exports = ShExWriter; // node environment
 
-},{"util":485}],237:[function(require,module,exports){
+},{"util":479}],231:[function(require,module,exports){
 var NFAXVal1Err = (function () {
   var N3Util = require("n3").Util;
 
@@ -55771,7 +50814,7 @@ return exports = {
 if (typeof require !== "undefined" && typeof exports !== "undefined")
   module.exports = NFAXVal1Err;
 
-},{"n3":241}],238:[function(require,module,exports){
+},{"n3":235}],232:[function(require,module,exports){
 var ThreadedValNErr = (function () {
 var N3Util = require("n3").Util;
 var UNBOUNDED = -1;
@@ -56141,7 +51184,7 @@ return {
 if (typeof require !== "undefined" && typeof exports !== "undefined")
   module.exports = ThreadedValNErr;
 
-},{"n3":241}],239:[function(require,module,exports){
+},{"n3":235}],233:[function(require,module,exports){
 "use strict";
 
 // rawAsap provides everything we need except exception management.
@@ -56209,7 +51252,7 @@ RawTask.prototype.call = function () {
     }
 };
 
-},{"./raw":240}],240:[function(require,module,exports){
+},{"./raw":234}],234:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -56436,9 +51479,9 @@ rawAsap.makeRequestCallFromTimer = makeRequestCallFromTimer;
 // https://github.com/tildeio/rsvp.js/blob/cddf7232546a9cf858524b75cde6f9edf72620a7/lib/rsvp/asap.js
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],241:[function(require,module,exports){
-arguments[4][191][0].apply(exports,arguments)
-},{"./lib/N3Lexer":242,"./lib/N3Parser":243,"./lib/N3Store":244,"./lib/N3StreamParser":245,"./lib/N3StreamWriter":246,"./lib/N3Util":247,"./lib/N3Writer":248,"dup":191}],242:[function(require,module,exports){
+},{}],235:[function(require,module,exports){
+arguments[4][185][0].apply(exports,arguments)
+},{"./lib/N3Lexer":236,"./lib/N3Parser":237,"./lib/N3Store":238,"./lib/N3StreamParser":239,"./lib/N3StreamWriter":240,"./lib/N3Util":241,"./lib/N3Writer":242,"dup":185}],236:[function(require,module,exports){
 // **N3Lexer** tokenizes N3 documents.
 var fromCharCode = String.fromCharCode;
 var immediately = typeof setImmediate === 'function' ? setImmediate :
@@ -56848,7 +51891,7 @@ N3Lexer.prototype = {
 // ## Exports
 module.exports = N3Lexer;
 
-},{}],243:[function(require,module,exports){
+},{}],237:[function(require,module,exports){
 // **N3Parser** parses N3 documents.
 var N3Lexer = require('./N3Lexer');
 
@@ -57754,9 +52797,9 @@ function noop() {}
 // ## Exports
 module.exports = N3Parser;
 
-},{"./N3Lexer":242}],244:[function(require,module,exports){
-arguments[4][194][0].apply(exports,arguments)
-},{"./N3Util":247,"dup":194}],245:[function(require,module,exports){
+},{"./N3Lexer":236}],238:[function(require,module,exports){
+arguments[4][188][0].apply(exports,arguments)
+},{"./N3Util":241,"dup":188}],239:[function(require,module,exports){
 // **N3StreamParser** parses an N3 stream into a triple stream.
 var Transform = require('stream').Transform,
     util = require('util'),
@@ -57790,11 +52833,11 @@ util.inherits(N3StreamParser, Transform);
 // ## Exports
 module.exports = N3StreamParser;
 
-},{"./N3Parser.js":243,"stream":473,"util":485}],246:[function(require,module,exports){
-arguments[4][196][0].apply(exports,arguments)
-},{"./N3Writer.js":248,"dup":196,"stream":473,"util":485}],247:[function(require,module,exports){
-arguments[4][197][0].apply(exports,arguments)
-},{"dup":197}],248:[function(require,module,exports){
+},{"./N3Parser.js":237,"stream":467,"util":479}],240:[function(require,module,exports){
+arguments[4][190][0].apply(exports,arguments)
+},{"./N3Writer.js":242,"dup":190,"stream":467,"util":479}],241:[function(require,module,exports){
+arguments[4][191][0].apply(exports,arguments)
+},{"dup":191}],242:[function(require,module,exports){
 // **N3Writer** writes N3 documents.
 
 // Matches a literal as represented in memory by the N3 library
@@ -58124,12 +53167,12 @@ function characterReplacer(character) {
 // ## Exports
 module.exports = N3Writer;
 
-},{}],249:[function(require,module,exports){
+},{}],243:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./lib')
 
-},{"./lib":254}],250:[function(require,module,exports){
+},{"./lib":248}],244:[function(require,module,exports){
 'use strict';
 
 var asap = require('asap/raw');
@@ -58344,7 +53387,7 @@ function doResolve(fn, promise) {
   }
 }
 
-},{"asap/raw":240}],251:[function(require,module,exports){
+},{"asap/raw":234}],245:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -58359,7 +53402,7 @@ Promise.prototype.done = function (onFulfilled, onRejected) {
   });
 };
 
-},{"./core.js":250}],252:[function(require,module,exports){
+},{"./core.js":244}],246:[function(require,module,exports){
 'use strict';
 
 //This file contains the ES6 extensions to the core Promises/A+ API
@@ -58468,7 +53511,7 @@ Promise.prototype['catch'] = function (onRejected) {
   return this.then(null, onRejected);
 };
 
-},{"./core.js":250}],253:[function(require,module,exports){
+},{"./core.js":244}],247:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -58486,7 +53529,7 @@ Promise.prototype['finally'] = function (f) {
   });
 };
 
-},{"./core.js":250}],254:[function(require,module,exports){
+},{"./core.js":244}],248:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./core.js');
@@ -58496,7 +53539,7 @@ require('./es6-extensions.js');
 require('./node-extensions.js');
 require('./synchronous.js');
 
-},{"./core.js":250,"./done.js":251,"./es6-extensions.js":252,"./finally.js":253,"./node-extensions.js":255,"./synchronous.js":256}],255:[function(require,module,exports){
+},{"./core.js":244,"./done.js":245,"./es6-extensions.js":246,"./finally.js":247,"./node-extensions.js":249,"./synchronous.js":250}],249:[function(require,module,exports){
 'use strict';
 
 // This file contains then/promise specific extensions that are only useful
@@ -58628,7 +53671,7 @@ Promise.prototype.nodeify = function (callback, ctx) {
   });
 };
 
-},{"./core.js":250,"asap":239}],256:[function(require,module,exports){
+},{"./core.js":244,"asap":233}],250:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -58692,7 +53735,7 @@ Promise.disableSynchronous = function() {
   Promise.prototype.getState = undefined;
 };
 
-},{"./core.js":250}],257:[function(require,module,exports){
+},{"./core.js":244}],251:[function(require,module,exports){
 var ShEx = {
   Parser:       require('./lib/ShExParser'),
   Util:         require('./lib/ShExUtil'),
@@ -58708,7 +53751,7 @@ if (typeof require !== 'undefined' && typeof exports !== 'undefined')
   module.exports = ShEx;
 
 
-},{"./lib/ShExLoader":232,"./lib/ShExParser":233,"./lib/ShExUtil":234,"./lib/ShExValidator":235,"./lib/ShExWriter":236,"./lib/regex/nfax-val-1err":237,"./lib/regex/threaded-val-nerr":238,"n3":241}],258:[function(require,module,exports){
+},{"./lib/ShExLoader":226,"./lib/ShExParser":227,"./lib/ShExUtil":228,"./lib/ShExValidator":229,"./lib/ShExWriter":230,"./lib/regex/nfax-val-1err":231,"./lib/regex/threaded-val-nerr":232,"n3":235}],252:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -58880,7 +53923,7 @@ module.exports = {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350}],259:[function(require,module,exports){
+},{"buffer":344}],253:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2016 Joyent, Inc.
 
@@ -59261,7 +54304,7 @@ Certificate._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":258,"./errors":262,"./fingerprint":263,"./formats/openssh-cert":265,"./formats/x509":273,"./formats/x509-pem":272,"./identity":274,"./key":276,"./private-key":277,"./signature":278,"./utils":280,"assert-plus":57,"buffer":350,"crypto":360,"util":485}],260:[function(require,module,exports){
+},{"./algs":252,"./errors":256,"./fingerprint":257,"./formats/openssh-cert":259,"./formats/x509":267,"./formats/x509-pem":266,"./identity":268,"./key":270,"./private-key":271,"./signature":272,"./utils":274,"assert-plus":51,"buffer":344,"crypto":354,"util":479}],254:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -59676,7 +54719,7 @@ function generateECDSA(curve) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":258,"./key":276,"./private-key":277,"./utils":280,"assert-plus":57,"buffer":350,"crypto":360,"ecc-jsbn":106,"ecc-jsbn/lib/ec":107,"jsbn":147,"tweetnacl":292}],261:[function(require,module,exports){
+},{"./algs":252,"./key":270,"./private-key":271,"./utils":274,"assert-plus":51,"buffer":344,"crypto":354,"ecc-jsbn":100,"ecc-jsbn/lib/ec":101,"jsbn":141,"tweetnacl":286}],255:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -59776,7 +54819,7 @@ Signer.prototype.sign = function () {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./signature":278,"assert-plus":57,"buffer":350,"stream":473,"tweetnacl":292,"util":485}],262:[function(require,module,exports){
+},{"./signature":272,"assert-plus":51,"buffer":344,"stream":467,"tweetnacl":286,"util":479}],256:[function(require,module,exports){
 // Copyright 2015 Joyent, Inc.
 
 var assert = require('assert-plus');
@@ -59862,7 +54905,7 @@ module.exports = {
 	CertificateParseError: CertificateParseError
 };
 
-},{"assert-plus":57,"util":485}],263:[function(require,module,exports){
+},{"assert-plus":51,"util":479}],257:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -60027,7 +55070,7 @@ Fingerprint._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":258,"./certificate":259,"./errors":262,"./key":276,"./utils":280,"assert-plus":57,"buffer":350,"crypto":360}],264:[function(require,module,exports){
+},{"./algs":252,"./certificate":253,"./errors":256,"./key":270,"./utils":274,"assert-plus":51,"buffer":344,"crypto":354}],258:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -60104,7 +55147,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../key":276,"../private-key":277,"../utils":280,"./pem":266,"./rfc4253":269,"./ssh":271,"assert-plus":57,"buffer":350}],265:[function(require,module,exports){
+},{"../key":270,"../private-key":271,"../utils":274,"./pem":260,"./rfc4253":263,"./ssh":265,"assert-plus":51,"buffer":344}],259:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -60430,7 +55473,7 @@ function getCertType(key) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":258,"../certificate":259,"../identity":274,"../key":276,"../private-key":277,"../signature":278,"../ssh-buffer":279,"../utils":280,"./rfc4253":269,"assert-plus":57,"buffer":350,"crypto":360}],266:[function(require,module,exports){
+},{"../algs":252,"../certificate":253,"../identity":268,"../key":270,"../private-key":271,"../signature":272,"../ssh-buffer":273,"../utils":274,"./rfc4253":263,"assert-plus":51,"buffer":344,"crypto":354}],260:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -60620,7 +55663,7 @@ function write(key, options, type) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":258,"../errors":262,"../key":276,"../private-key":277,"../utils":280,"./pkcs1":267,"./pkcs8":268,"./rfc4253":269,"./ssh-private":270,"asn1":56,"assert-plus":57,"buffer":350,"crypto":360}],267:[function(require,module,exports){
+},{"../algs":252,"../errors":256,"../key":270,"../private-key":271,"../utils":274,"./pkcs1":261,"./pkcs8":262,"./rfc4253":263,"./ssh-private":264,"asn1":50,"assert-plus":51,"buffer":344,"crypto":354}],261:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -60944,7 +55987,7 @@ function writePkcs1ECDSAPrivate(der, key) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":258,"../key":276,"../private-key":277,"../utils":280,"./pem":266,"./pkcs8":268,"asn1":56,"assert-plus":57,"buffer":350}],268:[function(require,module,exports){
+},{"../algs":252,"../key":270,"../private-key":271,"../utils":274,"./pem":260,"./pkcs8":262,"asn1":50,"assert-plus":51,"buffer":344}],262:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -61453,7 +56496,7 @@ function writePkcs8ECDSAPrivate(key, der) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":258,"../key":276,"../private-key":277,"../utils":280,"./pem":266,"asn1":56,"assert-plus":57,"buffer":350}],269:[function(require,module,exports){
+},{"../algs":252,"../key":270,"../private-key":271,"../utils":274,"./pem":260,"asn1":50,"assert-plus":51,"buffer":344}],263:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -61603,7 +56646,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":258,"../key":276,"../private-key":277,"../ssh-buffer":279,"../utils":280,"assert-plus":57,"buffer":350}],270:[function(require,module,exports){
+},{"../algs":252,"../key":270,"../private-key":271,"../ssh-buffer":273,"../utils":274,"assert-plus":51,"buffer":344}],264:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -61868,7 +56911,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":258,"../errors":262,"../key":276,"../private-key":277,"../ssh-buffer":279,"../utils":280,"./pem":266,"./rfc4253":269,"asn1":56,"assert-plus":57,"bcrypt-pbkdf":61,"buffer":350,"crypto":360}],271:[function(require,module,exports){
+},{"../algs":252,"../errors":256,"../key":270,"../private-key":271,"../ssh-buffer":273,"../utils":274,"./pem":260,"./rfc4253":263,"asn1":50,"assert-plus":51,"bcrypt-pbkdf":55,"buffer":344,"crypto":354}],265:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -61986,7 +57029,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../key":276,"../private-key":277,"../utils":280,"./rfc4253":269,"./ssh-private":270,"assert-plus":57,"buffer":350}],272:[function(require,module,exports){
+},{"../key":270,"../private-key":271,"../utils":274,"./rfc4253":263,"./ssh-private":264,"assert-plus":51,"buffer":344}],266:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2016 Joyent, Inc.
 
@@ -62067,7 +57110,7 @@ function write(cert, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":258,"../certificate":259,"../identity":274,"../key":276,"../private-key":277,"../signature":278,"../utils":280,"./pem":266,"./x509":273,"asn1":56,"assert-plus":57,"buffer":350}],273:[function(require,module,exports){
+},{"../algs":252,"../certificate":253,"../identity":268,"../key":270,"../private-key":271,"../signature":272,"../utils":274,"./pem":260,"./x509":267,"asn1":50,"assert-plus":51,"buffer":344}],267:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -62797,7 +57840,7 @@ function writeBitField(setBits, bitIndex) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":258,"../certificate":259,"../identity":274,"../key":276,"../private-key":277,"../signature":278,"../utils":280,"./pem":266,"./pkcs8":268,"asn1":56,"assert-plus":57,"buffer":350}],274:[function(require,module,exports){
+},{"../algs":252,"../certificate":253,"../identity":268,"../key":270,"../private-key":271,"../signature":272,"../utils":274,"./pem":260,"./pkcs8":262,"asn1":50,"assert-plus":51,"buffer":344}],268:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -63078,7 +58121,7 @@ Identity._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":258,"./errors":262,"./fingerprint":263,"./signature":278,"./utils":280,"asn1":56,"assert-plus":57,"buffer":350,"crypto":360,"util":485}],275:[function(require,module,exports){
+},{"./algs":252,"./errors":256,"./fingerprint":257,"./signature":272,"./utils":274,"asn1":50,"assert-plus":51,"buffer":344,"crypto":354,"util":479}],269:[function(require,module,exports){
 // Copyright 2015 Joyent, Inc.
 
 var Key = require('./key');
@@ -63119,7 +58162,7 @@ module.exports = {
 	CertificateParseError: errs.CertificateParseError
 };
 
-},{"./certificate":259,"./errors":262,"./fingerprint":263,"./identity":274,"./key":276,"./private-key":277,"./signature":278}],276:[function(require,module,exports){
+},{"./certificate":253,"./errors":256,"./fingerprint":257,"./identity":268,"./key":270,"./private-key":271,"./signature":272}],270:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -63397,7 +58440,7 @@ Key._oldVersionDetect = function (obj) {
 };
 
 }).call(this,{"isBuffer":require("../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":407,"./algs":258,"./dhe":260,"./ed-compat":261,"./errors":262,"./fingerprint":263,"./formats/auto":264,"./formats/pem":266,"./formats/pkcs1":267,"./formats/pkcs8":268,"./formats/rfc4253":269,"./formats/ssh":271,"./formats/ssh-private":270,"./private-key":277,"./signature":278,"./utils":280,"assert-plus":57,"crypto":360}],277:[function(require,module,exports){
+},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":401,"./algs":252,"./dhe":254,"./ed-compat":255,"./errors":256,"./fingerprint":257,"./formats/auto":258,"./formats/pem":260,"./formats/pkcs1":261,"./formats/pkcs8":262,"./formats/rfc4253":263,"./formats/ssh":265,"./formats/ssh-private":264,"./private-key":271,"./signature":272,"./utils":274,"assert-plus":51,"crypto":354}],271:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -63655,7 +58698,7 @@ PrivateKey._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":258,"./dhe":260,"./ed-compat":261,"./errors":262,"./fingerprint":263,"./formats/auto":264,"./formats/pem":266,"./formats/pkcs1":267,"./formats/pkcs8":268,"./formats/rfc4253":269,"./formats/ssh-private":270,"./key":276,"./signature":278,"./utils":280,"assert-plus":57,"buffer":350,"crypto":360,"tweetnacl":292,"util":485}],278:[function(require,module,exports){
+},{"./algs":252,"./dhe":254,"./ed-compat":255,"./errors":256,"./fingerprint":257,"./formats/auto":258,"./formats/pem":260,"./formats/pkcs1":261,"./formats/pkcs8":262,"./formats/rfc4253":263,"./formats/ssh-private":264,"./key":270,"./signature":272,"./utils":274,"assert-plus":51,"buffer":344,"crypto":354,"tweetnacl":286,"util":479}],272:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -63972,7 +59015,7 @@ Signature._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":258,"./errors":262,"./ssh-buffer":279,"./utils":280,"asn1":56,"assert-plus":57,"buffer":350,"crypto":360}],279:[function(require,module,exports){
+},{"./algs":252,"./errors":256,"./ssh-buffer":273,"./utils":274,"asn1":50,"assert-plus":51,"buffer":344,"crypto":354}],273:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -64124,7 +59167,7 @@ SSHBuffer.prototype.write = function (buf) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"assert-plus":57,"buffer":350}],280:[function(require,module,exports){
+},{"assert-plus":51,"buffer":344}],274:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -64416,7 +59459,7 @@ function opensshCipherInfo(cipher) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./private-key":277,"assert-plus":57,"buffer":350,"crypto":360,"jsbn":147}],281:[function(require,module,exports){
+},{"./private-key":271,"assert-plus":51,"buffer":344,"crypto":354,"jsbn":141}],275:[function(require,module,exports){
 (function (Buffer){
 var util = require('util')
 var Stream = require('stream')
@@ -64522,7 +59565,7 @@ function alignedWrite(buffer) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350,"stream":473,"string_decoder":478,"util":485}],282:[function(require,module,exports){
+},{"buffer":344,"stream":467,"string_decoder":472,"util":479}],276:[function(require,module,exports){
 'use strict';
 var ansiRegex = require('ansi-regex')();
 
@@ -64530,7 +59573,7 @@ module.exports = function (str) {
 	return typeof str === 'string' ? str.replace(ansiRegex, '') : str;
 };
 
-},{"ansi-regex":48}],283:[function(require,module,exports){
+},{"ansi-regex":42}],277:[function(require,module,exports){
 (function (process){
 'use strict';
 var argv = process.argv;
@@ -64584,7 +59627,7 @@ module.exports = (function () {
 })();
 
 }).call(this,require('_process'))
-},{"_process":437}],284:[function(require,module,exports){
+},{"_process":431}],278:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -65927,7 +60970,7 @@ module.exports = {
   canonicalDomain: canonicalDomain
 };
 
-},{"../package.json":290,"./memstore":285,"./pathMatch":286,"./permuteDomain":287,"./pubsuffix":288,"./store":289,"net":300,"punycode":444,"url":480}],285:[function(require,module,exports){
+},{"../package.json":284,"./memstore":279,"./pathMatch":280,"./permuteDomain":281,"./pubsuffix":282,"./store":283,"net":294,"punycode":438,"url":474}],279:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -66099,7 +61142,7 @@ MemoryCookieStore.prototype.getAllCookies = function(cb) {
   cb(null, cookies);
 };
 
-},{"./pathMatch":286,"./permuteDomain":287,"./store":289,"util":485}],286:[function(require,module,exports){
+},{"./pathMatch":280,"./permuteDomain":281,"./store":283,"util":479}],280:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -66162,7 +61205,7 @@ function pathMatch (reqPath, cookiePath) {
 
 exports.pathMatch = pathMatch;
 
-},{}],287:[function(require,module,exports){
+},{}],281:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -66220,7 +61263,7 @@ function permuteDomain (domain) {
 
 exports.permuteDomain = permuteDomain;
 
-},{"./pubsuffix":288}],288:[function(require,module,exports){
+},{"./pubsuffix":282}],282:[function(require,module,exports){
 /****************************************************
  * AUTOMATICALLY GENERATED by generate-pubsuffix.js *
  *                  DO NOT EDIT!                    *
@@ -66320,7 +61363,7 @@ var index = module.exports.index = Object.freeze(
 
 // END of automatically generated file
 
-},{"punycode":444}],289:[function(require,module,exports){
+},{"punycode":438}],283:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -66393,7 +61436,7 @@ Store.prototype.getAllCookies = function(cb) {
   throw new Error('getAllCookies is not implemented (therefore jar cannot be serialized)');
 };
 
-},{}],290:[function(require,module,exports){
+},{}],284:[function(require,module,exports){
 module.exports={
   "_from": "tough-cookie@~2.3.3",
   "_id": "tough-cookie@2.3.3",
@@ -66487,7 +61530,7 @@ module.exports={
   "version": "2.3.3"
 }
 
-},{}],291:[function(require,module,exports){
+},{}],285:[function(require,module,exports){
 (function (process){
 'use strict'
 
@@ -66735,7 +61778,7 @@ if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
 exports.debug = debug // for test
 
 }).call(this,require('_process'))
-},{"_process":437,"assert":315,"events":387,"http":474,"https":403,"net":300,"safe-buffer":230,"tls":300,"util":485}],292:[function(require,module,exports){
+},{"_process":431,"assert":309,"events":381,"http":468,"https":397,"net":294,"safe-buffer":224,"tls":294,"util":479}],286:[function(require,module,exports){
 (function(nacl) {
 'use strict';
 
@@ -69125,7 +64168,7 @@ nacl.setPRNG = function(fn) {
 
 })(typeof module !== 'undefined' && module.exports ? module.exports : (self.nacl = self.nacl || {}));
 
-},{"crypto":319}],293:[function(require,module,exports){
+},{"crypto":313}],287:[function(require,module,exports){
 var v1 = require('./v1');
 var v4 = require('./v4');
 
@@ -69135,7 +64178,7 @@ uuid.v4 = v4;
 
 module.exports = uuid;
 
-},{"./v1":296,"./v4":297}],294:[function(require,module,exports){
+},{"./v1":290,"./v4":291}],288:[function(require,module,exports){
 /**
  * Convert array of 16 byte values to UUID string format of the form:
  * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
@@ -69160,7 +64203,7 @@ function bytesToUuid(buf, offset) {
 
 module.exports = bytesToUuid;
 
-},{}],295:[function(require,module,exports){
+},{}],289:[function(require,module,exports){
 // Unique ID creation requires a high quality random # generator.  In the
 // browser this is a little complicated due to unknown quality of Math.random()
 // and inconsistent support for the `crypto` API.  We do the best we can via
@@ -69194,7 +64237,7 @@ if (getRandomValues) {
   };
 }
 
-},{}],296:[function(require,module,exports){
+},{}],290:[function(require,module,exports){
 var rng = require('./lib/rng');
 var bytesToUuid = require('./lib/bytesToUuid');
 
@@ -69305,7 +64348,7 @@ function v1(options, buf, offset) {
 
 module.exports = v1;
 
-},{"./lib/bytesToUuid":294,"./lib/rng":295}],297:[function(require,module,exports){
+},{"./lib/bytesToUuid":288,"./lib/rng":289}],291:[function(require,module,exports){
 var rng = require('./lib/rng');
 var bytesToUuid = require('./lib/bytesToUuid');
 
@@ -69336,7 +64379,7 @@ function v4(options, buf, offset) {
 
 module.exports = v4;
 
-},{"./lib/bytesToUuid":294,"./lib/rng":295}],298:[function(require,module,exports){
+},{"./lib/bytesToUuid":288,"./lib/rng":289}],292:[function(require,module,exports){
 /*
  * verror.js: richer JavaScript errors
  */
@@ -69789,7 +64832,7 @@ WError.prototype.cause = function we_cause(c)
 	return (this.jse_cause);
 };
 
-},{"assert-plus":57,"core-util-is":104,"extsprintf":112,"util":485}],299:[function(require,module,exports){
+},{"assert-plus":51,"core-util-is":98,"extsprintf":106,"util":479}],293:[function(require,module,exports){
 /* 
     Build ShExValidator.js client side bundle using browserify with the following commands:
     cd /home/shex/ShExValidata
@@ -69799,9 +64842,9 @@ WError.prototype.cause = function we_cause(c)
 
 ShExValidator = require('ShEx-validator');
 
-},{"ShEx-validator":3}],300:[function(require,module,exports){
+},{"ShEx-validator":1}],294:[function(require,module,exports){
 
-},{}],301:[function(require,module,exports){
+},{}],295:[function(require,module,exports){
 var asn1 = exports;
 
 asn1.bignum = require('bn.js');
@@ -69812,7 +64855,7 @@ asn1.constants = require('./asn1/constants');
 asn1.decoders = require('./asn1/decoders');
 asn1.encoders = require('./asn1/encoders');
 
-},{"./asn1/api":302,"./asn1/base":304,"./asn1/constants":308,"./asn1/decoders":310,"./asn1/encoders":313,"bn.js":317}],302:[function(require,module,exports){
+},{"./asn1/api":296,"./asn1/base":298,"./asn1/constants":302,"./asn1/decoders":304,"./asn1/encoders":307,"bn.js":311}],296:[function(require,module,exports){
 var asn1 = require('../asn1');
 var inherits = require('inherits');
 
@@ -69875,7 +64918,7 @@ Entity.prototype.encode = function encode(data, enc, /* internal */ reporter) {
   return this._getEncoder(enc).encode(data, reporter);
 };
 
-},{"../asn1":301,"inherits":406,"vm":486}],303:[function(require,module,exports){
+},{"../asn1":295,"inherits":400,"vm":480}],297:[function(require,module,exports){
 var inherits = require('inherits');
 var Reporter = require('../base').Reporter;
 var Buffer = require('buffer').Buffer;
@@ -69993,7 +65036,7 @@ EncoderBuffer.prototype.join = function join(out, offset) {
   return out;
 };
 
-},{"../base":304,"buffer":350,"inherits":406}],304:[function(require,module,exports){
+},{"../base":298,"buffer":344,"inherits":400}],298:[function(require,module,exports){
 var base = exports;
 
 base.Reporter = require('./reporter').Reporter;
@@ -70001,7 +65044,7 @@ base.DecoderBuffer = require('./buffer').DecoderBuffer;
 base.EncoderBuffer = require('./buffer').EncoderBuffer;
 base.Node = require('./node');
 
-},{"./buffer":303,"./node":305,"./reporter":306}],305:[function(require,module,exports){
+},{"./buffer":297,"./node":299,"./reporter":300}],299:[function(require,module,exports){
 var Reporter = require('../base').Reporter;
 var EncoderBuffer = require('../base').EncoderBuffer;
 var DecoderBuffer = require('../base').DecoderBuffer;
@@ -70637,7 +65680,7 @@ Node.prototype._isPrintstr = function isPrintstr(str) {
   return /^[A-Za-z0-9 '\(\)\+,\-\.\/:=\?]*$/.test(str);
 };
 
-},{"../base":304,"minimalistic-assert":412}],306:[function(require,module,exports){
+},{"../base":298,"minimalistic-assert":406}],300:[function(require,module,exports){
 var inherits = require('inherits');
 
 function Reporter(options) {
@@ -70760,7 +65803,7 @@ ReporterError.prototype.rethrow = function rethrow(msg) {
   return this;
 };
 
-},{"inherits":406}],307:[function(require,module,exports){
+},{"inherits":400}],301:[function(require,module,exports){
 var constants = require('../constants');
 
 exports.tagClass = {
@@ -70804,7 +65847,7 @@ exports.tag = {
 };
 exports.tagByName = constants._reverse(exports.tag);
 
-},{"../constants":308}],308:[function(require,module,exports){
+},{"../constants":302}],302:[function(require,module,exports){
 var constants = exports;
 
 // Helper
@@ -70825,7 +65868,7 @@ constants._reverse = function reverse(map) {
 
 constants.der = require('./der');
 
-},{"./der":307}],309:[function(require,module,exports){
+},{"./der":301}],303:[function(require,module,exports){
 var inherits = require('inherits');
 
 var asn1 = require('../../asn1');
@@ -71151,13 +66194,13 @@ function derDecodeLen(buf, primitive, fail) {
   return len;
 }
 
-},{"../../asn1":301,"inherits":406}],310:[function(require,module,exports){
+},{"../../asn1":295,"inherits":400}],304:[function(require,module,exports){
 var decoders = exports;
 
 decoders.der = require('./der');
 decoders.pem = require('./pem');
 
-},{"./der":309,"./pem":311}],311:[function(require,module,exports){
+},{"./der":303,"./pem":305}],305:[function(require,module,exports){
 var inherits = require('inherits');
 var Buffer = require('buffer').Buffer;
 
@@ -71208,7 +66251,7 @@ PEMDecoder.prototype.decode = function decode(data, options) {
   return DERDecoder.prototype.decode.call(this, input, options);
 };
 
-},{"./der":309,"buffer":350,"inherits":406}],312:[function(require,module,exports){
+},{"./der":303,"buffer":344,"inherits":400}],306:[function(require,module,exports){
 var inherits = require('inherits');
 var Buffer = require('buffer').Buffer;
 
@@ -71505,13 +66548,13 @@ function encodeTag(tag, primitive, cls, reporter) {
   return res;
 }
 
-},{"../../asn1":301,"buffer":350,"inherits":406}],313:[function(require,module,exports){
+},{"../../asn1":295,"buffer":344,"inherits":400}],307:[function(require,module,exports){
 var encoders = exports;
 
 encoders.der = require('./der');
 encoders.pem = require('./pem');
 
-},{"./der":312,"./pem":314}],314:[function(require,module,exports){
+},{"./der":306,"./pem":308}],308:[function(require,module,exports){
 var inherits = require('inherits');
 
 var DEREncoder = require('./der');
@@ -71534,7 +66577,7 @@ PEMEncoder.prototype.encode = function encode(data, options) {
   return out.join('\n');
 };
 
-},{"./der":312,"inherits":406}],315:[function(require,module,exports){
+},{"./der":306,"inherits":400}],309:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -72028,7 +67071,7 @@ var objectKeys = Object.keys || function (obj) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"util/":485}],316:[function(require,module,exports){
+},{"util/":479}],310:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -72144,7 +67187,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],317:[function(require,module,exports){
+},{}],311:[function(require,module,exports){
 (function (module, exports) {
   'use strict';
 
@@ -75573,7 +70616,7 @@ function fromByteArray (uint8) {
   };
 })(typeof module === 'undefined' || module, this);
 
-},{"buffer":319}],318:[function(require,module,exports){
+},{"buffer":313}],312:[function(require,module,exports){
 var r;
 
 module.exports = function rand(len) {
@@ -75640,9 +70683,9 @@ if (typeof self === 'object') {
   }
 }
 
-},{"crypto":319}],319:[function(require,module,exports){
-arguments[4][300][0].apply(exports,arguments)
-},{"dup":300}],320:[function(require,module,exports){
+},{"crypto":313}],313:[function(require,module,exports){
+arguments[4][294][0].apply(exports,arguments)
+},{"dup":294}],314:[function(require,module,exports){
 // based on the aes implimentation in triple sec
 // https://github.com/keybase/triplesec
 // which is in turn based on the one from crypto-js
@@ -75872,7 +70915,7 @@ AES.prototype.scrub = function () {
 
 module.exports.AES = AES
 
-},{"safe-buffer":464}],321:[function(require,module,exports){
+},{"safe-buffer":458}],315:[function(require,module,exports){
 var aes = require('./aes')
 var Buffer = require('safe-buffer').Buffer
 var Transform = require('cipher-base')
@@ -75991,7 +71034,7 @@ StreamCipher.prototype.setAAD = function setAAD (buf) {
 
 module.exports = StreamCipher
 
-},{"./aes":320,"./ghash":325,"./incr32":326,"buffer-xor":349,"cipher-base":352,"inherits":406,"safe-buffer":464}],322:[function(require,module,exports){
+},{"./aes":314,"./ghash":319,"./incr32":320,"buffer-xor":343,"cipher-base":346,"inherits":400,"safe-buffer":458}],316:[function(require,module,exports){
 var ciphers = require('./encrypter')
 var deciphers = require('./decrypter')
 var modes = require('./modes/list.json')
@@ -76006,7 +71049,7 @@ exports.createDecipher = exports.Decipher = deciphers.createDecipher
 exports.createDecipheriv = exports.Decipheriv = deciphers.createDecipheriv
 exports.listCiphers = exports.getCiphers = getCiphers
 
-},{"./decrypter":323,"./encrypter":324,"./modes/list.json":334}],323:[function(require,module,exports){
+},{"./decrypter":317,"./encrypter":318,"./modes/list.json":328}],317:[function(require,module,exports){
 var AuthCipher = require('./authCipher')
 var Buffer = require('safe-buffer').Buffer
 var MODES = require('./modes')
@@ -76129,7 +71172,7 @@ function createDecipher (suite, password) {
 exports.createDecipher = createDecipher
 exports.createDecipheriv = createDecipheriv
 
-},{"./aes":320,"./authCipher":321,"./modes":333,"./streamCipher":336,"cipher-base":352,"evp_bytestokey":388,"inherits":406,"safe-buffer":464}],324:[function(require,module,exports){
+},{"./aes":314,"./authCipher":315,"./modes":327,"./streamCipher":330,"cipher-base":346,"evp_bytestokey":382,"inherits":400,"safe-buffer":458}],318:[function(require,module,exports){
 var MODES = require('./modes')
 var AuthCipher = require('./authCipher')
 var Buffer = require('safe-buffer').Buffer
@@ -76245,7 +71288,7 @@ function createCipher (suite, password) {
 exports.createCipheriv = createCipheriv
 exports.createCipher = createCipher
 
-},{"./aes":320,"./authCipher":321,"./modes":333,"./streamCipher":336,"cipher-base":352,"evp_bytestokey":388,"inherits":406,"safe-buffer":464}],325:[function(require,module,exports){
+},{"./aes":314,"./authCipher":315,"./modes":327,"./streamCipher":330,"cipher-base":346,"evp_bytestokey":382,"inherits":400,"safe-buffer":458}],319:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 var ZEROES = Buffer.alloc(16, 0)
 
@@ -76336,7 +71379,7 @@ GHASH.prototype.final = function (abl, bl) {
 
 module.exports = GHASH
 
-},{"safe-buffer":464}],326:[function(require,module,exports){
+},{"safe-buffer":458}],320:[function(require,module,exports){
 function incr32 (iv) {
   var len = iv.length
   var item
@@ -76353,7 +71396,7 @@ function incr32 (iv) {
 }
 module.exports = incr32
 
-},{}],327:[function(require,module,exports){
+},{}],321:[function(require,module,exports){
 var xor = require('buffer-xor')
 
 exports.encrypt = function (self, block) {
@@ -76372,7 +71415,7 @@ exports.decrypt = function (self, block) {
   return xor(out, pad)
 }
 
-},{"buffer-xor":349}],328:[function(require,module,exports){
+},{"buffer-xor":343}],322:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 var xor = require('buffer-xor')
 
@@ -76407,7 +71450,7 @@ exports.encrypt = function (self, data, decrypt) {
   return out
 }
 
-},{"buffer-xor":349,"safe-buffer":464}],329:[function(require,module,exports){
+},{"buffer-xor":343,"safe-buffer":458}],323:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 
 function encryptByte (self, byteParam, decrypt) {
@@ -76451,7 +71494,7 @@ exports.encrypt = function (self, chunk, decrypt) {
   return out
 }
 
-},{"safe-buffer":464}],330:[function(require,module,exports){
+},{"safe-buffer":458}],324:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 
 function encryptByte (self, byteParam, decrypt) {
@@ -76478,7 +71521,7 @@ exports.encrypt = function (self, chunk, decrypt) {
   return out
 }
 
-},{"safe-buffer":464}],331:[function(require,module,exports){
+},{"safe-buffer":458}],325:[function(require,module,exports){
 var xor = require('buffer-xor')
 var Buffer = require('safe-buffer').Buffer
 var incr32 = require('../incr32')
@@ -76510,7 +71553,7 @@ exports.encrypt = function (self, chunk) {
   return xor(chunk, pad)
 }
 
-},{"../incr32":326,"buffer-xor":349,"safe-buffer":464}],332:[function(require,module,exports){
+},{"../incr32":320,"buffer-xor":343,"safe-buffer":458}],326:[function(require,module,exports){
 exports.encrypt = function (self, block) {
   return self._cipher.encryptBlock(block)
 }
@@ -76519,7 +71562,7 @@ exports.decrypt = function (self, block) {
   return self._cipher.decryptBlock(block)
 }
 
-},{}],333:[function(require,module,exports){
+},{}],327:[function(require,module,exports){
 var modeModules = {
   ECB: require('./ecb'),
   CBC: require('./cbc'),
@@ -76539,7 +71582,7 @@ for (var key in modes) {
 
 module.exports = modes
 
-},{"./cbc":327,"./cfb":328,"./cfb1":329,"./cfb8":330,"./ctr":331,"./ecb":332,"./list.json":334,"./ofb":335}],334:[function(require,module,exports){
+},{"./cbc":321,"./cfb":322,"./cfb1":323,"./cfb8":324,"./ctr":325,"./ecb":326,"./list.json":328,"./ofb":329}],328:[function(require,module,exports){
 module.exports={
   "aes-128-ecb": {
     "cipher": "AES",
@@ -76732,7 +71775,7 @@ module.exports={
   }
 }
 
-},{}],335:[function(require,module,exports){
+},{}],329:[function(require,module,exports){
 (function (Buffer){
 var xor = require('buffer-xor')
 
@@ -76752,7 +71795,7 @@ exports.encrypt = function (self, chunk) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350,"buffer-xor":349}],336:[function(require,module,exports){
+},{"buffer":344,"buffer-xor":343}],330:[function(require,module,exports){
 var aes = require('./aes')
 var Buffer = require('safe-buffer').Buffer
 var Transform = require('cipher-base')
@@ -76781,7 +71824,7 @@ StreamCipher.prototype._final = function () {
 
 module.exports = StreamCipher
 
-},{"./aes":320,"cipher-base":352,"inherits":406,"safe-buffer":464}],337:[function(require,module,exports){
+},{"./aes":314,"cipher-base":346,"inherits":400,"safe-buffer":458}],331:[function(require,module,exports){
 var ebtk = require('evp_bytestokey')
 var aes = require('browserify-aes/browser')
 var DES = require('browserify-des')
@@ -76856,7 +71899,7 @@ function getCiphers () {
 }
 exports.listCiphers = exports.getCiphers = getCiphers
 
-},{"browserify-aes/browser":322,"browserify-aes/modes":333,"browserify-des":338,"browserify-des/modes":339,"evp_bytestokey":388}],338:[function(require,module,exports){
+},{"browserify-aes/browser":316,"browserify-aes/modes":327,"browserify-des":332,"browserify-des/modes":333,"evp_bytestokey":382}],332:[function(require,module,exports){
 (function (Buffer){
 var CipherBase = require('cipher-base')
 var des = require('des.js')
@@ -76903,7 +71946,7 @@ DES.prototype._final = function () {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350,"cipher-base":352,"des.js":361,"inherits":406}],339:[function(require,module,exports){
+},{"buffer":344,"cipher-base":346,"des.js":355,"inherits":400}],333:[function(require,module,exports){
 exports['des-ecb'] = {
   key: 8,
   iv: 0
@@ -76929,7 +71972,7 @@ exports['des-ede'] = {
   iv: 0
 }
 
-},{}],340:[function(require,module,exports){
+},{}],334:[function(require,module,exports){
 (function (Buffer){
 var bn = require('bn.js');
 var randomBytes = require('randombytes');
@@ -76973,10 +72016,10 @@ function getr(priv) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"bn.js":317,"buffer":350,"randombytes":448}],341:[function(require,module,exports){
+},{"bn.js":311,"buffer":344,"randombytes":442}],335:[function(require,module,exports){
 module.exports = require('./browser/algorithms.json')
 
-},{"./browser/algorithms.json":342}],342:[function(require,module,exports){
+},{"./browser/algorithms.json":336}],336:[function(require,module,exports){
 module.exports={
   "sha224WithRSAEncryption": {
     "sign": "rsa",
@@ -77130,7 +72173,7 @@ module.exports={
   }
 }
 
-},{}],343:[function(require,module,exports){
+},{}],337:[function(require,module,exports){
 module.exports={
   "1.3.132.0.10": "secp256k1",
   "1.3.132.0.33": "p224",
@@ -77140,7 +72183,7 @@ module.exports={
   "1.3.132.0.35": "p521"
 }
 
-},{}],344:[function(require,module,exports){
+},{}],338:[function(require,module,exports){
 (function (Buffer){
 var createHash = require('create-hash')
 var stream = require('stream')
@@ -77235,7 +72278,7 @@ module.exports = {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./algorithms.json":342,"./sign":345,"./verify":346,"buffer":350,"create-hash":355,"inherits":406,"stream":473}],345:[function(require,module,exports){
+},{"./algorithms.json":336,"./sign":339,"./verify":340,"buffer":344,"create-hash":349,"inherits":400,"stream":467}],339:[function(require,module,exports){
 (function (Buffer){
 // much of this based on https://github.com/indutny/self-signed/blob/gh-pages/lib/rsa.js
 var createHmac = require('create-hmac')
@@ -77384,7 +72427,7 @@ module.exports.getKey = getKey
 module.exports.makeKey = makeKey
 
 }).call(this,require("buffer").Buffer)
-},{"./curves.json":343,"bn.js":317,"browserify-rsa":340,"buffer":350,"create-hmac":358,"elliptic":371,"parse-asn1":429}],346:[function(require,module,exports){
+},{"./curves.json":337,"bn.js":311,"browserify-rsa":334,"buffer":344,"create-hmac":352,"elliptic":365,"parse-asn1":423}],340:[function(require,module,exports){
 (function (Buffer){
 // much of this based on https://github.com/indutny/self-signed/blob/gh-pages/lib/rsa.js
 var BN = require('bn.js')
@@ -77471,7 +72514,7 @@ function checkValue (b, q) {
 module.exports = verify
 
 }).call(this,require("buffer").Buffer)
-},{"./curves.json":343,"bn.js":317,"buffer":350,"elliptic":371,"parse-asn1":429}],347:[function(require,module,exports){
+},{"./curves.json":337,"bn.js":311,"buffer":344,"elliptic":365,"parse-asn1":423}],341:[function(require,module,exports){
 (function (process,Buffer){
 'use strict';
 /* eslint camelcase: "off" */
@@ -77883,7 +72926,7 @@ Zlib.prototype._reset = function () {
 
 exports.Zlib = Zlib;
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"_process":437,"assert":315,"buffer":350,"pako/lib/zlib/constants":416,"pako/lib/zlib/deflate.js":418,"pako/lib/zlib/inflate.js":420,"pako/lib/zlib/zstream":424}],348:[function(require,module,exports){
+},{"_process":431,"assert":309,"buffer":344,"pako/lib/zlib/constants":410,"pako/lib/zlib/deflate.js":412,"pako/lib/zlib/inflate.js":414,"pako/lib/zlib/zstream":418}],342:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -78495,7 +73538,7 @@ util.inherits(DeflateRaw, Zlib);
 util.inherits(InflateRaw, Zlib);
 util.inherits(Unzip, Zlib);
 }).call(this,require('_process'))
-},{"./binding":347,"_process":437,"assert":315,"buffer":350,"stream":473,"util":485}],349:[function(require,module,exports){
+},{"./binding":341,"_process":431,"assert":309,"buffer":344,"stream":467,"util":479}],343:[function(require,module,exports){
 (function (Buffer){
 module.exports = function xor (a, b) {
   var length = Math.min(a.length, b.length)
@@ -78509,7 +73552,7 @@ module.exports = function xor (a, b) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350}],350:[function(require,module,exports){
+},{"buffer":344}],344:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -80225,7 +75268,7 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":316,"ieee754":404}],351:[function(require,module,exports){
+},{"base64-js":310,"ieee754":398}],345:[function(require,module,exports){
 module.exports = {
   "100": "Continue",
   "101": "Switching Protocols",
@@ -80291,7 +75334,7 @@ module.exports = {
   "511": "Network Authentication Required"
 }
 
-},{}],352:[function(require,module,exports){
+},{}],346:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 var Transform = require('stream').Transform
 var StringDecoder = require('string_decoder').StringDecoder
@@ -80392,7 +75435,7 @@ CipherBase.prototype._toString = function (value, enc, fin) {
 
 module.exports = CipherBase
 
-},{"inherits":406,"safe-buffer":464,"stream":473,"string_decoder":478}],353:[function(require,module,exports){
+},{"inherits":400,"safe-buffer":458,"stream":467,"string_decoder":472}],347:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -80503,7 +75546,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":407}],354:[function(require,module,exports){
+},{"../../is-buffer/index.js":401}],348:[function(require,module,exports){
 (function (Buffer){
 var elliptic = require('elliptic');
 var BN = require('bn.js');
@@ -80629,7 +75672,7 @@ function formatReturnValue(bn, enc, len) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"bn.js":317,"buffer":350,"elliptic":371}],355:[function(require,module,exports){
+},{"bn.js":311,"buffer":344,"elliptic":365}],349:[function(require,module,exports){
 (function (Buffer){
 'use strict'
 var inherits = require('inherits')
@@ -80685,7 +75728,7 @@ module.exports = function createHash (alg) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./md5":357,"buffer":350,"cipher-base":352,"inherits":406,"ripemd160":463,"sha.js":466}],356:[function(require,module,exports){
+},{"./md5":351,"buffer":344,"cipher-base":346,"inherits":400,"ripemd160":457,"sha.js":460}],350:[function(require,module,exports){
 (function (Buffer){
 'use strict'
 var intSize = 4
@@ -80719,7 +75762,7 @@ module.exports = function hash (buf, fn) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350}],357:[function(require,module,exports){
+},{"buffer":344}],351:[function(require,module,exports){
 'use strict'
 /*
  * A JavaScript implementation of the RSA Data Security, Inc. MD5 Message
@@ -80872,7 +75915,7 @@ module.exports = function md5 (buf) {
   return makeHash(buf, core_md5)
 }
 
-},{"./make-hash":356}],358:[function(require,module,exports){
+},{"./make-hash":350}],352:[function(require,module,exports){
 'use strict'
 var inherits = require('inherits')
 var Legacy = require('./legacy')
@@ -80936,7 +75979,7 @@ module.exports = function createHmac (alg, key) {
   return new Hmac(alg, key)
 }
 
-},{"./legacy":359,"cipher-base":352,"create-hash/md5":357,"inherits":406,"ripemd160":463,"safe-buffer":464,"sha.js":466}],359:[function(require,module,exports){
+},{"./legacy":353,"cipher-base":346,"create-hash/md5":351,"inherits":400,"ripemd160":457,"safe-buffer":458,"sha.js":460}],353:[function(require,module,exports){
 'use strict'
 var inherits = require('inherits')
 var Buffer = require('safe-buffer').Buffer
@@ -80984,7 +76027,7 @@ Hmac.prototype._final = function () {
 }
 module.exports = Hmac
 
-},{"cipher-base":352,"inherits":406,"safe-buffer":464}],360:[function(require,module,exports){
+},{"cipher-base":346,"inherits":400,"safe-buffer":458}],354:[function(require,module,exports){
 'use strict'
 
 exports.randomBytes = exports.rng = exports.pseudoRandomBytes = exports.prng = require('randombytes')
@@ -81083,7 +76126,7 @@ exports.constants = {
   'POINT_CONVERSION_HYBRID': 6
 }
 
-},{"browserify-cipher":337,"browserify-sign":344,"browserify-sign/algos":341,"create-ecdh":354,"create-hash":355,"create-hmac":358,"diffie-hellman":367,"pbkdf2":431,"public-encrypt":438,"randombytes":448,"randomfill":449}],361:[function(require,module,exports){
+},{"browserify-cipher":331,"browserify-sign":338,"browserify-sign/algos":335,"create-ecdh":348,"create-hash":349,"create-hmac":352,"diffie-hellman":361,"pbkdf2":425,"public-encrypt":432,"randombytes":442,"randomfill":443}],355:[function(require,module,exports){
 'use strict';
 
 exports.utils = require('./des/utils');
@@ -81092,7 +76135,7 @@ exports.DES = require('./des/des');
 exports.CBC = require('./des/cbc');
 exports.EDE = require('./des/ede');
 
-},{"./des/cbc":362,"./des/cipher":363,"./des/des":364,"./des/ede":365,"./des/utils":366}],362:[function(require,module,exports){
+},{"./des/cbc":356,"./des/cipher":357,"./des/des":358,"./des/ede":359,"./des/utils":360}],356:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -81159,7 +76202,7 @@ proto._update = function _update(inp, inOff, out, outOff) {
   }
 };
 
-},{"inherits":406,"minimalistic-assert":412}],363:[function(require,module,exports){
+},{"inherits":400,"minimalistic-assert":406}],357:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -81302,7 +76345,7 @@ Cipher.prototype._finalDecrypt = function _finalDecrypt() {
   return this._unpad(out);
 };
 
-},{"minimalistic-assert":412}],364:[function(require,module,exports){
+},{"minimalistic-assert":406}],358:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -81447,7 +76490,7 @@ DES.prototype._decrypt = function _decrypt(state, lStart, rStart, out, off) {
   utils.rip(l, r, out, off);
 };
 
-},{"../des":361,"inherits":406,"minimalistic-assert":412}],365:[function(require,module,exports){
+},{"../des":355,"inherits":400,"minimalistic-assert":406}],359:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -81504,7 +76547,7 @@ EDE.prototype._update = function _update(inp, inOff, out, outOff) {
 EDE.prototype._pad = DES.prototype._pad;
 EDE.prototype._unpad = DES.prototype._unpad;
 
-},{"../des":361,"inherits":406,"minimalistic-assert":412}],366:[function(require,module,exports){
+},{"../des":355,"inherits":400,"minimalistic-assert":406}],360:[function(require,module,exports){
 'use strict';
 
 exports.readUInt32BE = function readUInt32BE(bytes, off) {
@@ -81762,7 +76805,7 @@ exports.padSplit = function padSplit(num, size, group) {
   return out.join(' ');
 };
 
-},{}],367:[function(require,module,exports){
+},{}],361:[function(require,module,exports){
 (function (Buffer){
 var generatePrime = require('./lib/generatePrime')
 var primes = require('./lib/primes.json')
@@ -81808,7 +76851,7 @@ exports.DiffieHellmanGroup = exports.createDiffieHellmanGroup = exports.getDiffi
 exports.createDiffieHellman = exports.DiffieHellman = createDiffieHellman
 
 }).call(this,require("buffer").Buffer)
-},{"./lib/dh":368,"./lib/generatePrime":369,"./lib/primes.json":370,"buffer":350}],368:[function(require,module,exports){
+},{"./lib/dh":362,"./lib/generatePrime":363,"./lib/primes.json":364,"buffer":344}],362:[function(require,module,exports){
 (function (Buffer){
 var BN = require('bn.js');
 var MillerRabin = require('miller-rabin');
@@ -81976,7 +77019,7 @@ function formatReturnValue(bn, enc) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./generatePrime":369,"bn.js":317,"buffer":350,"miller-rabin":411,"randombytes":448}],369:[function(require,module,exports){
+},{"./generatePrime":363,"bn.js":311,"buffer":344,"miller-rabin":405,"randombytes":442}],363:[function(require,module,exports){
 var randomBytes = require('randombytes');
 module.exports = findPrime;
 findPrime.simpleSieve = simpleSieve;
@@ -82083,7 +77126,7 @@ function findPrime(bits, gen) {
 
 }
 
-},{"bn.js":317,"miller-rabin":411,"randombytes":448}],370:[function(require,module,exports){
+},{"bn.js":311,"miller-rabin":405,"randombytes":442}],364:[function(require,module,exports){
 module.exports={
     "modp1": {
         "gen": "02",
@@ -82118,7 +77161,7 @@ module.exports={
         "prime": "ffffffffffffffffc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b139b22514a08798e3404ddef9519b3cd3a431b302b0a6df25f14374fe1356d6d51c245e485b576625e7ec6f44c42e9a637ed6b0bff5cb6f406b7edee386bfb5a899fa5ae9f24117c4b1fe649286651ece45b3dc2007cb8a163bf0598da48361c55d39a69163fa8fd24cf5f83655d23dca3ad961c62f356208552bb9ed529077096966d670c354e4abc9804f1746c08ca18217c32905e462e36ce3be39e772c180e86039b2783a2ec07a28fb5c55df06f4c52c9de2bcbf6955817183995497cea956ae515d2261898fa051015728e5a8aaac42dad33170d04507a33a85521abdf1cba64ecfb850458dbef0a8aea71575d060c7db3970f85a6e1e4c7abf5ae8cdb0933d71e8c94e04a25619dcee3d2261ad2ee6bf12ffa06d98a0864d87602733ec86a64521f2b18177b200cbbe117577a615d6c770988c0bad946e208e24fa074e5ab3143db5bfce0fd108e4b82d120a92108011a723c12a787e6d788719a10bdba5b2699c327186af4e23c1a946834b6150bda2583e9ca2ad44ce8dbbbc2db04de8ef92e8efc141fbecaa6287c59474e6bc05d99b2964fa090c3a2233ba186515be7ed1f612970cee2d7afb81bdd762170481cd0069127d5b05aa993b4ea988d8fddc186ffb7dc90a6c08f4df435c93402849236c3fab4d27c7026c1d4dcb2602646dec9751e763dba37bdf8ff9406ad9e530ee5db382f413001aeb06a53ed9027d831179727b0865a8918da3edbebcf9b14ed44ce6cbaced4bb1bdb7f1447e6cc254b332051512bd7af426fb8f401378cd2bf5983ca01c64b92ecf032ea15d1721d03f482d7ce6e74fef6d55e702f46980c82b5a84031900b1c9e59e7c97fbec7e8f323a97a7e36cc88be0f1d45b7ff585ac54bd407b22b4154aacc8f6d7ebf48e1d814cc5ed20f8037e0a79715eef29be32806a1d58bb7c5da76f550aa3d8a1fbff0eb19ccb1a313d55cda56c9ec2ef29632387fe8d76e3c0468043e8f663f4860ee12bf2d5b0b7474d6e694f91e6dbe115974a3926f12fee5e438777cb6a932df8cd8bec4d073b931ba3bc832b68d9dd300741fa7bf8afc47ed2576f6936ba424663aab639c5ae4f5683423b4742bf1c978238f16cbe39d652de3fdb8befc848ad922222e04a4037c0713eb57a81a23f0c73473fc646cea306b4bcbc8862f8385ddfa9d4b7fa2c087e879683303ed5bdd3a062b3cf5b3a278a66d2a13f83f44f82ddf310ee074ab6a364597e899a0255dc164f31cc50846851df9ab48195ded7ea1b1d510bd7ee74d73faf36bc31ecfa268359046f4eb879f924009438b481c6cd7889a002ed5ee382bc9190da6fc026e479558e4475677e9aa9e3050e2765694dfc81f56e880b96e7160c980dd98edd3dfffffffffffffffff"
     }
 }
-},{}],371:[function(require,module,exports){
+},{}],365:[function(require,module,exports){
 'use strict';
 
 var elliptic = exports;
@@ -82133,7 +77176,7 @@ elliptic.curves = require('./elliptic/curves');
 elliptic.ec = require('./elliptic/ec');
 elliptic.eddsa = require('./elliptic/eddsa');
 
-},{"../package.json":386,"./elliptic/curve":374,"./elliptic/curves":377,"./elliptic/ec":378,"./elliptic/eddsa":381,"./elliptic/utils":385,"brorand":318}],372:[function(require,module,exports){
+},{"../package.json":380,"./elliptic/curve":368,"./elliptic/curves":371,"./elliptic/ec":372,"./elliptic/eddsa":375,"./elliptic/utils":379,"brorand":312}],366:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -82510,7 +77553,7 @@ BasePoint.prototype.dblp = function dblp(k) {
   return r;
 };
 
-},{"../../elliptic":371,"bn.js":317}],373:[function(require,module,exports){
+},{"../../elliptic":365,"bn.js":311}],367:[function(require,module,exports){
 'use strict';
 
 var curve = require('../curve');
@@ -82945,7 +77988,7 @@ Point.prototype.eqXToP = function eqXToP(x) {
 Point.prototype.toP = Point.prototype.normalize;
 Point.prototype.mixedAdd = Point.prototype.add;
 
-},{"../../elliptic":371,"../curve":374,"bn.js":317,"inherits":406}],374:[function(require,module,exports){
+},{"../../elliptic":365,"../curve":368,"bn.js":311,"inherits":400}],368:[function(require,module,exports){
 'use strict';
 
 var curve = exports;
@@ -82955,7 +77998,7 @@ curve.short = require('./short');
 curve.mont = require('./mont');
 curve.edwards = require('./edwards');
 
-},{"./base":372,"./edwards":373,"./mont":375,"./short":376}],375:[function(require,module,exports){
+},{"./base":366,"./edwards":367,"./mont":369,"./short":370}],369:[function(require,module,exports){
 'use strict';
 
 var curve = require('../curve');
@@ -83137,7 +78180,7 @@ Point.prototype.getX = function getX() {
   return this.x.fromRed();
 };
 
-},{"../../elliptic":371,"../curve":374,"bn.js":317,"inherits":406}],376:[function(require,module,exports){
+},{"../../elliptic":365,"../curve":368,"bn.js":311,"inherits":400}],370:[function(require,module,exports){
 'use strict';
 
 var curve = require('../curve');
@@ -84077,7 +79120,7 @@ JPoint.prototype.isInfinity = function isInfinity() {
   return this.z.cmpn(0) === 0;
 };
 
-},{"../../elliptic":371,"../curve":374,"bn.js":317,"inherits":406}],377:[function(require,module,exports){
+},{"../../elliptic":365,"../curve":368,"bn.js":311,"inherits":400}],371:[function(require,module,exports){
 'use strict';
 
 var curves = exports;
@@ -84284,7 +79327,7 @@ defineCurve('secp256k1', {
   ]
 });
 
-},{"../elliptic":371,"./precomputed/secp256k1":384,"hash.js":390}],378:[function(require,module,exports){
+},{"../elliptic":365,"./precomputed/secp256k1":378,"hash.js":384}],372:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -84526,7 +79569,7 @@ EC.prototype.getKeyRecoveryParam = function(e, signature, Q, enc) {
   throw new Error('Unable to find valid recovery factor');
 };
 
-},{"../../elliptic":371,"./key":379,"./signature":380,"bn.js":317,"hmac-drbg":402}],379:[function(require,module,exports){
+},{"../../elliptic":365,"./key":373,"./signature":374,"bn.js":311,"hmac-drbg":396}],373:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -84647,7 +79690,7 @@ KeyPair.prototype.inspect = function inspect() {
          ' pub: ' + (this.pub && this.pub.inspect()) + ' >';
 };
 
-},{"../../elliptic":371,"bn.js":317}],380:[function(require,module,exports){
+},{"../../elliptic":365,"bn.js":311}],374:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -84784,7 +79827,7 @@ Signature.prototype.toDER = function toDER(enc) {
   return utils.encode(res, enc);
 };
 
-},{"../../elliptic":371,"bn.js":317}],381:[function(require,module,exports){
+},{"../../elliptic":365,"bn.js":311}],375:[function(require,module,exports){
 'use strict';
 
 var hash = require('hash.js');
@@ -84904,7 +79947,7 @@ EDDSA.prototype.isPoint = function isPoint(val) {
   return val instanceof this.pointClass;
 };
 
-},{"../../elliptic":371,"./key":382,"./signature":383,"hash.js":390}],382:[function(require,module,exports){
+},{"../../elliptic":365,"./key":376,"./signature":377,"hash.js":384}],376:[function(require,module,exports){
 'use strict';
 
 var elliptic = require('../../elliptic');
@@ -85002,7 +80045,7 @@ KeyPair.prototype.getPublic = function getPublic(enc) {
 
 module.exports = KeyPair;
 
-},{"../../elliptic":371}],383:[function(require,module,exports){
+},{"../../elliptic":365}],377:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -85070,7 +80113,7 @@ Signature.prototype.toHex = function toHex() {
 
 module.exports = Signature;
 
-},{"../../elliptic":371,"bn.js":317}],384:[function(require,module,exports){
+},{"../../elliptic":365,"bn.js":311}],378:[function(require,module,exports){
 module.exports = {
   doubles: {
     step: 4,
@@ -85852,7 +80895,7 @@ module.exports = {
   }
 };
 
-},{}],385:[function(require,module,exports){
+},{}],379:[function(require,module,exports){
 'use strict';
 
 var utils = exports;
@@ -85974,7 +81017,7 @@ function intFromLE(bytes) {
 utils.intFromLE = intFromLE;
 
 
-},{"bn.js":317,"minimalistic-assert":412,"minimalistic-crypto-utils":413}],386:[function(require,module,exports){
+},{"bn.js":311,"minimalistic-assert":406,"minimalistic-crypto-utils":407}],380:[function(require,module,exports){
 module.exports={
   "_from": "elliptic@^6.0.0",
   "_id": "elliptic@6.4.0",
@@ -86063,7 +81106,7 @@ module.exports={
   "version": "6.4.0"
 }
 
-},{}],387:[function(require,module,exports){
+},{}],381:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -86584,7 +81627,7 @@ function functionBindPolyfill(context) {
   };
 }
 
-},{}],388:[function(require,module,exports){
+},{}],382:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 var MD5 = require('md5.js')
 
@@ -86631,7 +81674,7 @@ function EVP_BytesToKey (password, salt, keyBits, ivLen) {
 
 module.exports = EVP_BytesToKey
 
-},{"md5.js":409,"safe-buffer":464}],389:[function(require,module,exports){
+},{"md5.js":403,"safe-buffer":458}],383:[function(require,module,exports){
 (function (Buffer){
 'use strict'
 var Transform = require('stream').Transform
@@ -86718,7 +81761,7 @@ HashBase.prototype._digest = function () {
 module.exports = HashBase
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350,"inherits":406,"stream":473}],390:[function(require,module,exports){
+},{"buffer":344,"inherits":400,"stream":467}],384:[function(require,module,exports){
 var hash = exports;
 
 hash.utils = require('./hash/utils');
@@ -86735,7 +81778,7 @@ hash.sha384 = hash.sha.sha384;
 hash.sha512 = hash.sha.sha512;
 hash.ripemd160 = hash.ripemd.ripemd160;
 
-},{"./hash/common":391,"./hash/hmac":392,"./hash/ripemd":393,"./hash/sha":394,"./hash/utils":401}],391:[function(require,module,exports){
+},{"./hash/common":385,"./hash/hmac":386,"./hash/ripemd":387,"./hash/sha":388,"./hash/utils":395}],385:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -86829,7 +81872,7 @@ BlockHash.prototype._pad = function pad() {
   return res;
 };
 
-},{"./utils":401,"minimalistic-assert":412}],392:[function(require,module,exports){
+},{"./utils":395,"minimalistic-assert":406}],386:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -86878,7 +81921,7 @@ Hmac.prototype.digest = function digest(enc) {
   return this.outer.digest(enc);
 };
 
-},{"./utils":401,"minimalistic-assert":412}],393:[function(require,module,exports){
+},{"./utils":395,"minimalistic-assert":406}],387:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -87026,7 +82069,7 @@ var sh = [
   8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11
 ];
 
-},{"./common":391,"./utils":401}],394:[function(require,module,exports){
+},{"./common":385,"./utils":395}],388:[function(require,module,exports){
 'use strict';
 
 exports.sha1 = require('./sha/1');
@@ -87035,7 +82078,7 @@ exports.sha256 = require('./sha/256');
 exports.sha384 = require('./sha/384');
 exports.sha512 = require('./sha/512');
 
-},{"./sha/1":395,"./sha/224":396,"./sha/256":397,"./sha/384":398,"./sha/512":399}],395:[function(require,module,exports){
+},{"./sha/1":389,"./sha/224":390,"./sha/256":391,"./sha/384":392,"./sha/512":393}],389:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -87111,7 +82154,7 @@ SHA1.prototype._digest = function digest(enc) {
     return utils.split32(this.h, 'big');
 };
 
-},{"../common":391,"../utils":401,"./common":400}],396:[function(require,module,exports){
+},{"../common":385,"../utils":395,"./common":394}],390:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -87143,7 +82186,7 @@ SHA224.prototype._digest = function digest(enc) {
 };
 
 
-},{"../utils":401,"./256":397}],397:[function(require,module,exports){
+},{"../utils":395,"./256":391}],391:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -87250,7 +82293,7 @@ SHA256.prototype._digest = function digest(enc) {
     return utils.split32(this.h, 'big');
 };
 
-},{"../common":391,"../utils":401,"./common":400,"minimalistic-assert":412}],398:[function(require,module,exports){
+},{"../common":385,"../utils":395,"./common":394,"minimalistic-assert":406}],392:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -87287,7 +82330,7 @@ SHA384.prototype._digest = function digest(enc) {
     return utils.split32(this.h.slice(0, 12), 'big');
 };
 
-},{"../utils":401,"./512":399}],399:[function(require,module,exports){
+},{"../utils":395,"./512":393}],393:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -87619,7 +82662,7 @@ function g1_512_lo(xh, xl) {
   return r;
 }
 
-},{"../common":391,"../utils":401,"minimalistic-assert":412}],400:[function(require,module,exports){
+},{"../common":385,"../utils":395,"minimalistic-assert":406}],394:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -87670,7 +82713,7 @@ function g1_256(x) {
 }
 exports.g1_256 = g1_256;
 
-},{"../utils":401}],401:[function(require,module,exports){
+},{"../utils":395}],395:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -87925,7 +82968,7 @@ function shr64_lo(ah, al, num) {
 }
 exports.shr64_lo = shr64_lo;
 
-},{"inherits":406,"minimalistic-assert":412}],402:[function(require,module,exports){
+},{"inherits":400,"minimalistic-assert":406}],396:[function(require,module,exports){
 'use strict';
 
 var hash = require('hash.js');
@@ -88040,7 +83083,7 @@ HmacDRBG.prototype.generate = function generate(len, enc, add, addEnc) {
   return utils.encode(res, enc);
 };
 
-},{"hash.js":390,"minimalistic-assert":412,"minimalistic-crypto-utils":413}],403:[function(require,module,exports){
+},{"hash.js":384,"minimalistic-assert":406,"minimalistic-crypto-utils":407}],397:[function(require,module,exports){
 var http = require('http')
 var url = require('url')
 
@@ -88073,7 +83116,7 @@ function validateParams (params) {
   return params
 }
 
-},{"http":474,"url":480}],404:[function(require,module,exports){
+},{"http":468,"url":474}],398:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -88159,7 +83202,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],405:[function(require,module,exports){
+},{}],399:[function(require,module,exports){
 
 var indexOf = [].indexOf;
 
@@ -88170,7 +83213,7 @@ module.exports = function(arr, obj){
   }
   return -1;
 };
-},{}],406:[function(require,module,exports){
+},{}],400:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -88195,7 +83238,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],407:[function(require,module,exports){
+},{}],401:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -88218,14 +83261,14 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],408:[function(require,module,exports){
+},{}],402:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],409:[function(require,module,exports){
+},{}],403:[function(require,module,exports){
 (function (Buffer){
 'use strict'
 var inherits = require('inherits')
@@ -88374,7 +83417,7 @@ function fnI (a, b, c, d, m, k, s) {
 module.exports = MD5
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350,"hash-base":410,"inherits":406}],410:[function(require,module,exports){
+},{"buffer":344,"hash-base":404,"inherits":400}],404:[function(require,module,exports){
 'use strict'
 var Buffer = require('safe-buffer').Buffer
 var Transform = require('stream').Transform
@@ -88471,7 +83514,7 @@ HashBase.prototype._digest = function () {
 
 module.exports = HashBase
 
-},{"inherits":406,"safe-buffer":464,"stream":473}],411:[function(require,module,exports){
+},{"inherits":400,"safe-buffer":458,"stream":467}],405:[function(require,module,exports){
 var bn = require('bn.js');
 var brorand = require('brorand');
 
@@ -88588,7 +83631,7 @@ MillerRabin.prototype.getDivisor = function getDivisor(n, k) {
   return false;
 };
 
-},{"bn.js":317,"brorand":318}],412:[function(require,module,exports){
+},{"bn.js":311,"brorand":312}],406:[function(require,module,exports){
 module.exports = assert;
 
 function assert(val, msg) {
@@ -88601,7 +83644,7 @@ assert.equal = function assertEqual(l, r, msg) {
     throw new Error(msg || ('Assertion failed: ' + l + ' != ' + r));
 };
 
-},{}],413:[function(require,module,exports){
+},{}],407:[function(require,module,exports){
 'use strict';
 
 var utils = exports;
@@ -88661,7 +83704,7 @@ utils.encode = function encode(arr, enc) {
     return arr;
 };
 
-},{}],414:[function(require,module,exports){
+},{}],408:[function(require,module,exports){
 'use strict';
 
 
@@ -88768,7 +83811,7 @@ exports.setTyped = function (on) {
 
 exports.setTyped(TYPED_OK);
 
-},{}],415:[function(require,module,exports){
+},{}],409:[function(require,module,exports){
 'use strict';
 
 // Note: adler32 takes 12% for level 0 and 2% for level 6.
@@ -88821,7 +83864,7 @@ function adler32(adler, buf, len, pos) {
 
 module.exports = adler32;
 
-},{}],416:[function(require,module,exports){
+},{}],410:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -88891,7 +83934,7 @@ module.exports = {
   //Z_NULL:                 null // Use -1 or null inline, depending on var type
 };
 
-},{}],417:[function(require,module,exports){
+},{}],411:[function(require,module,exports){
 'use strict';
 
 // Note: we can't get significant speed boost here.
@@ -88952,7 +83995,7 @@ function crc32(crc, buf, len, pos) {
 
 module.exports = crc32;
 
-},{}],418:[function(require,module,exports){
+},{}],412:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -90828,7 +85871,7 @@ exports.deflatePrime = deflatePrime;
 exports.deflateTune = deflateTune;
 */
 
-},{"../utils/common":414,"./adler32":415,"./crc32":417,"./messages":422,"./trees":423}],419:[function(require,module,exports){
+},{"../utils/common":408,"./adler32":409,"./crc32":411,"./messages":416,"./trees":417}],413:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -91175,7 +86218,7 @@ module.exports = function inflate_fast(strm, start) {
   return;
 };
 
-},{}],420:[function(require,module,exports){
+},{}],414:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -92733,7 +87776,7 @@ exports.inflateSyncPoint = inflateSyncPoint;
 exports.inflateUndermine = inflateUndermine;
 */
 
-},{"../utils/common":414,"./adler32":415,"./crc32":417,"./inffast":419,"./inftrees":421}],421:[function(require,module,exports){
+},{"../utils/common":408,"./adler32":409,"./crc32":411,"./inffast":413,"./inftrees":415}],415:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -93078,7 +88121,7 @@ module.exports = function inflate_table(type, lens, lens_index, codes, table, ta
   return 0;
 };
 
-},{"../utils/common":414}],422:[function(require,module,exports){
+},{"../utils/common":408}],416:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -93112,7 +88155,7 @@ module.exports = {
   '-6':   'incompatible version' /* Z_VERSION_ERROR (-6) */
 };
 
-},{}],423:[function(require,module,exports){
+},{}],417:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -94334,7 +89377,7 @@ exports._tr_flush_block  = _tr_flush_block;
 exports._tr_tally = _tr_tally;
 exports._tr_align = _tr_align;
 
-},{"../utils/common":414}],424:[function(require,module,exports){
+},{"../utils/common":408}],418:[function(require,module,exports){
 'use strict';
 
 // (C) 1995-2013 Jean-loup Gailly and Mark Adler
@@ -94383,7 +89426,7 @@ function ZStream() {
 
 module.exports = ZStream;
 
-},{}],425:[function(require,module,exports){
+},{}],419:[function(require,module,exports){
 module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
 "2.16.840.1.101.3.4.1.2": "aes-128-cbc",
 "2.16.840.1.101.3.4.1.3": "aes-128-ofb",
@@ -94397,7 +89440,7 @@ module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
 "2.16.840.1.101.3.4.1.43": "aes-256-ofb",
 "2.16.840.1.101.3.4.1.44": "aes-256-cfb"
 }
-},{}],426:[function(require,module,exports){
+},{}],420:[function(require,module,exports){
 // from https://github.com/indutny/self-signed/blob/gh-pages/lib/asn1.js
 // Fedor, you are amazing.
 'use strict'
@@ -94521,7 +89564,7 @@ exports.signature = asn1.define('signature', function () {
   )
 })
 
-},{"./certificate":427,"asn1.js":301}],427:[function(require,module,exports){
+},{"./certificate":421,"asn1.js":295}],421:[function(require,module,exports){
 // from https://github.com/Rantanen/node-dtls/blob/25a7dc861bda38cfeac93a723500eea4f0ac2e86/Certificate.js
 // thanks to @Rantanen
 
@@ -94611,7 +89654,7 @@ var X509Certificate = asn.define('X509Certificate', function () {
 
 module.exports = X509Certificate
 
-},{"asn1.js":301}],428:[function(require,module,exports){
+},{"asn1.js":295}],422:[function(require,module,exports){
 (function (Buffer){
 // adapted from https://github.com/apatil/pemstrip
 var findProc = /Proc-Type: 4,ENCRYPTED\n\r?DEK-Info: AES-((?:128)|(?:192)|(?:256))-CBC,([0-9A-H]+)\n\r?\n\r?([0-9A-z\n\r\+\/\=]+)\n\r?/m
@@ -94645,7 +89688,7 @@ module.exports = function (okey, password) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"browserify-aes":322,"buffer":350,"evp_bytestokey":388}],429:[function(require,module,exports){
+},{"browserify-aes":316,"buffer":344,"evp_bytestokey":382}],423:[function(require,module,exports){
 (function (Buffer){
 var asn1 = require('./asn1')
 var aesid = require('./aesid.json')
@@ -94755,7 +89798,7 @@ function decrypt (data, password) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./aesid.json":425,"./asn1":426,"./fixProc":428,"browserify-aes":322,"buffer":350,"pbkdf2":431}],430:[function(require,module,exports){
+},{"./aesid.json":419,"./asn1":420,"./fixProc":422,"browserify-aes":316,"buffer":344,"pbkdf2":425}],424:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -94983,13 +90026,13 @@ var substr = 'ab'.substr(-1) === 'b'
 ;
 
 }).call(this,require('_process'))
-},{"_process":437}],431:[function(require,module,exports){
+},{"_process":431}],425:[function(require,module,exports){
 
 exports.pbkdf2 = require('./lib/async')
 
 exports.pbkdf2Sync = require('./lib/sync')
 
-},{"./lib/async":432,"./lib/sync":435}],432:[function(require,module,exports){
+},{"./lib/async":426,"./lib/sync":429}],426:[function(require,module,exports){
 (function (process,global){
 var checkParameters = require('./precondition')
 var defaultEncoding = require('./default-encoding')
@@ -95091,7 +90134,7 @@ module.exports = function (password, salt, iterations, keylen, digest, callback)
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./default-encoding":433,"./precondition":434,"./sync":435,"_process":437,"safe-buffer":464}],433:[function(require,module,exports){
+},{"./default-encoding":427,"./precondition":428,"./sync":429,"_process":431,"safe-buffer":458}],427:[function(require,module,exports){
 (function (process){
 var defaultEncoding
 /* istanbul ignore next */
@@ -95105,7 +90148,7 @@ if (process.browser) {
 module.exports = defaultEncoding
 
 }).call(this,require('_process'))
-},{"_process":437}],434:[function(require,module,exports){
+},{"_process":431}],428:[function(require,module,exports){
 var MAX_ALLOC = Math.pow(2, 30) - 1 // default in iojs
 module.exports = function (iterations, keylen) {
   if (typeof iterations !== 'number') {
@@ -95125,7 +90168,7 @@ module.exports = function (iterations, keylen) {
   }
 }
 
-},{}],435:[function(require,module,exports){
+},{}],429:[function(require,module,exports){
 var md5 = require('create-hash/md5')
 var rmd160 = require('ripemd160')
 var sha = require('sha.js')
@@ -95228,7 +90271,7 @@ function pbkdf2 (password, salt, iterations, keylen, digest) {
 
 module.exports = pbkdf2
 
-},{"./default-encoding":433,"./precondition":434,"create-hash/md5":357,"ripemd160":463,"safe-buffer":464,"sha.js":466}],436:[function(require,module,exports){
+},{"./default-encoding":427,"./precondition":428,"create-hash/md5":351,"ripemd160":457,"safe-buffer":458,"sha.js":460}],430:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -95276,7 +90319,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 
 
 }).call(this,require('_process'))
-},{"_process":437}],437:[function(require,module,exports){
+},{"_process":431}],431:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -95462,7 +90505,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],438:[function(require,module,exports){
+},{}],432:[function(require,module,exports){
 exports.publicEncrypt = require('./publicEncrypt');
 exports.privateDecrypt = require('./privateDecrypt');
 
@@ -95473,7 +90516,7 @@ exports.privateEncrypt = function privateEncrypt(key, buf) {
 exports.publicDecrypt = function publicDecrypt(key, buf) {
   return exports.privateDecrypt(key, buf, true);
 };
-},{"./privateDecrypt":440,"./publicEncrypt":441}],439:[function(require,module,exports){
+},{"./privateDecrypt":434,"./publicEncrypt":435}],433:[function(require,module,exports){
 (function (Buffer){
 var createHash = require('create-hash');
 module.exports = function (seed, len) {
@@ -95492,7 +90535,7 @@ function i2ops(c) {
   return out;
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":350,"create-hash":355}],440:[function(require,module,exports){
+},{"buffer":344,"create-hash":349}],434:[function(require,module,exports){
 (function (Buffer){
 var parseKeys = require('parse-asn1');
 var mgf = require('./mgf');
@@ -95603,7 +90646,7 @@ function compare(a, b){
   return dif;
 }
 }).call(this,require("buffer").Buffer)
-},{"./mgf":439,"./withPublic":442,"./xor":443,"bn.js":317,"browserify-rsa":340,"buffer":350,"create-hash":355,"parse-asn1":429}],441:[function(require,module,exports){
+},{"./mgf":433,"./withPublic":436,"./xor":437,"bn.js":311,"browserify-rsa":334,"buffer":344,"create-hash":349,"parse-asn1":423}],435:[function(require,module,exports){
 (function (Buffer){
 var parseKeys = require('parse-asn1');
 var randomBytes = require('randombytes');
@@ -95701,7 +90744,7 @@ function nonZero(len, crypto) {
   return out;
 }
 }).call(this,require("buffer").Buffer)
-},{"./mgf":439,"./withPublic":442,"./xor":443,"bn.js":317,"browserify-rsa":340,"buffer":350,"create-hash":355,"parse-asn1":429,"randombytes":448}],442:[function(require,module,exports){
+},{"./mgf":433,"./withPublic":436,"./xor":437,"bn.js":311,"browserify-rsa":334,"buffer":344,"create-hash":349,"parse-asn1":423,"randombytes":442}],436:[function(require,module,exports){
 (function (Buffer){
 var bn = require('bn.js');
 function withPublic(paddedMsg, key) {
@@ -95714,7 +90757,7 @@ function withPublic(paddedMsg, key) {
 
 module.exports = withPublic;
 }).call(this,require("buffer").Buffer)
-},{"bn.js":317,"buffer":350}],443:[function(require,module,exports){
+},{"bn.js":311,"buffer":344}],437:[function(require,module,exports){
 module.exports = function xor(a, b) {
   var len = a.length;
   var i = -1;
@@ -95723,7 +90766,7 @@ module.exports = function xor(a, b) {
   }
   return a
 };
-},{}],444:[function(require,module,exports){
+},{}],438:[function(require,module,exports){
 (function (global){
 /*! https://mths.be/punycode v1.4.1 by @mathias */
 ;(function(root) {
@@ -96260,7 +91303,7 @@ module.exports = function xor(a, b) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],445:[function(require,module,exports){
+},{}],439:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -96346,7 +91389,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],446:[function(require,module,exports){
+},{}],440:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -96433,13 +91476,13 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],447:[function(require,module,exports){
+},{}],441:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":445,"./encode":446}],448:[function(require,module,exports){
+},{"./decode":439,"./encode":440}],442:[function(require,module,exports){
 (function (process,global){
 'use strict'
 
@@ -96481,7 +91524,7 @@ function randomBytes (size, cb) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":437,"safe-buffer":464}],449:[function(require,module,exports){
+},{"_process":431,"safe-buffer":458}],443:[function(require,module,exports){
 (function (process,global){
 'use strict'
 
@@ -96593,10 +91636,10 @@ function randomFillSync (buf, offset, size) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":437,"randombytes":448,"safe-buffer":464}],450:[function(require,module,exports){
+},{"_process":431,"randombytes":442,"safe-buffer":458}],444:[function(require,module,exports){
 module.exports = require('./lib/_stream_duplex.js');
 
-},{"./lib/_stream_duplex.js":451}],451:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":445}],445:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -96721,7 +91764,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":453,"./_stream_writable":455,"core-util-is":353,"inherits":406,"process-nextick-args":436}],452:[function(require,module,exports){
+},{"./_stream_readable":447,"./_stream_writable":449,"core-util-is":347,"inherits":400,"process-nextick-args":430}],446:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -96769,7 +91812,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":454,"core-util-is":353,"inherits":406}],453:[function(require,module,exports){
+},{"./_stream_transform":448,"core-util-is":347,"inherits":400}],447:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -97787,7 +92830,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":451,"./internal/streams/BufferList":456,"./internal/streams/destroy":457,"./internal/streams/stream":458,"_process":437,"core-util-is":353,"events":387,"inherits":406,"isarray":408,"process-nextick-args":436,"safe-buffer":464,"string_decoder/":478,"util":319}],454:[function(require,module,exports){
+},{"./_stream_duplex":445,"./internal/streams/BufferList":450,"./internal/streams/destroy":451,"./internal/streams/stream":452,"_process":431,"core-util-is":347,"events":381,"inherits":400,"isarray":402,"process-nextick-args":430,"safe-buffer":458,"string_decoder/":472,"util":313}],448:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -98002,7 +93045,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":451,"core-util-is":353,"inherits":406}],455:[function(require,module,exports){
+},{"./_stream_duplex":445,"core-util-is":347,"inherits":400}],449:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -98682,7 +93725,7 @@ Writable.prototype._destroy = function (err, cb) {
   cb(err);
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":451,"./internal/streams/destroy":457,"./internal/streams/stream":458,"_process":437,"core-util-is":353,"inherits":406,"process-nextick-args":436,"safe-buffer":464,"util-deprecate":482}],456:[function(require,module,exports){
+},{"./_stream_duplex":445,"./internal/streams/destroy":451,"./internal/streams/stream":452,"_process":431,"core-util-is":347,"inherits":400,"process-nextick-args":430,"safe-buffer":458,"util-deprecate":476}],450:[function(require,module,exports){
 'use strict';
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -98762,7 +93805,7 @@ if (util && util.inspect && util.inspect.custom) {
     return this.constructor.name + ' ' + obj;
   };
 }
-},{"safe-buffer":464,"util":319}],457:[function(require,module,exports){
+},{"safe-buffer":458,"util":313}],451:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -98837,13 +93880,13 @@ module.exports = {
   destroy: destroy,
   undestroy: undestroy
 };
-},{"process-nextick-args":436}],458:[function(require,module,exports){
+},{"process-nextick-args":430}],452:[function(require,module,exports){
 module.exports = require('events').EventEmitter;
 
-},{"events":387}],459:[function(require,module,exports){
+},{"events":381}],453:[function(require,module,exports){
 module.exports = require('./readable').PassThrough
 
-},{"./readable":460}],460:[function(require,module,exports){
+},{"./readable":454}],454:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = exports;
 exports.Readable = exports;
@@ -98852,13 +93895,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":451,"./lib/_stream_passthrough.js":452,"./lib/_stream_readable.js":453,"./lib/_stream_transform.js":454,"./lib/_stream_writable.js":455}],461:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":445,"./lib/_stream_passthrough.js":446,"./lib/_stream_readable.js":447,"./lib/_stream_transform.js":448,"./lib/_stream_writable.js":449}],455:[function(require,module,exports){
 module.exports = require('./readable').Transform
 
-},{"./readable":460}],462:[function(require,module,exports){
+},{"./readable":454}],456:[function(require,module,exports){
 module.exports = require('./lib/_stream_writable.js');
 
-},{"./lib/_stream_writable.js":455}],463:[function(require,module,exports){
+},{"./lib/_stream_writable.js":449}],457:[function(require,module,exports){
 (function (Buffer){
 'use strict'
 var inherits = require('inherits')
@@ -99153,9 +94196,9 @@ function fn5 (a, b, c, d, e, m, k, s) {
 module.exports = RIPEMD160
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":350,"hash-base":389,"inherits":406}],464:[function(require,module,exports){
-arguments[4][230][0].apply(exports,arguments)
-},{"buffer":350,"dup":230}],465:[function(require,module,exports){
+},{"buffer":344,"hash-base":383,"inherits":400}],458:[function(require,module,exports){
+arguments[4][224][0].apply(exports,arguments)
+},{"buffer":344,"dup":224}],459:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 
 // prototype class for hash functions
@@ -99238,7 +94281,7 @@ Hash.prototype._update = function () {
 
 module.exports = Hash
 
-},{"safe-buffer":464}],466:[function(require,module,exports){
+},{"safe-buffer":458}],460:[function(require,module,exports){
 var exports = module.exports = function SHA (algorithm) {
   algorithm = algorithm.toLowerCase()
 
@@ -99255,7 +94298,7 @@ exports.sha256 = require('./sha256')
 exports.sha384 = require('./sha384')
 exports.sha512 = require('./sha512')
 
-},{"./sha":467,"./sha1":468,"./sha224":469,"./sha256":470,"./sha384":471,"./sha512":472}],467:[function(require,module,exports){
+},{"./sha":461,"./sha1":462,"./sha224":463,"./sha256":464,"./sha384":465,"./sha512":466}],461:[function(require,module,exports){
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-0, as defined
  * in FIPS PUB 180-1
@@ -99351,7 +94394,7 @@ Sha.prototype._hash = function () {
 
 module.exports = Sha
 
-},{"./hash":465,"inherits":406,"safe-buffer":464}],468:[function(require,module,exports){
+},{"./hash":459,"inherits":400,"safe-buffer":458}],462:[function(require,module,exports){
 /*
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-1, as defined
  * in FIPS PUB 180-1
@@ -99452,7 +94495,7 @@ Sha1.prototype._hash = function () {
 
 module.exports = Sha1
 
-},{"./hash":465,"inherits":406,"safe-buffer":464}],469:[function(require,module,exports){
+},{"./hash":459,"inherits":400,"safe-buffer":458}],463:[function(require,module,exports){
 /**
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
  * in FIPS 180-2
@@ -99507,7 +94550,7 @@ Sha224.prototype._hash = function () {
 
 module.exports = Sha224
 
-},{"./hash":465,"./sha256":470,"inherits":406,"safe-buffer":464}],470:[function(require,module,exports){
+},{"./hash":459,"./sha256":464,"inherits":400,"safe-buffer":458}],464:[function(require,module,exports){
 /**
  * A JavaScript implementation of the Secure Hash Algorithm, SHA-256, as defined
  * in FIPS 180-2
@@ -99644,7 +94687,7 @@ Sha256.prototype._hash = function () {
 
 module.exports = Sha256
 
-},{"./hash":465,"inherits":406,"safe-buffer":464}],471:[function(require,module,exports){
+},{"./hash":459,"inherits":400,"safe-buffer":458}],465:[function(require,module,exports){
 var inherits = require('inherits')
 var SHA512 = require('./sha512')
 var Hash = require('./hash')
@@ -99703,7 +94746,7 @@ Sha384.prototype._hash = function () {
 
 module.exports = Sha384
 
-},{"./hash":465,"./sha512":472,"inherits":406,"safe-buffer":464}],472:[function(require,module,exports){
+},{"./hash":459,"./sha512":466,"inherits":400,"safe-buffer":458}],466:[function(require,module,exports){
 var inherits = require('inherits')
 var Hash = require('./hash')
 var Buffer = require('safe-buffer').Buffer
@@ -99965,7 +95008,7 @@ Sha512.prototype._hash = function () {
 
 module.exports = Sha512
 
-},{"./hash":465,"inherits":406,"safe-buffer":464}],473:[function(require,module,exports){
+},{"./hash":459,"inherits":400,"safe-buffer":458}],467:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -100094,7 +95137,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":387,"inherits":406,"readable-stream/duplex.js":450,"readable-stream/passthrough.js":459,"readable-stream/readable.js":460,"readable-stream/transform.js":461,"readable-stream/writable.js":462}],474:[function(require,module,exports){
+},{"events":381,"inherits":400,"readable-stream/duplex.js":444,"readable-stream/passthrough.js":453,"readable-stream/readable.js":454,"readable-stream/transform.js":455,"readable-stream/writable.js":456}],468:[function(require,module,exports){
 (function (global){
 var ClientRequest = require('./lib/request')
 var IncomingMessage = require('./lib/response')
@@ -100180,7 +95223,7 @@ http.METHODS = [
 	'UNSUBSCRIBE'
 ]
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./lib/request":476,"./lib/response":477,"builtin-status-codes":351,"url":480,"xtend":487}],475:[function(require,module,exports){
+},{"./lib/request":470,"./lib/response":471,"builtin-status-codes":345,"url":474,"xtend":481}],469:[function(require,module,exports){
 (function (global){
 exports.fetch = isFunction(global.fetch) && isFunction(global.ReadableStream)
 
@@ -100257,7 +95300,7 @@ function isFunction (value) {
 xhr = null // Help gc
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],476:[function(require,module,exports){
+},{}],470:[function(require,module,exports){
 (function (process,global,Buffer){
 var capability = require('./capability')
 var inherits = require('inherits')
@@ -100584,7 +95627,7 @@ var unsafeHeaders = [
 ]
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./capability":475,"./response":477,"_process":437,"buffer":350,"inherits":406,"readable-stream":460,"to-arraybuffer":479}],477:[function(require,module,exports){
+},{"./capability":469,"./response":471,"_process":431,"buffer":344,"inherits":400,"readable-stream":454,"to-arraybuffer":473}],471:[function(require,module,exports){
 (function (process,global,Buffer){
 var capability = require('./capability')
 var inherits = require('inherits')
@@ -100805,7 +95848,7 @@ IncomingMessage.prototype._onXHRProgress = function () {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./capability":475,"_process":437,"buffer":350,"inherits":406,"readable-stream":460}],478:[function(require,module,exports){
+},{"./capability":469,"_process":431,"buffer":344,"inherits":400,"readable-stream":454}],472:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('safe-buffer').Buffer;
@@ -101078,7 +96121,7 @@ function simpleWrite(buf) {
 function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
-},{"safe-buffer":464}],479:[function(require,module,exports){
+},{"safe-buffer":458}],473:[function(require,module,exports){
 var Buffer = require('buffer').Buffer
 
 module.exports = function (buf) {
@@ -101107,7 +96150,7 @@ module.exports = function (buf) {
 	}
 }
 
-},{"buffer":350}],480:[function(require,module,exports){
+},{"buffer":344}],474:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -101841,7 +96884,7 @@ Url.prototype.parseHost = function() {
   if (host) this.hostname = host;
 };
 
-},{"./util":481,"punycode":444,"querystring":447}],481:[function(require,module,exports){
+},{"./util":475,"punycode":438,"querystring":441}],475:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -101859,7 +96902,7 @@ module.exports = {
   }
 };
 
-},{}],482:[function(require,module,exports){
+},{}],476:[function(require,module,exports){
 (function (global){
 
 /**
@@ -101930,16 +96973,16 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],483:[function(require,module,exports){
-arguments[4][406][0].apply(exports,arguments)
-},{"dup":406}],484:[function(require,module,exports){
+},{}],477:[function(require,module,exports){
+arguments[4][400][0].apply(exports,arguments)
+},{"dup":400}],478:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],485:[function(require,module,exports){
+},{}],479:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -102529,7 +97572,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":484,"_process":437,"inherits":483}],486:[function(require,module,exports){
+},{"./support/isBuffer":478,"_process":431,"inherits":477}],480:[function(require,module,exports){
 var indexOf = require('indexof');
 
 var Object_keys = function (obj) {
@@ -102669,7 +97712,7 @@ exports.createContext = Script.createContext = function (context) {
     return copy;
 };
 
-},{"indexof":405}],487:[function(require,module,exports){
+},{"indexof":399}],481:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -102690,4 +97733,4 @@ function extend() {
     return target
 }
 
-},{}]},{},[299]);
+},{}]},{},[293]);

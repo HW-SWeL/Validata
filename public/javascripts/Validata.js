@@ -101,7 +101,9 @@ Validata = {
         {
             Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
             UI.updateResourceShapeMapTable();
+            Validata.Validation.rawResponses = [];
             Validata.validator.validate(Validata.Validation.options.resourceShapeMap);
+
             console.log('validator called');
         });
     },
@@ -282,12 +284,13 @@ Validata = {
                             '    <ul class="list-group resourceShapeErrorsListGroup">';
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'], function (index, rawError)
-                        {
-                            var line = Util.isDefined(rawError.line) ? rawError.line : "";
+                        {   
+                            console.log(rawError);
+                            var line = Util.isDefined(rawError.type) ? rawError.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
-                            var requirementLevel = 'default';
+                            var requirementLevel = 'REQ_LEVEL TODO';
                             // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
-                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.description) ) + '</span>';
+                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.type) ) + '</span>';
 
                             errorsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
@@ -487,6 +490,7 @@ Validata = {
             quickSummaryStatusResults = "Incomplete";
         }
 
+        //if schema is ok
         if (Util.iterableLength(Validata.Schema))
         {
             if (Util.stringIsNotBlank(Validata.Schema.data))
@@ -526,7 +530,7 @@ Validata = {
             quickSummaryStatusSchema = "Incomplete";
             quickSummaryStatusResults = "Incomplete";
         }
-
+        //if data is ok
         if (Util.iterableLength(Validata.Data))
         {
             if (Util.stringIsNotBlank(Validata.Data.data))
