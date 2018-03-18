@@ -285,7 +285,7 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'], function (index, rawError)
                         {   
-                            console.log(rawError);
+                            console.log('raw_error',rawError);
                             var line = Util.isDefined(rawError.type) ? rawError.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
                             var requirementLevel = 'REQ_LEVEL TODO';

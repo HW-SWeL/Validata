@@ -173,7 +173,8 @@ UI = {
         var schemaSourceTextarea = $('#schemaSourceText');
         
         UI.dataSourceText = CodeMirror.fromTextArea(dataSourceTextarea[0], {
-            lineNumbers: true
+            lineNumbers: true,
+            mode:"turtle"
         });
 
         UI.dataSourceText.on('change', function schemaSelectorChange()
@@ -195,7 +196,7 @@ UI = {
             UI.dataSourceText.setSize("100%", old_height + 100);
         });
 
-
+        
 
         UI.schemaSourceText = CodeMirror.fromTextArea(schemaSourceTextarea[0], {
             lineNumbers: true
