@@ -13,3 +13,4 @@ public/components
 # Config File
 # --------------------
 public/javascripts/ValidataConfig.json
+package-lock.json
