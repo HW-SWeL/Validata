@@ -40,6 +40,10 @@ var schemaText =
 "    foaf:mbox IRI                      # one FOAF mbox.\n" + 
 "}";
 
+//paste for node test
+
+n3 = require('n3')
+
 var dataText = 
 "# Issue1.ttl - sample issue data.\n" + 
 "# <Issue1> conforms to <Issue.shex#IssueShape>\n" + 
@@ -66,6 +70,22 @@ var dataText =
 "    foaf:mbox <mailto:joe@example.org>\n"+
 "."
 
+var DefaultBase = "http://127.0.0.1:8888/doc/Issue1"
+
+var db = n3.Store();
+n3.Parser({documentIRI: DefaultBase, format: "text/turtle"}).parse(dataText, function (error, triple, prefix) {
+    if (error) {
+      throw Error("error parsing " + data + ": " + error);
+    } else if (triple) {
+      db.addQuad(triple)
+      console.log(triple.subject, triple.predicate, triple.object, '.');
+    } else if (prefix){
+      console.log('prefix',prefix);
+    }else {
+      Triples = db;
+    }
+});
+
 
 var shexc = "http://127.0.0.1:8888/doc/Issue.shex";
 var shape = "http://127.0.0.1:8888/doc/IssueShape";
@@ -82,7 +102,7 @@ n3.Parser({documentIRI: DefaultBase, format: "text/turtle"}).parse(dataText, fun
     if (error) {
       throw Error("error parsing " + data + ": " + error);
     } else if (triple) {
-      db.addTriple(triple)
+      db.addQuad(triple)
       console.log(triple.subject, triple.predicate, triple.object, '.');
     } else {
       Triples = db;

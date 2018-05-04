@@ -271,6 +271,7 @@ Validata = {
                     // Add this resource to the errors panel and actually print the errors if we have some
                     if (Util.iterableLength(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors']))
                     {
+                        console.log('errors reporting');
                         var errorsResourceSectionHTMLString =
                             '<div class="panel-heading">' +
                             '    <a data-toggle="collapse" href="#errorsResourceShape' + rawResponseIndex + '" class="panel-title">' +

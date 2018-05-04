@@ -64,15 +64,22 @@ Validator.prototype = {
 module.exports.Validator = Validator;
 
 function parseData(dataText){
+    console.log('split data');
+    console.log(dataText.split("\n"));
     return new Promise(function (resolve, reject) {
 
         var db = n3.Store();
-        n3.Parser({documentIRI: DefaultBase, format: "text/turtle"}).parse(dataText, function (error, triple, prefixes) {
+        n3.Parser({documentIRI: DefaultBase}).parse(dataText, function (error, triple, prefixes) {
+            // console.log('db', db);
+            // console.log('DB');
+            console.log('triple callback')
             if (error) {
                 // throw Error("error parsing " + data + ": " + error);
                 reject(parseN3Error(error));
             } else if (triple) {
-                db.addTriple(triple)
+                console.log("N3triple",triple);
+                // triple.line = N3triple.line;
+                db.addTriple(triple);
             // console.log(triple.subject, triple.predicate, triple.object, '.');
             } else {
                 resolve({db: db, triples:db.getTriples()});
@@ -30850,6 +30857,7 @@ function N3Parser(options) {
       isNTriples = /triple/.test(format), isNQuads = /quad/.test(format),
       isN3 = this._n3Mode = /n3/.test(format),
       isLineMode = isNTriples || isNQuads;
+  console.log("format",format);
   if (!(this._supportsNamedGraphs = !(isTurtle || isN3)))
     this._readPredicateOrNamedGraph = this._readPredicate;
   this._supportsQuads = !(isTurtle || isTriG || isNTriples || isN3);
@@ -30967,6 +30975,7 @@ N3Parser.prototype = {
         return this._readNamedGraphLabel;
     // Otherwise, the next token must be a subject
     default:
+      console.log('default case N3Parser');
       return this._readSubject(token);
     }
   },
@@ -31154,7 +31163,7 @@ N3Parser.prototype = {
 
     // Store blank node triple
     if (this._subject !== null)
-      this._triple(this._subject, this._predicate, this._object, this._graph);
+      this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
 
     // Restore the parent context containing this blank node
     var empty = this._predicate === null;
@@ -31207,7 +31216,7 @@ N3Parser.prototype = {
       // If this list is contained within a parent list, return the membership triple here.
       // This will be `<parent list element> rdf:first <this list>.`.
       if (stack.length !== 0 && stack[stack.length - 1].type === 'list')
-        this._triple(this._subject, this._predicate, this._object, this._graph);
+        this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
       // Was this list the parent's subject?
       if (this._predicate === null) {
         // The next token is the predicate
@@ -31250,7 +31259,7 @@ N3Parser.prototype = {
     }
     else {
       // Continue the previous list with the current list
-      this._triple(prevList, RDF_REST, list, this._graph);
+      this._triple(prevList, RDF_REST, list, this._graph, token.line);
     }
     // Add the item's value
     if (item !== null) {
@@ -31264,7 +31273,7 @@ N3Parser.prototype = {
       }
       // Output the item if it is complete
       if (itemComplete)
-        this._triple(list, RDF_FIRST, item, this._graph);
+        this._triple(list, RDF_FIRST, item, this._graph, token.line);
       // Otherwise, save it for completion
       else
         this._object = item;
@@ -31301,7 +31310,7 @@ N3Parser.prototype = {
     // If this literal was part of a list, write the item
     // (we could also check the context stack, but passing in a flag is faster)
     if (listItem)
-      this._triple(this._subject, RDF_FIRST, this._object, this._graph);
+      this._triple(this._subject, RDF_FIRST, this._object, this._graph, token.line);
     // Continue with the rest of the input
     if (suffix)
       return this._getContextEndReader();
@@ -31318,7 +31327,7 @@ N3Parser.prototype = {
 
     // Store the last triple of the formula
     if (this._subject !== null)
-      this._triple(this._subject, this._predicate, this._object, this._graph);
+      this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
 
     // Restore the parent context containing this formula
     this._restoreContext();
@@ -31365,9 +31374,9 @@ N3Parser.prototype = {
     if (subject !== null) {
       var predicate = this._predicate, object = this._object;
       if (!inversePredicate)
-        this._triple(subject, predicate, object,  graph);
+        this._triple(subject, predicate, object,  graph, token.line);
       else
-        this._triple(object,  predicate, subject, graph);
+        this._triple(object,  predicate, subject, graph, token.line);
     }
     return next;
   },
@@ -31388,7 +31397,7 @@ N3Parser.prototype = {
       return this._error('Expected punctuation to follow "' + this._object + '"', token);
     }
     // A triple has been completed now, so return it
-    this._triple(this._subject, this._predicate, this._object, this._graph);
+    this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
     return next;
   },
 
@@ -31480,13 +31489,13 @@ N3Parser.prototype = {
       // If this is the first item, start a new quantifier list
       if (this._subject === null)
         this._triple(this._graph || '', this._predicate,
-                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH);
+                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH, token.line);
       // Otherwise, continue the previous list
       else
         this._triple(this._subject, RDF_REST,
-                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH);
+                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH, token.line);
       // Output the list item
-      this._triple(this._subject, RDF_FIRST, entity, QUANTIFIERS_GRAPH);
+      this._triple(this._subject, RDF_FIRST, entity, QUANTIFIERS_GRAPH, token.line);
     }
     return this._readQuantifierPunctuation;
   },
@@ -31500,7 +31509,7 @@ N3Parser.prototype = {
     else {
       // With explicit quantifiers, close the quantifier list
       if (this._explicitQuantifiers) {
-        this._triple(this._subject, RDF_REST, RDF_NIL, QUANTIFIERS_GRAPH);
+        this._triple(this._subject, RDF_REST, RDF_NIL, QUANTIFIERS_GRAPH, token.line);
         this._subject = null;
       }
       // Read a dot
@@ -31532,7 +31541,7 @@ N3Parser.prototype = {
         // Switch back to the context of the list
         this._restoreContext();
         // Output the list item
-        this._triple(this._subject, RDF_FIRST, item, this._graph);
+        this._triple(this._subject, RDF_FIRST, item, this._graph, token.line);
       }
       return this._afterPath(token);
     }
@@ -31551,7 +31560,7 @@ N3Parser.prototype = {
     else
       subject = this._object,  this._object  = object;
     // Emit the path's current triple and read its next section
-    this._triple(subject, predicate, object, this._graph);
+    this._triple(subject, predicate, object, this._graph, token.line);
     return this._readPath;
   },
 
@@ -31568,7 +31577,7 @@ N3Parser.prototype = {
     else
       object = this._object,  this._object  = subject;
     // Emit the path's current triple and read its next section
-    this._triple(subject, predicate, object, this._graph);
+    this._triple(subject, predicate, object, this._graph, token.line);
     return this._readPath;
   },
 
@@ -31589,9 +31598,9 @@ N3Parser.prototype = {
   },
 
   // ### `_triple` emits a triple through the callback
-  _triple: function (subject, predicate, object, graph) {
+  _triple: function (subject, predicate, object, graph, line) {
     this._callback(null,
-      { subject: subject, predicate: predicate, object: object, graph: graph || '' });
+      { subject: subject, predicate: predicate, object: object, graph: graph || '' ,line:line});
   },
 
   // ### `_error` emits an error message through the callback
@@ -31692,6 +31701,8 @@ N3Parser.prototype = {
 
   // ### `parse` parses the N3 input and emits each parsed triple through the callback
   parse: function (input, tripleCallback, prefixCallback) {
+    console.log('tripleCallback',tripleCallback);
+    console.log('prefixCallback',prefixCallback);
     var self = this;
     // The read callback is the next function to be executed when a token arrives.
     // We start reading in the top context.
@@ -31708,6 +31719,7 @@ N3Parser.prototype = {
       var triples = [], error;
       this._callback = function (e, t) { e ? (error = e) : t && triples.push(t); };
       this._lexer.tokenize(input).every(function (token) {
+        console.log("token line",token);
         return self._readCallback = self._readCallback(token);
       });
       if (error) throw error;
@@ -31717,6 +31729,7 @@ N3Parser.prototype = {
     // Parse asynchronously otherwise, executing the read callback when a token arrives
     this._callback = tripleCallback;
     this._lexer.tokenize(input, function (error, token) {
+      console.log("token line asynchronously",token);
       if (error !== null)
         self._callback(error), self._callback = noop;
       else if (self._readCallback)
