@@ -11,24 +11,15 @@ function Validator(schemaText, dataText, callbacks, options) {
     
     this.updateSchema(location.origin + '/schema.shex', schemaText);
     this.updateData(dataText);
-    
-    // console.log("validator has instantiated");
-    // console.log("callbacks:\n",callbacks);
-    // console.log("options:\n",options);
-
 }
 
 Validator.prototype = {
     updateSchema: function (base, schemaText) {
         this.schema = parseSchema(base ,schemaText);
-        // this.schema = schemaParser.parseSchema(schemaText);
         this.schema.done(this.callbacks.schemaParsed, this.callbacks.schemaParseError);
-        // var _schema = shexjs.Parser.construct(DefaultBase).parse(schemaText);
-        // console.log('UPDATING THE FUCKIGN Schema',this.schema, _schema);
     },
     updateData: function (dataText) {
         this.data = parseData(dataText);
-        // this.data = dataParser.parseData(dataText);
         this.data.done(this.callbacks.dataParsed, this.callbacks.dataParseError);
     },
     findShapes: function () {
@@ -47,6 +38,7 @@ Validator.prototype = {
             var node = Object.keys(a[2].resourceShapeMap)[0];
             var result = shexjs.Validator.construct(a[0].schema).validate(a[1].db, node, a[2].resourceShapeMap[node]);
             console.log('callbacks in validator',_this.callbacks);
+            console.log('db to validate',a[1].db)
             // console.log('validation results:',result);
             // return validator.validate(
             //     a[0].schema,                       // Schema
@@ -56,7 +48,7 @@ Validator.prototype = {
             //     a[1].resolver,
             //     _this.options.closedShapes,
             //     _this.callbacks.validationResult);
-            return cleanResult(result, _this.callbacks.validationResult)
+            return cleanResult(result, a[1].triples, _this.callbacks.validationResult)
         });
     }
 };
@@ -66,8 +58,9 @@ module.exports.Validator = Validator;
 function parseData(dataText){
     console.log('split data');
     console.log(dataText.split("\n"));
+    console.log('this',this);
     return new Promise(function (resolve, reject) {
-
+        var lineIndex = new Object();
         var db = n3.Store();
         n3.Parser({documentIRI: DefaultBase}).parse(dataText, function (error, triple, prefixes) {
             // console.log('db', db);
@@ -78,11 +71,17 @@ function parseData(dataText){
                 reject(parseN3Error(error));
             } else if (triple) {
                 console.log("N3triple",triple);
-                // triple.line = N3triple.line;
+                lineIndex[JSON.stringify({'subject':triple.subject,'predicate':triple.predicate,'object':triple.object,'graph':triple.graph})] = triple.line;
+                // lineIndex[triple.line] = {'object':triple.object,'subject':triple.subject,'predicate':triple.predicate,'graph':triple.graph};
                 db.addTriple(triple);
             // console.log(triple.subject, triple.predicate, triple.object, '.');
             } else {
-                resolve({db: db, triples:db.getTriples()});
+                var triples = db.getTriples();
+                for (var i = triples.length - 1; i >= 0; i--) {
+                    var triple_key = JSON.stringify({'subject':triples[i].subject,'predicate':triples[i].predicate,'object':triples[i].object,'graph':""});
+                    triples[i].line = lineIndex[triple_key];
+                }
+                resolve({db: db, triples:triples});
             }
         });
         
@@ -103,20 +102,26 @@ function parseSchema(base, schemaText) {
     });
 };
 
-function cleanResult(result, callback){
+function cleanResult(result, parsedTriples, callback){
     console.log('validation result', result);
     var errors = [];
     var solutions = [];
     if (result.type == 'Failure'){
         errors = result.errors;
+        console.log('errors',errors);
+        // console.log('lineIndex',lineIndex);
+        for (var i = errors.length - 1; i >= 0; i--) {
+            errors[i].line = parsedTriples.find(function (triple) { return triple.subject === errors[i].triple.subject &&
+                                                                            triple.predicate === errors[i].triple.predicate &&
+                                                                            triple.object === errors[i].triple.object; }).line;
+        }
     } else {
-        solutions = result.solution.solutions;
+        solutions = result.solution;
     }
-    console.log('errors',errors,'passed',errors.length === 0);
     var clean_result = {
             errors: errors,
             matches: solutions,
-            startingResource: 'startingResource',
+            startingResource: result.node,
             passed: errors.length === 0,
             full_result:result
         };
@@ -135,7 +140,31 @@ function parseN3Error(error) {
         column: 0
     }
 }
+// returns the matched triples and the corresponding lines
+function cleanMatches(validResult){
+    var results = []
+    if (validResult.type == 'ShapeTest') {
+        cleanMatches(validResult.solution);
+    }
+    else if (validResult.type == 'EachOfSolutions') {
 
+    }
+    else if (validResult.type == 'OneOfSolutions') {
+
+    }
+    else if (validResult.type == 'TripleConstraintSolutions') {
+
+    }
+    else if (validResult.type == 'TestedTriple') {
+
+    }
+    else if (validResult instanceof Array){
+        for (var i = validResult.length - 1; i >= 0; i--) {
+            cleanMatches(validResult[i]);
+        }
+    }
+    return results
+}
 },{"n3":185,"promise":195,"shex":251}],2:[function(require,module,exports){
 'use strict';
 
@@ -31701,8 +31730,8 @@ N3Parser.prototype = {
 
   // ### `parse` parses the N3 input and emits each parsed triple through the callback
   parse: function (input, tripleCallback, prefixCallback) {
-    console.log('tripleCallback',tripleCallback);
-    console.log('prefixCallback',prefixCallback);
+    // console.log('tripleCallback',tripleCallback);
+    // console.log('prefixCallback',prefixCallback);
     var self = this;
     // The read callback is the next function to be executed when a token arrives.
     // We start reading in the top context.
@@ -31729,7 +31758,7 @@ N3Parser.prototype = {
     // Parse asynchronously otherwise, executing the read callback when a token arrives
     this._callback = tripleCallback;
     this._lexer.tokenize(input, function (error, token) {
-      console.log("token line asynchronously",token);
+      // console.log("token line asynchronously",token);
       if (error !== null)
         self._callback(error), self._callback = noop;
       else if (self._readCallback)
@@ -42918,7 +42947,7 @@ var compactQueue = function compactQueue(queue) {
     return obj;
 };
 
-exports.arrayToObject = function arrayToObject(source, options) {
+var arrayToObject = function arrayToObject(source, options) {
     var obj = options && options.plainObjects ? Object.create(null) : {};
     for (var i = 0; i < source.length; ++i) {
         if (typeof source[i] !== 'undefined') {
@@ -42929,7 +42958,7 @@ exports.arrayToObject = function arrayToObject(source, options) {
     return obj;
 };
 
-exports.merge = function merge(target, source, options) {
+var merge = function merge(target, source, options) {
     if (!source) {
         return target;
     }
@@ -42954,14 +42983,14 @@ exports.merge = function merge(target, source, options) {
 
     var mergeTarget = target;
     if (Array.isArray(target) && !Array.isArray(source)) {
-        mergeTarget = exports.arrayToObject(target, options);
+        mergeTarget = arrayToObject(target, options);
     }
 
     if (Array.isArray(target) && Array.isArray(source)) {
         source.forEach(function (item, i) {
             if (has.call(target, i)) {
                 if (target[i] && typeof target[i] === 'object') {
-                    target[i] = exports.merge(target[i], item, options);
+                    target[i] = merge(target[i], item, options);
                 } else {
                     target.push(item);
                 }
@@ -42976,7 +43005,7 @@ exports.merge = function merge(target, source, options) {
         var value = source[key];
 
         if (has.call(acc, key)) {
-            acc[key] = exports.merge(acc[key], value, options);
+            acc[key] = merge(acc[key], value, options);
         } else {
             acc[key] = value;
         }
@@ -42984,14 +43013,14 @@ exports.merge = function merge(target, source, options) {
     }, mergeTarget);
 };
 
-exports.assign = function assignSingleSource(target, source) {
+var assign = function assignSingleSource(target, source) {
     return Object.keys(source).reduce(function (acc, key) {
         acc[key] = source[key];
         return acc;
     }, target);
 };
 
-exports.decode = function (str) {
+var decode = function (str) {
     try {
         return decodeURIComponent(str.replace(/\+/g, ' '));
     } catch (e) {
@@ -42999,7 +43028,7 @@ exports.decode = function (str) {
     }
 };
 
-exports.encode = function encode(str) {
+var encode = function encode(str) {
     // This code was originally written by Brian White (mscdex) for the io.js core querystring library.
     // It has been adapted here for stricter adherence to RFC 3986
     if (str.length === 0) {
@@ -43051,7 +43080,7 @@ exports.encode = function encode(str) {
     return out;
 };
 
-exports.compact = function compact(value) {
+var compact = function compact(value) {
     var queue = [{ obj: { o: value }, prop: 'o' }];
     var refs = [];
 
@@ -43073,16 +43102,27 @@ exports.compact = function compact(value) {
     return compactQueue(queue);
 };
 
-exports.isRegExp = function isRegExp(obj) {
+var isRegExp = function isRegExp(obj) {
     return Object.prototype.toString.call(obj) === '[object RegExp]';
 };
 
-exports.isBuffer = function isBuffer(obj) {
+var isBuffer = function isBuffer(obj) {
     if (obj === null || typeof obj === 'undefined') {
         return false;
     }
 
     return !!(obj.constructor && obj.constructor.isBuffer && obj.constructor.isBuffer(obj));
+};
+
+module.exports = {
+    arrayToObject: arrayToObject,
+    assign: assign,
+    compact: compact,
+    decode: decode,
+    encode: encode,
+    isBuffer: isBuffer,
+    isRegExp: isRegExp,
+    merge: merge
 };
 
 },{}],223:[function(require,module,exports){

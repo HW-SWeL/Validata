@@ -278,7 +278,7 @@ Validata = {
                             '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
                             '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
                             '        </svg>' +
-                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[rawResponse.startingResource.lex]) + '</span>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[Validata.Validation.rawResponses[0].startingResource]) + '</span>' +
                             '    </a>' +
                             '</div>' +
                             '<div id="errorsResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
@@ -287,11 +287,11 @@ Validata = {
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'], function (index, rawError)
                         {   
                             console.log('raw_error',rawError);
-                            var line = Util.isDefined(rawError.type) ? rawError.line : "";
+                            var line = Util.isDefined(rawError.type) ? rawError.line : ""; //add line finder here
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
                             var requirementLevel = 'REQ_LEVEL TODO';
                             // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
-                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.type) ) + '</span>';
+                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(' '+rawError.type +' on line '+ rawError.line) ) + '</span>';
 
                             errorsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
@@ -318,7 +318,7 @@ Validata = {
                             '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
                             '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
                             '        </svg>' +
-                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[rawResponse.startingResource.lex]) + '</span>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[Validata.Validation.rawResponses[0].startingResource]) + '</span>' +
                             '    </a>' +
                             '</div>' +
                             '<div id="warningsResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
@@ -357,14 +357,15 @@ Validata = {
                             '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
                             '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
                             '        </svg>' +
-                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[rawResponse.startingResource.lex]) + '</span>' +
+                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[Validata.Validation.rawResponses[0].startingResource]) + '</span>' +
                             '    </a>' +
                             '</div>' +
                             '<div id="matchesResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
                             '    <ul class="list-group resourceShapeMatchesListGroup">';
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'], function (index, rawMatch)
-                        {
+                        {   
+                            console.log('rawmatch',index,rawMatch);
                             var line = Util.isDefined(rawMatch.triple) ? rawMatch.triple.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
                             var requirementLevel = 'default';

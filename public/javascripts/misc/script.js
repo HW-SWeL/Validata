@@ -81,6 +81,7 @@ n3.Parser({documentIRI: DefaultBase, format: "text/turtle"}).parse(dataText, fun
       console.log(triple.subject, triple.predicate, triple.object, '.');
     } else if (prefix){
       console.log('prefix',prefix);
+      db.
     }else {
       Triples = db;
     }
@@ -198,3 +199,23 @@ parser.parse('@prefix c: <http://example.org/cartoons#>.\n' +
                else
                  console.log("# That's all, folks!", prefixes)
              });
+
+
+// json ld
+
+var doc = {
+  "http://schema.org/name": "Manu Sporny",
+  "http://schema.org/url": {"@id": "http://manu.sporny.org/"},
+  "http://schema.org/image": {"@id": "http://manu.sporny.org/images/manu.png"}
+};
+var context = {
+  "name": "http://schema.org/name",
+  "homepage": {"@id": "http://schema.org/url", "@type": "@id"},
+  "image": {"@id": "http://schema.org/image", "@type": "@id"}
+};
+
+jsonld.toRDF(doc, {format: 'application/n-quads'}, (err, nquads) => {
+  if (nquads) {
+    console.log(nquads)
+  }
+});
