@@ -1,171 +1,4 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-var Promise = require('promise');
-var shexjs = require("shex");
-var n3 = require("n3");
-
-var DefaultBase = "";
-
-function Validator(schemaText, dataText, callbacks, options) {
-    this.callbacks = callbacks;
-    this.options = options;
-    
-    this.updateSchema(location.origin + '/schema.shex', schemaText);
-    this.updateData(dataText);
-}
-
-Validator.prototype = {
-    updateSchema: function (base, schemaText) {
-        this.schema = parseSchema(base ,schemaText);
-        this.schema.done(this.callbacks.schemaParsed, this.callbacks.schemaParseError);
-    },
-    updateData: function (dataText) {
-        this.data = parseData(dataText);
-        this.data.done(this.callbacks.dataParsed, this.callbacks.dataParseError);
-    },
-    findShapes: function () {
-        var _this = this;
-        return Promise.all([this.schema, this.data]).then(function (a) {
-            console.log('showing shapes');
-            console.log(this.schema);
-            console.log(this.data);
-        });
-    },
-    validate: function(startingNodes) {
-        var _this = this;
-        console.log('validate function',_this);
-        return Promise.all([this.schema, this.data, this.options]).then(function (a) {
-            console.log(a);
-            var node = Object.keys(a[2].resourceShapeMap)[0];
-            var result = shexjs.Validator.construct(a[0].schema).validate(a[1].db, node, a[2].resourceShapeMap[node]);
-            console.log('callbacks in validator',_this.callbacks);
-            console.log('db to validate',a[1].db)
-            // console.log('validation results:',result);
-            // return validator.validate(
-            //     a[0].schema,                       // Schema
-            //     a[0].resolver,
-            //     startingNodes,      // Starting Node
-            //     a[1].db,                       // db
-            //     a[1].resolver,
-            //     _this.options.closedShapes,
-            //     _this.callbacks.validationResult);
-            return cleanResult(result, a[1].triples, _this.callbacks.validationResult)
-        });
-    }
-};
-
-module.exports.Validator = Validator;
-
-function parseData(dataText){
-    console.log('split data');
-    console.log(dataText.split("\n"));
-    console.log('this',this);
-    return new Promise(function (resolve, reject) {
-        var lineIndex = new Object();
-        var db = n3.Store();
-        n3.Parser({documentIRI: DefaultBase}).parse(dataText, function (error, triple, prefixes) {
-            // console.log('db', db);
-            // console.log('DB');
-            console.log('triple callback')
-            if (error) {
-                // throw Error("error parsing " + data + ": " + error);
-                reject(parseN3Error(error));
-            } else if (triple) {
-                console.log("N3triple",triple);
-                lineIndex[JSON.stringify({'subject':triple.subject,'predicate':triple.predicate,'object':triple.object,'graph':triple.graph})] = triple.line;
-                // lineIndex[triple.line] = {'object':triple.object,'subject':triple.subject,'predicate':triple.predicate,'graph':triple.graph};
-                db.addTriple(triple);
-            // console.log(triple.subject, triple.predicate, triple.object, '.');
-            } else {
-                var triples = db.getTriples();
-                for (var i = triples.length - 1; i >= 0; i--) {
-                    var triple_key = JSON.stringify({'subject':triples[i].subject,'predicate':triples[i].predicate,'object':triples[i].object,'graph':""});
-                    triples[i].line = lineIndex[triple_key];
-                }
-                resolve({db: db, triples:triples});
-            }
-        });
-        
-    });
-}
-
-function parseSchema(base, schemaText) {
-    return new Promise(function (resolve, reject) {
-        var schema;
-        try {
-            schema = shexjs.Parser.construct(base).parse(schemaText);
-        }
-        catch (e) {
-            reject(e);
-        }
-        resolve({schema: schema, shapes: schema.shapes});
-
-    });
-};
-
-function cleanResult(result, parsedTriples, callback){
-    console.log('validation result', result);
-    var errors = [];
-    var solutions = [];
-    if (result.type == 'Failure'){
-        errors = result.errors;
-        console.log('errors',errors);
-        // console.log('lineIndex',lineIndex);
-        for (var i = errors.length - 1; i >= 0; i--) {
-            errors[i].line = parsedTriples.find(function (triple) { return triple.subject === errors[i].triple.subject &&
-                                                                            triple.predicate === errors[i].triple.predicate &&
-                                                                            triple.object === errors[i].triple.object; }).line;
-        }
-    } else {
-        solutions = result.solution;
-    }
-    var clean_result = {
-            errors: errors,
-            matches: solutions,
-            startingResource: result.node,
-            passed: errors.length === 0,
-            full_result:result
-        };
-    console.log('clean_result',clean_result);
-    return callback(clean_result);
-}
-
-function parseN3Error(error) {
-    var line = error.message.match(/line [0-9]*/g);
-
-    line = (line && line.length > 0 && line[0].length > 5)?Number(line[0].substr(5)):null;
-
-    return {
-        message: error.message,
-        line: line,
-        column: 0
-    }
-}
-// returns the matched triples and the corresponding lines
-function cleanMatches(validResult){
-    var results = []
-    if (validResult.type == 'ShapeTest') {
-        cleanMatches(validResult.solution);
-    }
-    else if (validResult.type == 'EachOfSolutions') {
-
-    }
-    else if (validResult.type == 'OneOfSolutions') {
-
-    }
-    else if (validResult.type == 'TripleConstraintSolutions') {
-
-    }
-    else if (validResult.type == 'TestedTriple') {
-
-    }
-    else if (validResult instanceof Array){
-        for (var i = validResult.length - 1; i >= 0; i--) {
-            cleanMatches(validResult[i]);
-        }
-    }
-    return results
-}
-},{"n3":185,"promise":195,"shex":251}],2:[function(require,module,exports){
 'use strict';
 
 var KEYWORDS = [
@@ -216,7 +49,7 @@ module.exports = function (metaSchema, keywordsJsonPointers) {
   return metaSchema;
 };
 
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 'use strict';
 
 var compileSchema = require('./compile')
@@ -720,7 +553,7 @@ function setLogger(self) {
 
 function noop() {}
 
-},{"./$data":2,"./cache":4,"./compile":9,"./compile/async":6,"./compile/error_classes":7,"./compile/formats":8,"./compile/resolve":10,"./compile/rules":11,"./compile/schema_obj":12,"./compile/util":14,"./keyword":38,"./patternGroups":39,"./refs/$data.json":40,"./refs/json-schema-draft-06.json":41,"co":95,"fast-json-stable-stringify":108}],4:[function(require,module,exports){
+},{"./$data":1,"./cache":3,"./compile":8,"./compile/async":5,"./compile/error_classes":6,"./compile/formats":7,"./compile/resolve":9,"./compile/rules":10,"./compile/schema_obj":11,"./compile/util":13,"./keyword":37,"./patternGroups":38,"./refs/$data.json":39,"./refs/json-schema-draft-06.json":40,"co":94,"fast-json-stable-stringify":107}],3:[function(require,module,exports){
 'use strict';
 
 
@@ -748,7 +581,7 @@ Cache.prototype.clear = function Cache_clear() {
   this._cache = {};
 };
 
-},{}],5:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 'use strict';
 
 //all requires must be explicit because browserify won't work with dynamic requires
@@ -781,7 +614,7 @@ module.exports = {
   validate: require('../dotjs/validate')
 };
 
-},{"../dotjs/_limit":15,"../dotjs/_limitItems":16,"../dotjs/_limitLength":17,"../dotjs/_limitProperties":18,"../dotjs/allOf":19,"../dotjs/anyOf":20,"../dotjs/const":21,"../dotjs/contains":22,"../dotjs/dependencies":24,"../dotjs/enum":25,"../dotjs/format":26,"../dotjs/items":27,"../dotjs/multipleOf":28,"../dotjs/not":29,"../dotjs/oneOf":30,"../dotjs/pattern":31,"../dotjs/properties":32,"../dotjs/propertyNames":33,"../dotjs/ref":34,"../dotjs/required":35,"../dotjs/uniqueItems":36,"../dotjs/validate":37}],6:[function(require,module,exports){
+},{"../dotjs/_limit":14,"../dotjs/_limitItems":15,"../dotjs/_limitLength":16,"../dotjs/_limitProperties":17,"../dotjs/allOf":18,"../dotjs/anyOf":19,"../dotjs/const":20,"../dotjs/contains":21,"../dotjs/dependencies":23,"../dotjs/enum":24,"../dotjs/format":25,"../dotjs/items":26,"../dotjs/multipleOf":27,"../dotjs/not":28,"../dotjs/oneOf":29,"../dotjs/pattern":30,"../dotjs/properties":31,"../dotjs/propertyNames":32,"../dotjs/ref":33,"../dotjs/required":34,"../dotjs/uniqueItems":35,"../dotjs/validate":36}],5:[function(require,module,exports){
 'use strict';
 
 var MissingRefError = require('./error_classes').MissingRef;
@@ -873,7 +706,7 @@ function compileAsync(schema, meta, callback) {
   }
 }
 
-},{"./error_classes":7}],7:[function(require,module,exports){
+},{"./error_classes":6}],6:[function(require,module,exports){
 'use strict';
 
 var resolve = require('./resolve');
@@ -909,7 +742,7 @@ function errorSubclass(Subclass) {
   return Subclass;
 }
 
-},{"./resolve":10}],8:[function(require,module,exports){
+},{"./resolve":9}],7:[function(require,module,exports){
 'use strict';
 
 var util = require('./util');
@@ -1046,7 +879,7 @@ function regex(str) {
   }
 }
 
-},{"./util":14}],9:[function(require,module,exports){
+},{"./util":13}],8:[function(require,module,exports){
 'use strict';
 
 var resolve = require('./resolve')
@@ -1428,7 +1261,7 @@ function vars(arr, statement) {
   return code;
 }
 
-},{"../dotjs/validate":37,"./error_classes":7,"./resolve":10,"./util":14,"co":95,"fast-deep-equal":107,"fast-json-stable-stringify":108}],10:[function(require,module,exports){
+},{"../dotjs/validate":36,"./error_classes":6,"./resolve":9,"./util":13,"co":94,"fast-deep-equal":106,"fast-json-stable-stringify":107}],9:[function(require,module,exports){
 'use strict';
 
 var url = require('url')
@@ -1701,7 +1534,7 @@ function resolveIds(schema) {
   return localRefs;
 }
 
-},{"./schema_obj":12,"./util":14,"fast-deep-equal":107,"json-schema-traverse":142,"url":472}],11:[function(require,module,exports){
+},{"./schema_obj":11,"./util":13,"fast-deep-equal":106,"json-schema-traverse":141,"url":472}],10:[function(require,module,exports){
 'use strict';
 
 var ruleModules = require('./_rules')
@@ -1761,7 +1594,7 @@ module.exports = function rules() {
   return RULES;
 };
 
-},{"./_rules":5,"./util":14}],12:[function(require,module,exports){
+},{"./_rules":4,"./util":13}],11:[function(require,module,exports){
 'use strict';
 
 var util = require('./util');
@@ -1772,7 +1605,7 @@ function SchemaObject(obj) {
   util.copy(obj, this);
 }
 
-},{"./util":14}],13:[function(require,module,exports){
+},{"./util":13}],12:[function(require,module,exports){
 'use strict';
 
 // https://mathiasbynens.be/notes/javascript-encoding
@@ -1794,7 +1627,7 @@ module.exports = function ucs2length(str) {
   return length;
 };
 
-},{}],14:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 
@@ -2063,7 +1896,7 @@ function unescapeJsonPointer(str) {
   return str.replace(/~1/g, '/').replace(/~0/g, '~');
 }
 
-},{"./ucs2length":13,"fast-deep-equal":107}],15:[function(require,module,exports){
+},{"./ucs2length":12,"fast-deep-equal":106}],14:[function(require,module,exports){
 'use strict';
 module.exports = function generate__limit(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2214,7 +2047,7 @@ module.exports = function generate__limit(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],16:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 module.exports = function generate__limitItems(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2292,7 +2125,7 @@ module.exports = function generate__limitItems(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],17:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 module.exports = function generate__limitLength(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2375,7 +2208,7 @@ module.exports = function generate__limitLength(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],18:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 module.exports = function generate__limitProperties(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2453,7 +2286,7 @@ module.exports = function generate__limitProperties(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],19:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 module.exports = function generate_allOf(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2498,7 +2331,7 @@ module.exports = function generate_allOf(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],20:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 'use strict';
 module.exports = function generate_anyOf(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2573,7 +2406,7 @@ module.exports = function generate_anyOf(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 module.exports = function generate_const(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2630,7 +2463,7 @@ module.exports = function generate_const(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],22:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 module.exports = function generate_contains(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2713,7 +2546,7 @@ module.exports = function generate_contains(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],23:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 module.exports = function generate_custom(it, $keyword, $ruleType) {
   var out = ' ';
@@ -2941,7 +2774,7 @@ module.exports = function generate_custom(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],24:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 module.exports = function generate_dependencies(it, $keyword, $ruleType) {
   var out = ' ';
@@ -3110,7 +2943,7 @@ module.exports = function generate_dependencies(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],25:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 module.exports = function generate_enum(it, $keyword, $ruleType) {
   var out = ' ';
@@ -3177,7 +3010,7 @@ module.exports = function generate_enum(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],26:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 module.exports = function generate_format(it, $keyword, $ruleType) {
   var out = ' ';
@@ -3328,7 +3161,7 @@ module.exports = function generate_format(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],27:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 module.exports = function generate_items(it, $keyword, $ruleType) {
   var out = ' ';
@@ -3470,7 +3303,7 @@ module.exports = function generate_items(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],28:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 module.exports = function generate_multipleOf(it, $keyword, $ruleType) {
   var out = ' ';
@@ -3548,7 +3381,7 @@ module.exports = function generate_multipleOf(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],29:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 'use strict';
 module.exports = function generate_not(it, $keyword, $ruleType) {
   var out = ' ';
@@ -3633,7 +3466,7 @@ module.exports = function generate_not(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],30:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 module.exports = function generate_oneOf(it, $keyword, $ruleType) {
   var out = ' ';
@@ -3705,7 +3538,7 @@ module.exports = function generate_oneOf(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],31:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 'use strict';
 module.exports = function generate_pattern(it, $keyword, $ruleType) {
   var out = ' ';
@@ -3781,7 +3614,7 @@ module.exports = function generate_pattern(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],32:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 'use strict';
 module.exports = function generate_properties(it, $keyword, $ruleType) {
   var out = ' ';
@@ -4251,7 +4084,7 @@ module.exports = function generate_properties(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],33:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 'use strict';
 module.exports = function generate_propertyNames(it, $keyword, $ruleType) {
   var out = ' ';
@@ -4334,7 +4167,7 @@ module.exports = function generate_propertyNames(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],34:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 module.exports = function generate_ref(it, $keyword, $ruleType) {
   var out = ' ';
@@ -4459,7 +4292,7 @@ module.exports = function generate_ref(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],35:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 'use strict';
 module.exports = function generate_required(it, $keyword, $ruleType) {
   var out = ' ';
@@ -4729,7 +4562,7 @@ module.exports = function generate_required(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],36:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 'use strict';
 module.exports = function generate_uniqueItems(it, $keyword, $ruleType) {
   var out = ' ';
@@ -4802,7 +4635,7 @@ module.exports = function generate_uniqueItems(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],37:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 'use strict';
 module.exports = function generate_validate(it, $keyword, $ruleType) {
   var out = '';
@@ -5262,7 +5095,7 @@ module.exports = function generate_validate(it, $keyword, $ruleType) {
   return out;
 }
 
-},{}],38:[function(require,module,exports){
+},{}],37:[function(require,module,exports){
 'use strict';
 
 var IDENTIFIER = /^[a-z_$][a-z0-9_$-]*$/i;
@@ -5399,7 +5232,7 @@ function removeKeyword(keyword) {
   return this;
 }
 
-},{"./dotjs/custom":23}],39:[function(require,module,exports){
+},{"./dotjs/custom":22}],38:[function(require,module,exports){
 'use strict';
 
 var META_SCHEMA_ID = 'http://json-schema.org/draft-06/schema';
@@ -5437,7 +5270,7 @@ module.exports = function (ajv) {
   ajv.RULES.all.properties.implements.push('patternGroups');
 };
 
-},{}],40:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 module.exports={
     "$schema": "http://json-schema.org/draft-06/schema#",
     "$id": "https://raw.githubusercontent.com/epoberezkin/ajv/master/lib/refs/$data.json#",
@@ -5456,7 +5289,7 @@ module.exports={
     "additionalProperties": false
 }
 
-},{}],41:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 module.exports={
     "$schema": "http://json-schema.org/draft-06/schema#",
     "$id": "http://json-schema.org/draft-06/schema#",
@@ -5612,13 +5445,13 @@ module.exports={
     "default": {}
 }
 
-},{}],42:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 'use strict';
 module.exports = function () {
 	return /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nqry=><]/g;
 };
 
-},{}],43:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 'use strict';
 
 function assembleStyles () {
@@ -5685,7 +5518,7 @@ Object.defineProperty(module, 'exports', {
 	get: assembleStyles
 });
 
-},{}],44:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 (function (process){
 
 // Use the fastest possible means to execute a task in a future turn
@@ -5802,7 +5635,7 @@ module.exports = asap;
 
 
 }).call(this,require('_process'))
-},{"_process":429}],45:[function(require,module,exports){
+},{"_process":429}],44:[function(require,module,exports){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
 
@@ -5817,7 +5650,7 @@ module.exports = {
 
 };
 
-},{}],46:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
 var errors = require('./errors');
@@ -5846,7 +5679,7 @@ for (var e in errors) {
     module.exports[e] = errors[e];
 }
 
-},{"./errors":45,"./reader":47,"./types":48,"./writer":49}],47:[function(require,module,exports){
+},{"./errors":44,"./reader":46,"./types":47,"./writer":48}],46:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
@@ -6111,7 +5944,7 @@ Reader.prototype._readTag = function(tag) {
 module.exports = Reader;
 
 }).call(this,require("buffer").Buffer)
-},{"./errors":45,"./types":48,"assert":310,"buffer":345}],48:[function(require,module,exports){
+},{"./errors":44,"./types":47,"assert":310,"buffer":345}],47:[function(require,module,exports){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
 
@@ -6149,7 +5982,7 @@ module.exports = {
   Context: 128
 };
 
-},{}],49:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
@@ -6469,7 +6302,7 @@ Writer.prototype._ensure = function(len) {
 module.exports = Writer;
 
 }).call(this,require("buffer").Buffer)
-},{"./errors":45,"./types":48,"assert":310,"buffer":345}],50:[function(require,module,exports){
+},{"./errors":44,"./types":47,"assert":310,"buffer":345}],49:[function(require,module,exports){
 // Copyright 2011 Mark Cavage <mcavage@gmail.com> All rights reserved.
 
 // If you have no idea what ASN.1 or BER is, see this:
@@ -6491,7 +6324,7 @@ module.exports = {
 
 };
 
-},{"./ber/index":46}],51:[function(require,module,exports){
+},{"./ber/index":45}],50:[function(require,module,exports){
 (function (Buffer,process){
 // Copyright (c) 2012, Mark Cavage. All rights reserved.
 // Copyright 2015 Joyent, Inc.
@@ -6705,8 +6538,8 @@ function _setExports(ndebug) {
 
 module.exports = _setExports(process.env.NODE_NDEBUG);
 
-}).call(this,{"isBuffer":require("../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400,"_process":429,"assert":310,"stream":465,"util":477}],52:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
+},{"../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400,"_process":429,"assert":310,"stream":465,"util":477}],51:[function(require,module,exports){
 
 /*!
  *  Copyright 2010 LearnBoost <dev@learnboost.com>
@@ -6920,7 +6753,7 @@ function canonicalizeResource (resource) {
 }
 module.exports.canonicalizeResource = canonicalizeResource
 
-},{"crypto":354,"url":472}],53:[function(require,module,exports){
+},{"crypto":354,"url":472}],52:[function(require,module,exports){
 (function (process,Buffer){
 var aws4 = exports,
     url = require('url'),
@@ -7256,7 +7089,7 @@ aws4.sign = function(request, credentials) {
 }
 
 }).call(this,require('_process'),require("buffer").Buffer)
-},{"./lru":54,"_process":429,"buffer":345,"crypto":354,"querystring":439,"url":472}],54:[function(require,module,exports){
+},{"./lru":53,"_process":429,"buffer":345,"crypto":354,"querystring":439,"url":472}],53:[function(require,module,exports){
 module.exports = function(size) {
   return new LruCache(size)
 }
@@ -7354,7 +7187,7 @@ function DoublyLinkedNode(key, val) {
   this.next = null
 }
 
-},{}],55:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 'use strict';
 
 var crypto_hash_sha512 = require('tweetnacl').lowlevel.crypto_hash;
@@ -7912,7 +7745,7 @@ module.exports = {
       pbkdf: bcrypt_pbkdf
 };
 
-},{"tweetnacl":287}],56:[function(require,module,exports){
+},{"tweetnacl":286}],55:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var SomePromiseArray = Promise._SomePromiseArray;
@@ -7935,7 +7768,7 @@ Promise.prototype.any = function () {
 
 };
 
-},{}],57:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 "use strict";
 var firstLineError;
 try {throw new Error(); } catch (e) {firstLineError = e;}
@@ -8087,7 +7920,7 @@ Async.prototype._reset = function () {
 module.exports = new Async();
 module.exports.firstLineError = firstLineError;
 
-},{"./queue.js":82,"./schedule.js":85,"./util.js":92}],58:[function(require,module,exports){
+},{"./queue.js":81,"./schedule.js":84,"./util.js":91}],57:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise) {
 var rejectThis = function(_, e) {
@@ -8161,7 +7994,7 @@ Promise.bind = function (thisArg, value) {
 };
 };
 
-},{}],59:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 "use strict";
 var cr = Object.create;
 if (cr) {
@@ -8286,7 +8119,7 @@ Promise.prototype.get = function (propertyName) {
 };
 };
 
-},{"./util.js":92}],60:[function(require,module,exports){
+},{"./util.js":91}],59:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var errors = require("./errors.js");
@@ -8336,7 +8169,7 @@ Promise.prototype.fork = function (didFulfill, didReject, didProgress) {
 };
 };
 
-},{"./async.js":57,"./errors.js":67}],61:[function(require,module,exports){
+},{"./async.js":56,"./errors.js":66}],60:[function(require,module,exports){
 (function (process){
 "use strict";
 module.exports = function() {
@@ -8833,7 +8666,7 @@ return CapturedTrace;
 };
 
 }).call(this,require('_process'))
-},{"./async.js":57,"./util.js":92,"_process":429}],62:[function(require,module,exports){
+},{"./async.js":56,"./util.js":91,"_process":429}],61:[function(require,module,exports){
 "use strict";
 module.exports = function(NEXT_FILTER) {
 var util = require("./util.js");
@@ -8901,7 +8734,7 @@ CatchFilter.prototype.doFilter = function (e) {
 return CatchFilter;
 };
 
-},{"./errors.js":67,"./es5.js":68,"./util.js":92}],63:[function(require,module,exports){
+},{"./errors.js":66,"./es5.js":67,"./util.js":91}],62:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, CapturedTrace, isDebugging) {
 var contextStack = [];
@@ -8941,7 +8774,7 @@ Promise.prototype._popContext = Context.prototype._popContext;
 return createContext;
 };
 
-},{}],64:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 (function (process){
 "use strict";
 module.exports = function(Promise, CapturedTrace) {
@@ -9107,7 +8940,7 @@ return function() {
 };
 
 }).call(this,require('_process'))
-},{"./async.js":57,"./errors.js":67,"./util.js":92,"_process":429}],65:[function(require,module,exports){
+},{"./async.js":56,"./errors.js":66,"./util.js":91,"_process":429}],64:[function(require,module,exports){
 "use strict";
 var util = require("./util.js");
 var isPrimitive = util.isPrimitive;
@@ -9172,7 +9005,7 @@ Promise.prototype.thenThrow = function (reason) {
 };
 };
 
-},{"./util.js":92}],66:[function(require,module,exports){
+},{"./util.js":91}],65:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var PromiseReduce = Promise.reduce;
@@ -9186,7 +9019,7 @@ Promise.each = function (promises, fn) {
 };
 };
 
-},{}],67:[function(require,module,exports){
+},{}],66:[function(require,module,exports){
 "use strict";
 var es5 = require("./es5.js");
 var Objectfreeze = es5.freeze;
@@ -9299,7 +9132,7 @@ module.exports = {
     Warning: Warning
 };
 
-},{"./es5.js":68,"./util.js":92}],68:[function(require,module,exports){
+},{"./es5.js":67,"./util.js":91}],67:[function(require,module,exports){
 var isES5 = (function(){
     "use strict";
     return this === undefined;
@@ -9381,7 +9214,7 @@ if (isES5) {
     };
 }
 
-},{}],69:[function(require,module,exports){
+},{}],68:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var PromiseMap = Promise.map;
@@ -9395,7 +9228,7 @@ Promise.filter = function (promises, fn, options) {
 };
 };
 
-},{}],70:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, NEXT_FILTER, tryConvertToPromise) {
 var util = require("./util.js");
@@ -9495,7 +9328,7 @@ Promise.prototype.tap = function (handler) {
 };
 };
 
-},{"./util.js":92}],71:[function(require,module,exports){
+},{"./util.js":91}],70:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           apiRejection,
@@ -9633,7 +9466,7 @@ Promise.spawn = function (generatorFunction) {
 };
 };
 
-},{"./errors.js":67,"./util.js":92}],72:[function(require,module,exports){
+},{"./errors.js":66,"./util.js":91}],71:[function(require,module,exports){
 "use strict";
 module.exports =
 function(Promise, PromiseArray, tryConvertToPromise, INTERNAL) {
@@ -9742,7 +9575,7 @@ Promise.join = function () {
 
 };
 
-},{"./util.js":92}],73:[function(require,module,exports){
+},{"./util.js":91}],72:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           PromiseArray,
@@ -9877,7 +9710,7 @@ Promise.map = function (promises, fn, options, _filter) {
 
 };
 
-},{"./async.js":57,"./util.js":92}],74:[function(require,module,exports){
+},{"./async.js":56,"./util.js":91}],73:[function(require,module,exports){
 "use strict";
 module.exports =
 function(Promise, INTERNAL, tryConvertToPromise, apiRejection) {
@@ -9923,7 +9756,7 @@ Promise.prototype._resolveFromSyncValue = function (value) {
 };
 };
 
-},{"./util.js":92}],75:[function(require,module,exports){
+},{"./util.js":91}],74:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 var util = require("./util.js");
@@ -9984,7 +9817,7 @@ Promise.prototype.nodeify = function (nodeback, options) {
 };
 };
 
-},{"./async.js":57,"./util.js":92}],76:[function(require,module,exports){
+},{"./async.js":56,"./util.js":91}],75:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, PromiseArray) {
 var util = require("./util.js");
@@ -10062,7 +9895,7 @@ Promise.prototype._progressUnchecked = function (progressValue) {
 };
 };
 
-},{"./async.js":57,"./util.js":92}],77:[function(require,module,exports){
+},{"./async.js":56,"./util.js":91}],76:[function(require,module,exports){
 (function (process){
 "use strict";
 module.exports = function() {
@@ -10825,7 +10658,7 @@ require('./filter.js')(Promise, INTERNAL);
 };
 
 }).call(this,require('_process'))
-},{"./any.js":56,"./async.js":57,"./bind.js":58,"./call_get.js":59,"./cancel.js":60,"./captured_trace.js":61,"./catch_filter.js":62,"./context.js":63,"./debuggability.js":64,"./direct_resolve.js":65,"./each.js":66,"./errors.js":67,"./filter.js":69,"./finally.js":70,"./generators.js":71,"./join.js":72,"./map.js":73,"./method.js":74,"./nodeify.js":75,"./progress.js":76,"./promise_array.js":78,"./promise_resolver.js":79,"./promisify.js":80,"./props.js":81,"./race.js":83,"./reduce.js":84,"./settle.js":86,"./some.js":87,"./synchronous_inspection.js":88,"./thenables.js":89,"./timers.js":90,"./using.js":91,"./util.js":92,"_process":429}],78:[function(require,module,exports){
+},{"./any.js":55,"./async.js":56,"./bind.js":57,"./call_get.js":58,"./cancel.js":59,"./captured_trace.js":60,"./catch_filter.js":61,"./context.js":62,"./debuggability.js":63,"./direct_resolve.js":64,"./each.js":65,"./errors.js":66,"./filter.js":68,"./finally.js":69,"./generators.js":70,"./join.js":71,"./map.js":72,"./method.js":73,"./nodeify.js":74,"./progress.js":75,"./promise_array.js":77,"./promise_resolver.js":78,"./promisify.js":79,"./props.js":80,"./race.js":82,"./reduce.js":83,"./settle.js":85,"./some.js":86,"./synchronous_inspection.js":87,"./thenables.js":88,"./timers.js":89,"./using.js":90,"./util.js":91,"_process":429}],77:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL, tryConvertToPromise,
     apiRejection) {
@@ -10969,7 +10802,7 @@ PromiseArray.prototype.getActualLength = function (len) {
 return PromiseArray;
 };
 
-},{"./util.js":92}],79:[function(require,module,exports){
+},{"./util.js":91}],78:[function(require,module,exports){
 "use strict";
 var util = require("./util.js");
 var maybeWrapAsError = util.maybeWrapAsError;
@@ -11094,7 +10927,7 @@ PromiseResolver.prototype.toJSON = function () {
 
 module.exports = PromiseResolver;
 
-},{"./errors.js":67,"./es5.js":68,"./util.js":92}],80:[function(require,module,exports){
+},{"./errors.js":66,"./es5.js":67,"./util.js":91}],79:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var THIS = {};
@@ -11403,7 +11236,7 @@ Promise.promisifyAll = function (target, options) {
 };
 
 
-},{"./errors":67,"./promise_resolver.js":79,"./util.js":92}],81:[function(require,module,exports){
+},{"./errors":66,"./promise_resolver.js":78,"./util.js":91}],80:[function(require,module,exports){
 "use strict";
 module.exports = function(
     Promise, PromiseArray, tryConvertToPromise, apiRejection) {
@@ -11484,7 +11317,7 @@ Promise.props = function (promises) {
 };
 };
 
-},{"./es5.js":68,"./util.js":92}],82:[function(require,module,exports){
+},{"./es5.js":67,"./util.js":91}],81:[function(require,module,exports){
 "use strict";
 function arrayMove(src, srcIndex, dst, dstIndex, len) {
     for (var j = 0; j < len; ++j) {
@@ -11576,7 +11409,7 @@ Queue.prototype._resizeTo = function (capacity) {
 
 module.exports = Queue;
 
-},{}],83:[function(require,module,exports){
+},{}],82:[function(require,module,exports){
 "use strict";
 module.exports = function(
     Promise, INTERNAL, tryConvertToPromise, apiRejection) {
@@ -11625,7 +11458,7 @@ Promise.prototype.race = function () {
 
 };
 
-},{"./util.js":92}],84:[function(require,module,exports){
+},{"./util.js":91}],83:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise,
                           PromiseArray,
@@ -11775,7 +11608,7 @@ Promise.reduce = function (promises, fn, initialValue, _each) {
 };
 };
 
-},{"./async.js":57,"./util.js":92}],85:[function(require,module,exports){
+},{"./async.js":56,"./util.js":91}],84:[function(require,module,exports){
 (function (process,global){
 "use strict";
 var schedule;
@@ -11814,7 +11647,7 @@ if (util.isNode && typeof MutationObserver === "undefined") {
 module.exports = schedule;
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./util":92,"_process":429}],86:[function(require,module,exports){
+},{"./util":91,"_process":429}],85:[function(require,module,exports){
 "use strict";
 module.exports =
     function(Promise, PromiseArray) {
@@ -11856,7 +11689,7 @@ Promise.prototype.settle = function () {
 };
 };
 
-},{"./util.js":92}],87:[function(require,module,exports){
+},{"./util.js":91}],86:[function(require,module,exports){
 "use strict";
 module.exports =
 function(Promise, PromiseArray, apiRejection) {
@@ -11983,7 +11816,7 @@ Promise.prototype.some = function (howMany) {
 Promise._SomePromiseArray = SomePromiseArray;
 };
 
-},{"./errors.js":67,"./util.js":92}],88:[function(require,module,exports){
+},{"./errors.js":66,"./util.js":91}],87:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise) {
 function PromiseInspection(promise) {
@@ -12079,7 +11912,7 @@ Promise.prototype.reason = function() {
 Promise.PromiseInspection = PromiseInspection;
 };
 
-},{}],89:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var util = require("./util.js");
@@ -12165,7 +11998,7 @@ function doThenable(x, then, context) {
 return tryConvertToPromise;
 };
 
-},{"./util.js":92}],90:[function(require,module,exports){
+},{"./util.js":91}],89:[function(require,module,exports){
 "use strict";
 module.exports = function(Promise, INTERNAL) {
 var util = require("./util.js");
@@ -12231,7 +12064,7 @@ Promise.prototype.timeout = function (ms, message) {
 
 };
 
-},{"./util.js":92}],91:[function(require,module,exports){
+},{"./util.js":91}],90:[function(require,module,exports){
 "use strict";
 module.exports = function (Promise, apiRejection, tryConvertToPromise,
     createContext) {
@@ -12446,7 +12279,7 @@ module.exports = function (Promise, apiRejection, tryConvertToPromise,
 
 };
 
-},{"./errors.js":67,"./util.js":92}],92:[function(require,module,exports){
+},{"./errors.js":66,"./util.js":91}],91:[function(require,module,exports){
 (function (process){
 "use strict";
 var es5 = require("./es5.js");
@@ -12771,7 +12604,7 @@ try {throw new Error(); } catch (e) {ret.lastLineError = e;}
 module.exports = ret;
 
 }).call(this,require('_process'))
-},{"./es5.js":68,"_process":429}],93:[function(require,module,exports){
+},{"./es5.js":67,"_process":429}],92:[function(require,module,exports){
 function Caseless (dict) {
   this.dict = dict || {}
 }
@@ -12840,7 +12673,7 @@ module.exports.httpify = function (resp, headers) {
   return c
 }
 
-},{}],94:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 (function (process){
 'use strict';
 var escapeStringRegexp = require('escape-string-regexp');
@@ -12960,7 +12793,7 @@ module.exports.stripColor = stripAnsi;
 module.exports.supportsColor = supportsColor;
 
 }).call(this,require('_process'))
-},{"_process":429,"ansi-styles":43,"escape-string-regexp":104,"has-ansi":132,"strip-ansi":277,"supports-color":278}],95:[function(require,module,exports){
+},{"_process":429,"ansi-styles":42,"escape-string-regexp":103,"has-ansi":131,"strip-ansi":276,"supports-color":277}],94:[function(require,module,exports){
 
 /**
  * slice() reference.
@@ -13199,7 +13032,7 @@ function isObject(val) {
   return Object == val.constructor;
 }
 
-},{}],96:[function(require,module,exports){
+},{}],95:[function(require,module,exports){
 (function (Buffer){
 var util = require('util');
 var Stream = require('stream').Stream;
@@ -13391,8 +13224,8 @@ CombinedStream.prototype._emitError = function(err) {
   this.emit('error', err);
 };
 
-}).call(this,{"isBuffer":require("../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400,"./defer.js":97,"delayed-stream":99,"stream":465,"util":477}],97:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
+},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400,"./defer.js":96,"delayed-stream":98,"stream":465,"util":477}],96:[function(require,module,exports){
 (function (process){
 module.exports = defer;
 
@@ -13422,7 +13255,7 @@ function defer(fn)
 }
 
 }).call(this,require('_process'))
-},{"_process":429}],98:[function(require,module,exports){
+},{"_process":429}],97:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -13532,8 +13365,8 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-}).call(this,{"isBuffer":require("../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400}],99:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
+},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400}],98:[function(require,module,exports){
 var Stream = require('stream').Stream;
 var util = require('util');
 
@@ -13642,7 +13475,7 @@ DelayedStream.prototype._checkIfMaxDataSizeExceeded = function() {
   this.emit('error', new Error(message));
 };
 
-},{"stream":465,"util":477}],100:[function(require,module,exports){
+},{"stream":465,"util":477}],99:[function(require,module,exports){
 (function (Buffer){
 var crypto = require("crypto");
 var BigInteger = require("jsbn").BigInteger;
@@ -13703,7 +13536,7 @@ exports.ECKey = function(curve, key, isPublic)
 
 
 }).call(this,require("buffer").Buffer)
-},{"./lib/ec.js":101,"./lib/sec.js":102,"buffer":345,"crypto":354,"jsbn":141}],101:[function(require,module,exports){
+},{"./lib/ec.js":100,"./lib/sec.js":101,"buffer":345,"crypto":354,"jsbn":140}],100:[function(require,module,exports){
 // Basic Javascript Elliptic Curve implementation
 // Ported loosely from BouncyCastle's Java EC code
 // Only Fp curves implemented for now
@@ -14266,7 +14099,7 @@ var exports = {
 
 module.exports = exports
 
-},{"jsbn":141}],102:[function(require,module,exports){
+},{"jsbn":140}],101:[function(require,module,exports){
 // Named EC curves
 
 // Requires ec.js, jsbn.js, and jsbn2.js
@@ -14438,7 +14271,7 @@ module.exports = {
   "secp256r1":secp256r1
 }
 
-},{"./ec.js":101,"jsbn":141}],103:[function(require,module,exports){
+},{"./ec.js":100,"jsbn":140}],102:[function(require,module,exports){
 (function (process,global){
 /*!
  * @overview es6-promise - a tiny implementation of Promises/A+.
@@ -15414,7 +15247,7 @@ module.exports = {
 
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":429}],104:[function(require,module,exports){
+},{"_process":429}],103:[function(require,module,exports){
 'use strict';
 
 var matchOperatorsRe = /[|\\{}()[\]^$+*?.]/g;
@@ -15427,7 +15260,7 @@ module.exports = function (str) {
 	return str.replace(matchOperatorsRe, '\\$&');
 };
 
-},{}],105:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 'use strict';
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -15515,7 +15348,7 @@ module.exports = function extend() {
 	return target;
 };
 
-},{}],106:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 (function (process){
 /*
  * extsprintf.js: extended POSIX-style sprintf
@@ -15702,7 +15535,7 @@ function dumpException(ex)
 }
 
 }).call(this,require('_process'))
-},{"_process":429,"assert":310,"util":477}],107:[function(require,module,exports){
+},{"_process":429,"assert":310,"util":477}],106:[function(require,module,exports){
 'use strict';
 
 var isArray = Array.isArray;
@@ -15759,7 +15592,7 @@ module.exports = function equal(a, b) {
   return false;
 };
 
-},{}],108:[function(require,module,exports){
+},{}],107:[function(require,module,exports){
 'use strict';
 
 module.exports = function (data, opts) {
@@ -15820,7 +15653,7 @@ module.exports = function (data, opts) {
     })(data);
 };
 
-},{}],109:[function(require,module,exports){
+},{}],108:[function(require,module,exports){
 module.exports = ForeverAgent
 ForeverAgent.SSL = ForeverAgentSSL
 
@@ -15960,11 +15793,11 @@ function createConnectionSSL (port, host, options) {
   return tls.connect(options);
 }
 
-},{"http":466,"https":397,"net":295,"tls":295,"util":477}],110:[function(require,module,exports){
+},{"http":466,"https":397,"net":295,"tls":295,"util":477}],109:[function(require,module,exports){
 /* eslint-env browser */
 module.exports = typeof self == 'object' ? self.FormData : window.FormData;
 
-},{}],111:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 module.exports={
   "$id": "afterRequest.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -15996,7 +15829,7 @@ module.exports={
   }
 }
 
-},{}],112:[function(require,module,exports){
+},{}],111:[function(require,module,exports){
 module.exports={
   "$id": "beforeRequest.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16028,7 +15861,7 @@ module.exports={
   }
 }
 
-},{}],113:[function(require,module,exports){
+},{}],112:[function(require,module,exports){
 module.exports={
   "$id": "browser.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16050,7 +15883,7 @@ module.exports={
   }
 }
 
-},{}],114:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 module.exports={
   "$id": "cache.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16073,7 +15906,7 @@ module.exports={
   }
 }
 
-},{}],115:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 module.exports={
   "$id": "content.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16104,7 +15937,7 @@ module.exports={
   }
 }
 
-},{}],116:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 module.exports={
   "$id": "cookie.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16142,7 +15975,7 @@ module.exports={
   }
 }
 
-},{}],117:[function(require,module,exports){
+},{}],116:[function(require,module,exports){
 module.exports={
   "$id": "creator.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16164,7 +15997,7 @@ module.exports={
   }
 }
 
-},{}],118:[function(require,module,exports){
+},{}],117:[function(require,module,exports){
 module.exports={
   "$id": "entry.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16219,7 +16052,7 @@ module.exports={
   }
 }
 
-},{}],119:[function(require,module,exports){
+},{}],118:[function(require,module,exports){
 module.exports={
   "$id": "har.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16234,7 +16067,7 @@ module.exports={
   }
 }
 
-},{}],120:[function(require,module,exports){
+},{}],119:[function(require,module,exports){
 module.exports={
   "$id": "header.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16256,7 +16089,7 @@ module.exports={
   }
 }
 
-},{}],121:[function(require,module,exports){
+},{}],120:[function(require,module,exports){
 'use strict'
 
 module.exports = {
@@ -16280,7 +16113,7 @@ module.exports = {
   timings: require('./timings.json')
 }
 
-},{"./afterRequest.json":111,"./beforeRequest.json":112,"./browser.json":113,"./cache.json":114,"./content.json":115,"./cookie.json":116,"./creator.json":117,"./entry.json":118,"./har.json":119,"./header.json":120,"./log.json":122,"./page.json":123,"./pageTimings.json":124,"./postData.json":125,"./query.json":126,"./request.json":127,"./response.json":128,"./timings.json":129}],122:[function(require,module,exports){
+},{"./afterRequest.json":110,"./beforeRequest.json":111,"./browser.json":112,"./cache.json":113,"./content.json":114,"./cookie.json":115,"./creator.json":116,"./entry.json":117,"./har.json":118,"./header.json":119,"./log.json":121,"./page.json":122,"./pageTimings.json":123,"./postData.json":124,"./query.json":125,"./request.json":126,"./response.json":127,"./timings.json":128}],121:[function(require,module,exports){
 module.exports={
   "$id": "log.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16318,7 +16151,7 @@ module.exports={
   }
 }
 
-},{}],123:[function(require,module,exports){
+},{}],122:[function(require,module,exports){
 module.exports={
   "$id": "page.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16352,7 +16185,7 @@ module.exports={
   }
 }
 
-},{}],124:[function(require,module,exports){
+},{}],123:[function(require,module,exports){
 module.exports={
   "$id": "pageTimings.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16372,7 +16205,7 @@ module.exports={
   }
 }
 
-},{}],125:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 module.exports={
   "$id": "postData.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16417,7 +16250,7 @@ module.exports={
   }
 }
 
-},{}],126:[function(require,module,exports){
+},{}],125:[function(require,module,exports){
 module.exports={
   "$id": "query.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16439,7 +16272,7 @@ module.exports={
   }
 }
 
-},{}],127:[function(require,module,exports){
+},{}],126:[function(require,module,exports){
 module.exports={
   "$id": "request.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16498,7 +16331,7 @@ module.exports={
   }
 }
 
-},{}],128:[function(require,module,exports){
+},{}],127:[function(require,module,exports){
 module.exports={
   "$id": "response.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16554,7 +16387,7 @@ module.exports={
   }
 }
 
-},{}],129:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 module.exports={
   "$id": "timings.json#",
   "$schema": "http://json-schema.org/draft-06/schema#",
@@ -16598,7 +16431,7 @@ module.exports={
   }
 }
 
-},{}],130:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 function HARError (errors) {
   var message = 'validation failed'
 
@@ -16617,7 +16450,7 @@ HARError.prototype = Error.prototype
 
 module.exports = HARError
 
-},{}],131:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 var Ajv = require('ajv')
 var HARError = require('./error')
 var schemas = require('har-schema')
@@ -16714,13 +16547,13 @@ exports.timings = function (data) {
   return validate('timings', data)
 }
 
-},{"./error":130,"ajv":3,"har-schema":121}],132:[function(require,module,exports){
+},{"./error":129,"ajv":2,"har-schema":120}],131:[function(require,module,exports){
 'use strict';
 var ansiRegex = require('ansi-regex');
 var re = new RegExp(ansiRegex().source); // remove the `g` flag
 module.exports = re.test.bind(re);
 
-},{"ansi-regex":42}],133:[function(require,module,exports){
+},{"ansi-regex":41}],132:[function(require,module,exports){
 'use strict';
 
 /*
@@ -17515,7 +17348,7 @@ if (typeof module !== 'undefined' && module.exports) {
 /* eslint-enable */
 // $lab:coverage:on$
 
-},{}],134:[function(require,module,exports){
+},{}],133:[function(require,module,exports){
 // Copyright 2015 Joyent, Inc.
 
 var parser = require('./parser');
@@ -17546,7 +17379,7 @@ module.exports = {
   verifyHMAC: verify.verifyHMAC
 };
 
-},{"./parser":135,"./signer":136,"./utils":137,"./verify":138}],135:[function(require,module,exports){
+},{"./parser":134,"./signer":135,"./utils":136,"./verify":137}],134:[function(require,module,exports){
 // Copyright 2012 Joyent, Inc.  All rights reserved.
 
 var assert = require('assert-plus');
@@ -17863,7 +17696,7 @@ module.exports = {
 
 };
 
-},{"./utils":137,"assert-plus":51,"util":477}],136:[function(require,module,exports){
+},{"./utils":136,"assert-plus":50,"util":477}],135:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2012 Joyent, Inc.  All rights reserved.
 
@@ -18267,8 +18100,8 @@ module.exports = {
 
 };
 
-}).call(this,{"isBuffer":require("../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400,"./utils":137,"assert-plus":51,"crypto":354,"http":466,"jsprim":147,"sshpk":270,"util":477}],137:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
+},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400,"./utils":136,"assert-plus":50,"crypto":354,"http":466,"jsprim":146,"sshpk":269,"util":477}],136:[function(require,module,exports){
 // Copyright 2012 Joyent, Inc.  All rights reserved.
 
 var assert = require('assert-plus');
@@ -18382,7 +18215,7 @@ module.exports = {
   }
 };
 
-},{"assert-plus":51,"sshpk":270,"util":477}],138:[function(require,module,exports){
+},{"assert-plus":50,"sshpk":269,"util":477}],137:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -18474,7 +18307,7 @@ module.exports = {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./utils":137,"assert-plus":51,"buffer":345,"crypto":354,"sshpk":270}],139:[function(require,module,exports){
+},{"./utils":136,"assert-plus":50,"buffer":345,"crypto":354,"sshpk":269}],138:[function(require,module,exports){
 module.exports      = isTypedArray
 isTypedArray.strict = isStrictTypedArray
 isTypedArray.loose  = isLooseTypedArray
@@ -18517,7 +18350,7 @@ function isLooseTypedArray(arr) {
   return names[toString.call(arr)]
 }
 
-},{}],140:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 var stream = require('stream')
 
 
@@ -18546,7 +18379,7 @@ module.exports.isReadable = isReadable
 module.exports.isWritable = isWritable
 module.exports.isDuplex   = isDuplex
 
-},{"stream":465}],141:[function(require,module,exports){
+},{"stream":465}],140:[function(require,module,exports){
 (function(){
 
     // Copyright (c) 2005  Tom Wu
@@ -19905,7 +19738,7 @@ module.exports.isDuplex   = isDuplex
 
 }).call(this);
 
-},{}],142:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 'use strict';
 
 var traverse = module.exports = function (schema, opts, cb) {
@@ -19988,7 +19821,7 @@ function escapeJsonPtr(str) {
   return str.replace(/~/g, '~0').replace(/\//g, '~1');
 }
 
-},{}],143:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 /**
  * JSONSchema Validator - Validates JavaScript objects using JSON Schemas
  *	(http://www.json.com/json-schema-proposal/)
@@ -20263,7 +20096,7 @@ exports.mustBeValid = function(result){
 return exports;
 }));
 
-},{}],144:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 exports = module.exports = stringify
 exports.getSerialize = serializer
 
@@ -20292,9 +20125,9 @@ function serializer(replacer, cycleReplacer) {
   }
 }
 
-},{}],145:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 // Ignore module for browserify (see package.json)
-},{}],146:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 (function (process,global,__dirname){
 /**
  * A JavaScript implementation of the JSON-LD API.
@@ -28488,8 +28321,8 @@ return factory;
 
 })();
 
-}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},"/node_modules/jsonld/js")
-},{"_process":429,"crypto":145,"es6-promise":103,"http":145,"jsonld-request":145,"pkginfo":145,"request":145,"util":145,"xmldom":145}],147:[function(require,module,exports){
+}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},"/node_modules/ShEx-validator/node_modules/jsonld/js")
+},{"_process":429,"crypto":144,"es6-promise":102,"http":144,"jsonld-request":144,"pkginfo":144,"request":144,"util":144,"xmldom":144}],146:[function(require,module,exports){
 /*
  * lib/jsprim.js: utilities for primitive JavaScript types
  */
@@ -29226,7 +29059,7 @@ function mergeObjects(provided, overrides, defaults)
 	return (rv);
 }
 
-},{"assert-plus":51,"extsprintf":106,"json-schema":143,"util":477,"verror":293}],148:[function(require,module,exports){
+},{"assert-plus":50,"extsprintf":105,"json-schema":142,"util":477,"verror":292}],147:[function(require,module,exports){
 var arrayEach = require('../internal/arrayEach'),
     baseEach = require('../internal/baseEach'),
     createForEach = require('../internal/createForEach');
@@ -29265,7 +29098,7 @@ var forEach = createForEach(arrayEach, baseEach);
 
 module.exports = forEach;
 
-},{"../internal/arrayEach":150,"../internal/baseEach":154,"../internal/createForEach":163}],149:[function(require,module,exports){
+},{"../internal/arrayEach":149,"../internal/baseEach":153,"../internal/createForEach":162}],148:[function(require,module,exports){
 /** Used as the `TypeError` message for "Functions" methods. */
 var FUNC_ERROR_TEXT = 'Expected a function';
 
@@ -29325,7 +29158,7 @@ function restParam(func, start) {
 
 module.exports = restParam;
 
-},{}],150:[function(require,module,exports){
+},{}],149:[function(require,module,exports){
 /**
  * A specialized version of `_.forEach` for arrays without support for callback
  * shorthands and `this` binding.
@@ -29349,7 +29182,7 @@ function arrayEach(array, iteratee) {
 
 module.exports = arrayEach;
 
-},{}],151:[function(require,module,exports){
+},{}],150:[function(require,module,exports){
 var keys = require('../object/keys');
 
 /**
@@ -29383,7 +29216,7 @@ function assignWith(object, source, customizer) {
 
 module.exports = assignWith;
 
-},{"../object/keys":182}],152:[function(require,module,exports){
+},{"../object/keys":181}],151:[function(require,module,exports){
 var baseCopy = require('./baseCopy'),
     keys = require('../object/keys');
 
@@ -29404,7 +29237,7 @@ function baseAssign(object, source) {
 
 module.exports = baseAssign;
 
-},{"../object/keys":182,"./baseCopy":153}],153:[function(require,module,exports){
+},{"../object/keys":181,"./baseCopy":152}],152:[function(require,module,exports){
 /**
  * Copies properties of `source` to `object`.
  *
@@ -29429,7 +29262,7 @@ function baseCopy(source, props, object) {
 
 module.exports = baseCopy;
 
-},{}],154:[function(require,module,exports){
+},{}],153:[function(require,module,exports){
 var baseForOwn = require('./baseForOwn'),
     createBaseEach = require('./createBaseEach');
 
@@ -29446,7 +29279,7 @@ var baseEach = createBaseEach(baseForOwn);
 
 module.exports = baseEach;
 
-},{"./baseForOwn":157,"./createBaseEach":161}],155:[function(require,module,exports){
+},{"./baseForOwn":156,"./createBaseEach":160}],154:[function(require,module,exports){
 var createBaseFor = require('./createBaseFor');
 
 /**
@@ -29465,7 +29298,7 @@ var baseFor = createBaseFor();
 
 module.exports = baseFor;
 
-},{"./createBaseFor":162}],156:[function(require,module,exports){
+},{"./createBaseFor":161}],155:[function(require,module,exports){
 var baseFor = require('./baseFor'),
     keysIn = require('../object/keysIn');
 
@@ -29484,7 +29317,7 @@ function baseForIn(object, iteratee) {
 
 module.exports = baseForIn;
 
-},{"../object/keysIn":183,"./baseFor":155}],157:[function(require,module,exports){
+},{"../object/keysIn":182,"./baseFor":154}],156:[function(require,module,exports){
 var baseFor = require('./baseFor'),
     keys = require('../object/keys');
 
@@ -29503,7 +29336,7 @@ function baseForOwn(object, iteratee) {
 
 module.exports = baseForOwn;
 
-},{"../object/keys":182,"./baseFor":155}],158:[function(require,module,exports){
+},{"../object/keys":181,"./baseFor":154}],157:[function(require,module,exports){
 /**
  * The base implementation of `_.property` without support for deep paths.
  *
@@ -29519,7 +29352,7 @@ function baseProperty(key) {
 
 module.exports = baseProperty;
 
-},{}],159:[function(require,module,exports){
+},{}],158:[function(require,module,exports){
 var identity = require('../utility/identity');
 
 /**
@@ -29560,7 +29393,7 @@ function bindCallback(func, thisArg, argCount) {
 
 module.exports = bindCallback;
 
-},{"../utility/identity":184}],160:[function(require,module,exports){
+},{"../utility/identity":183}],159:[function(require,module,exports){
 var bindCallback = require('./bindCallback'),
     isIterateeCall = require('./isIterateeCall'),
     restParam = require('../function/restParam');
@@ -29603,7 +29436,7 @@ function createAssigner(assigner) {
 
 module.exports = createAssigner;
 
-},{"../function/restParam":149,"./bindCallback":159,"./isIterateeCall":168}],161:[function(require,module,exports){
+},{"../function/restParam":148,"./bindCallback":158,"./isIterateeCall":167}],160:[function(require,module,exports){
 var getLength = require('./getLength'),
     isLength = require('./isLength'),
     toObject = require('./toObject');
@@ -29636,7 +29469,7 @@ function createBaseEach(eachFunc, fromRight) {
 
 module.exports = createBaseEach;
 
-},{"./getLength":164,"./isLength":169,"./toObject":172}],162:[function(require,module,exports){
+},{"./getLength":163,"./isLength":168,"./toObject":171}],161:[function(require,module,exports){
 var toObject = require('./toObject');
 
 /**
@@ -29665,7 +29498,7 @@ function createBaseFor(fromRight) {
 
 module.exports = createBaseFor;
 
-},{"./toObject":172}],163:[function(require,module,exports){
+},{"./toObject":171}],162:[function(require,module,exports){
 var bindCallback = require('./bindCallback'),
     isArray = require('../lang/isArray');
 
@@ -29687,7 +29520,7 @@ function createForEach(arrayFunc, eachFunc) {
 
 module.exports = createForEach;
 
-},{"../lang/isArray":174,"./bindCallback":159}],164:[function(require,module,exports){
+},{"../lang/isArray":173,"./bindCallback":158}],163:[function(require,module,exports){
 var baseProperty = require('./baseProperty');
 
 /**
@@ -29704,7 +29537,7 @@ var getLength = baseProperty('length');
 
 module.exports = getLength;
 
-},{"./baseProperty":158}],165:[function(require,module,exports){
+},{"./baseProperty":157}],164:[function(require,module,exports){
 var isNative = require('../lang/isNative');
 
 /**
@@ -29722,7 +29555,7 @@ function getNative(object, key) {
 
 module.exports = getNative;
 
-},{"../lang/isNative":176}],166:[function(require,module,exports){
+},{"../lang/isNative":175}],165:[function(require,module,exports){
 var getLength = require('./getLength'),
     isLength = require('./isLength');
 
@@ -29739,7 +29572,7 @@ function isArrayLike(value) {
 
 module.exports = isArrayLike;
 
-},{"./getLength":164,"./isLength":169}],167:[function(require,module,exports){
+},{"./getLength":163,"./isLength":168}],166:[function(require,module,exports){
 /** Used to detect unsigned integer values. */
 var reIsUint = /^\d+$/;
 
@@ -29765,7 +29598,7 @@ function isIndex(value, length) {
 
 module.exports = isIndex;
 
-},{}],168:[function(require,module,exports){
+},{}],167:[function(require,module,exports){
 var isArrayLike = require('./isArrayLike'),
     isIndex = require('./isIndex'),
     isObject = require('../lang/isObject');
@@ -29795,7 +29628,7 @@ function isIterateeCall(value, index, object) {
 
 module.exports = isIterateeCall;
 
-},{"../lang/isObject":177,"./isArrayLike":166,"./isIndex":167}],169:[function(require,module,exports){
+},{"../lang/isObject":176,"./isArrayLike":165,"./isIndex":166}],168:[function(require,module,exports){
 /**
  * Used as the [maximum length](http://ecma-international.org/ecma-262/6.0/#sec-number.max_safe_integer)
  * of an array-like value.
@@ -29817,7 +29650,7 @@ function isLength(value) {
 
 module.exports = isLength;
 
-},{}],170:[function(require,module,exports){
+},{}],169:[function(require,module,exports){
 /**
  * Checks if `value` is object-like.
  *
@@ -29831,7 +29664,7 @@ function isObjectLike(value) {
 
 module.exports = isObjectLike;
 
-},{}],171:[function(require,module,exports){
+},{}],170:[function(require,module,exports){
 var isArguments = require('../lang/isArguments'),
     isArray = require('../lang/isArray'),
     isIndex = require('./isIndex'),
@@ -29874,7 +29707,7 @@ function shimKeys(object) {
 
 module.exports = shimKeys;
 
-},{"../lang/isArguments":173,"../lang/isArray":174,"../object/keysIn":183,"./isIndex":167,"./isLength":169}],172:[function(require,module,exports){
+},{"../lang/isArguments":172,"../lang/isArray":173,"../object/keysIn":182,"./isIndex":166,"./isLength":168}],171:[function(require,module,exports){
 var isObject = require('../lang/isObject');
 
 /**
@@ -29890,7 +29723,7 @@ function toObject(value) {
 
 module.exports = toObject;
 
-},{"../lang/isObject":177}],173:[function(require,module,exports){
+},{"../lang/isObject":176}],172:[function(require,module,exports){
 var isArrayLike = require('../internal/isArrayLike'),
     isObjectLike = require('../internal/isObjectLike');
 
@@ -29926,7 +29759,7 @@ function isArguments(value) {
 
 module.exports = isArguments;
 
-},{"../internal/isArrayLike":166,"../internal/isObjectLike":170}],174:[function(require,module,exports){
+},{"../internal/isArrayLike":165,"../internal/isObjectLike":169}],173:[function(require,module,exports){
 var getNative = require('../internal/getNative'),
     isLength = require('../internal/isLength'),
     isObjectLike = require('../internal/isObjectLike');
@@ -29968,7 +29801,7 @@ var isArray = nativeIsArray || function(value) {
 
 module.exports = isArray;
 
-},{"../internal/getNative":165,"../internal/isLength":169,"../internal/isObjectLike":170}],175:[function(require,module,exports){
+},{"../internal/getNative":164,"../internal/isLength":168,"../internal/isObjectLike":169}],174:[function(require,module,exports){
 var isObject = require('./isObject');
 
 /** `Object#toString` result references. */
@@ -30008,7 +29841,7 @@ function isFunction(value) {
 
 module.exports = isFunction;
 
-},{"./isObject":177}],176:[function(require,module,exports){
+},{"./isObject":176}],175:[function(require,module,exports){
 var isFunction = require('./isFunction'),
     isObjectLike = require('../internal/isObjectLike');
 
@@ -30058,7 +29891,7 @@ function isNative(value) {
 
 module.exports = isNative;
 
-},{"../internal/isObjectLike":170,"./isFunction":175}],177:[function(require,module,exports){
+},{"../internal/isObjectLike":169,"./isFunction":174}],176:[function(require,module,exports){
 /**
  * Checks if `value` is the [language type](https://es5.github.io/#x8) of `Object`.
  * (e.g. arrays, functions, objects, regexes, `new Number(0)`, and `new String('')`)
@@ -30088,7 +29921,7 @@ function isObject(value) {
 
 module.exports = isObject;
 
-},{}],178:[function(require,module,exports){
+},{}],177:[function(require,module,exports){
 var baseForIn = require('../internal/baseForIn'),
     isArguments = require('./isArguments'),
     isObjectLike = require('../internal/isObjectLike');
@@ -30161,7 +29994,7 @@ function isPlainObject(value) {
 
 module.exports = isPlainObject;
 
-},{"../internal/baseForIn":156,"../internal/isObjectLike":170,"./isArguments":173}],179:[function(require,module,exports){
+},{"../internal/baseForIn":155,"../internal/isObjectLike":169,"./isArguments":172}],178:[function(require,module,exports){
 var isObjectLike = require('../internal/isObjectLike');
 
 /** `Object#toString` result references. */
@@ -30198,7 +30031,7 @@ function isString(value) {
 
 module.exports = isString;
 
-},{"../internal/isObjectLike":170}],180:[function(require,module,exports){
+},{"../internal/isObjectLike":169}],179:[function(require,module,exports){
 /**
  * Checks if `value` is `undefined`.
  *
@@ -30221,7 +30054,7 @@ function isUndefined(value) {
 
 module.exports = isUndefined;
 
-},{}],181:[function(require,module,exports){
+},{}],180:[function(require,module,exports){
 var assignWith = require('../internal/assignWith'),
     baseAssign = require('../internal/baseAssign'),
     createAssigner = require('../internal/createAssigner');
@@ -30266,7 +30099,7 @@ var assign = createAssigner(function(object, source, customizer) {
 
 module.exports = assign;
 
-},{"../internal/assignWith":151,"../internal/baseAssign":152,"../internal/createAssigner":160}],182:[function(require,module,exports){
+},{"../internal/assignWith":150,"../internal/baseAssign":151,"../internal/createAssigner":159}],181:[function(require,module,exports){
 var getNative = require('../internal/getNative'),
     isArrayLike = require('../internal/isArrayLike'),
     isObject = require('../lang/isObject'),
@@ -30313,7 +30146,7 @@ var keys = !nativeKeys ? shimKeys : function(object) {
 
 module.exports = keys;
 
-},{"../internal/getNative":165,"../internal/isArrayLike":166,"../internal/shimKeys":171,"../lang/isObject":177}],183:[function(require,module,exports){
+},{"../internal/getNative":164,"../internal/isArrayLike":165,"../internal/shimKeys":170,"../lang/isObject":176}],182:[function(require,module,exports){
 var isArguments = require('../lang/isArguments'),
     isArray = require('../lang/isArray'),
     isIndex = require('../internal/isIndex'),
@@ -30379,7 +30212,7 @@ function keysIn(object) {
 
 module.exports = keysIn;
 
-},{"../internal/isIndex":167,"../internal/isLength":169,"../lang/isArguments":173,"../lang/isArray":174,"../lang/isObject":177}],184:[function(require,module,exports){
+},{"../internal/isIndex":166,"../internal/isLength":168,"../lang/isArguments":172,"../lang/isArray":173,"../lang/isObject":176}],183:[function(require,module,exports){
 /**
  * This method returns the first argument provided to it.
  *
@@ -30401,4802 +30234,7 @@ function identity(value) {
 
 module.exports = identity;
 
-},{}],185:[function(require,module,exports){
-// Replace local require by a lazy loader
-var globalRequire = require;
-require = function () {};
-
-// Expose submodules
-var exports = module.exports = {
-  Lexer:        require('./lib/N3Lexer'),
-  Parser:       require('./lib/N3Parser'),
-  Writer:       require('./lib/N3Writer'),
-  Store:        require('./lib/N3Store'),
-  StreamParser: require('./lib/N3StreamParser'),
-  StreamWriter: require('./lib/N3StreamWriter'),
-  Util:         require('./lib/N3Util'),
-};
-
-// Load submodules on first access
-Object.keys(exports).forEach(function (submodule) {
-  Object.defineProperty(exports, submodule, {
-    configurable: true,
-    enumerable: true,
-    get: function () {
-      delete exports[submodule];
-      return exports[submodule] = globalRequire('./lib/N3' + submodule);
-    },
-  });
-});
-
-},{"./lib/N3Lexer":186,"./lib/N3Parser":187,"./lib/N3Store":188,"./lib/N3StreamParser":189,"./lib/N3StreamWriter":190,"./lib/N3Util":191,"./lib/N3Writer":192}],186:[function(require,module,exports){
-// **N3Lexer** tokenizes N3 documents.
-var fromCharCode = String.fromCharCode;
-var immediately = typeof setImmediate === 'function' ? setImmediate :
-                  function setImmediate(func) { setTimeout(func, 0); };
-
-// Regular expression and replacement string to escape N3 strings.
-// Note how we catch invalid unicode sequences separately (they will trigger an error).
-var escapeSequence = /\\u([a-fA-F0-9]{4})|\\U([a-fA-F0-9]{8})|\\[uU]|\\(.)/g;
-var escapeReplacements = {
-  '\\': '\\', "'": "'", '"': '"',
-  'n': '\n', 'r': '\r', 't': '\t', 'f': '\f', 'b': '\b',
-  '_': '_', '~': '~', '.': '.', '-': '-', '!': '!', '$': '$', '&': '&',
-  '(': '(', ')': ')', '*': '*', '+': '+', ',': ',', ';': ';', '=': '=',
-  '/': '/', '?': '?', '#': '#', '@': '@', '%': '%',
-};
-var illegalIriChars = /[\x00-\x20<>\\"\{\}\|\^\`]/;
-
-// ## Constructor
-function N3Lexer(options) {
-  if (!(this instanceof N3Lexer))
-    return new N3Lexer(options);
-  options = options || {};
-
-  // In line mode (N-Triples or N-Quads), only simple features may be parsed
-  if (options.lineMode) {
-    // Don't tokenize special literals
-    this._tripleQuotedString = this._number = this._boolean = /$0^/;
-    // Swap the tokenize method for a restricted version
-    var self = this;
-    this._tokenize = this.tokenize;
-    this.tokenize = function (input, callback) {
-      this._tokenize(input, function (error, token) {
-        if (!error && /^(?:IRI|blank|literal|langcode|typeIRI|\.|eof)$/.test(token.type))
-          callback && callback(error, token);
-        else
-          callback && callback(error || self._syntaxError(token.type, callback = null));
-      });
-    };
-  }
-  // Enable N3 functionality by default
-  this._n3Mode = options.n3 !== false;
-  // Disable comment tokens by default
-  this._comments = !!options.comments;
-}
-
-N3Lexer.prototype = {
-  // ## Regular expressions
-  // It's slightly faster to have these as properties than as in-scope variables
-
-  _iri: /^<((?:[^ <>{}\\]|\\[uU])+)>[ \t]*/, // IRI with escape sequences; needs sanity check after unescaping
-  _unescapedIri: /^<([^\x00-\x20<>\\"\{\}\|\^\`]*)>[ \t]*/, // IRI without escape sequences; no unescaping
-  _unescapedString: /^"[^"\\\r\n]+"/, // non-empty string without escape sequences
-  _singleQuotedString: /^"(?:[^"\\\r\n]|\\.)*"(?=[^"])|^'(?:[^'\\\r\n]|\\.)*'(?=[^'])/,
-  _tripleQuotedString: /^""("[^"\\]*(?:(?:\\.|"(?!""))[^"\\]*)*")""|^''('[^'\\]*(?:(?:\\.|'(?!''))[^'\\]*)*')''/,
-  _langcode: /^@([a-z]+(?:-[a-z0-9]+)*)(?=[^a-z0-9\-])/i,
-  _prefix: /^((?:[A-Za-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])(?:\.?[\-0-9A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])*)?:(?=[#\s<])/,
-  _prefixed: /^((?:[A-Za-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])(?:\.?[\-0-9A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])*)?:((?:(?:[0-:A-Z_a-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff]|%[0-9a-fA-F]{2}|\\[!#-\/;=?\-@_~])(?:(?:[\.\-0-:A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff]|%[0-9a-fA-F]{2}|\\[!#-\/;=?\-@_~])*(?:[\-0-:A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff]|%[0-9a-fA-F]{2}|\\[!#-\/;=?\-@_~]))?)?)(?:[ \t]+|(?=\.?[,;!\^\s#()\[\]\{\}"'<]))/,
-  _variable: /^\?(?:(?:[A-Z_a-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])(?:[\-0-:A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])*)(?=[.,;!\^\s#()\[\]\{\}"'<])/,
-  _blank: /^_:((?:[0-9A-Z_a-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])(?:\.?[\-0-9A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])*)(?:[ \t]+|(?=\.?[,;:\s#()\[\]\{\}"'<]))/,
-  _number: /^[\-+]?(?:\d+\.?\d*([eE](?:[\-\+])?\d+)|\d*\.?\d+)(?=\.?[,;:\s#()\[\]\{\}"'<])/,
-  _boolean: /^(?:true|false)(?=[.,;\s#()\[\]\{\}"'<])/,
-  _keyword: /^@[a-z]+(?=[\s#<:])/i,
-  _sparqlKeyword: /^(?:PREFIX|BASE|GRAPH)(?=[\s#<])/i,
-  _shortPredicates: /^a(?=\s+|<)/,
-  _newline: /^[ \t]*(?:#[^\n\r]*)?(?:\r\n|\n|\r)[ \t]*/,
-  _comment: /#([^\n\r]*)/,
-  _whitespace: /^[ \t]+/,
-  _endOfFile: /^(?:#[^\n\r]*)?$/,
-
-  // ## Private methods
-
-  // ### `_tokenizeToEnd` tokenizes as for as possible, emitting tokens through the callback
-  _tokenizeToEnd: function (callback, inputFinished) {
-    // Continue parsing as far as possible; the loop will return eventually
-    var input = this._input, outputComments = this._comments;
-    while (true) {
-      // Count and skip whitespace lines
-      var whiteSpaceMatch, comment;
-      while (whiteSpaceMatch = this._newline.exec(input)) {
-        // Try to find a comment
-        if (outputComments && (comment = this._comment.exec(whiteSpaceMatch[0])))
-          callback(null, { line: this._line, type: 'comment', value: comment[1], prefix: '' });
-        // Advance the input
-        input = input.substr(whiteSpaceMatch[0].length, input.length);
-        this._line++;
-      }
-      // Skip whitespace on current line
-      if (whiteSpaceMatch = this._whitespace.exec(input))
-        input = input.substr(whiteSpaceMatch[0].length, input.length);
-
-      // Stop for now if we're at the end
-      if (this._endOfFile.test(input)) {
-        // If the input is finished, emit EOF
-        if (inputFinished) {
-          // Try to find a final comment
-          if (outputComments && (comment = this._comment.exec(input)))
-            callback(null, { line: this._line, type: 'comment', value: comment[1], prefix: '' });
-          callback(input = null, { line: this._line, type: 'eof', value: '', prefix: '' });
-        }
-        return this._input = input;
-      }
-
-      // Look for specific token types based on the first character
-      var line = this._line, type = '', value = '', prefix = '',
-          firstChar = input[0], match = null, matchLength = 0, unescaped, inconclusive = false;
-      switch (firstChar) {
-      case '^':
-        // We need at least 3 tokens lookahead to distinguish ^^<IRI> and ^^pre:fixed
-        if (input.length < 3)
-          break;
-        // Try to match a type
-        else if (input[1] === '^') {
-          this._previousMarker = '^^';
-          // Move to type IRI or prefixed name
-          input = input.substr(2);
-          if (input[0] !== '<') {
-            inconclusive = true;
-            break;
-          }
-        }
-        // If no type, it must be a path expression
-        else {
-          if (this._n3Mode) {
-            matchLength = 1;
-            type = '^';
-          }
-          break;
-        }
-        // Fall through in case the type is an IRI
-      case '<':
-        // Try to find a full IRI without escape sequences
-        if (match = this._unescapedIri.exec(input))
-          type = 'IRI', value = match[1];
-        // Try to find a full IRI with escape sequences
-        else if (match = this._iri.exec(input)) {
-          unescaped = this._unescape(match[1]);
-          if (unescaped === null || illegalIriChars.test(unescaped))
-            return reportSyntaxError(this);
-          type = 'IRI', value = unescaped;
-        }
-        // Try to find a backwards implication arrow
-        else if (this._n3Mode && input.length > 1 && input[1] === '=')
-          type = 'inverse', matchLength = 2, value = 'http://www.w3.org/2000/10/swap/log#implies';
-        break;
-
-      case '_':
-        // Try to find a blank node. Since it can contain (but not end with) a dot,
-        // we always need a non-dot character before deciding it is a blank node.
-        // Therefore, try inserting a space if we're at the end of the input.
-        if ((match = this._blank.exec(input)) ||
-            inputFinished && (match = this._blank.exec(input + ' ')))
-          type = 'blank', prefix = '_', value = match[1];
-        break;
-
-      case '"':
-      case "'":
-        // Try to find a non-empty double-quoted literal without escape sequences
-        if (match = this._unescapedString.exec(input))
-          type = 'literal', value = match[0];
-        // Try to find any other literal wrapped in a pair of single or double quotes
-        else if (match = this._singleQuotedString.exec(input)) {
-          unescaped = this._unescape(match[0]);
-          if (unescaped === null)
-            return reportSyntaxError(this);
-          type = 'literal', value = unescaped.replace(/^'|'$/g, '"');
-        }
-        // Try to find a literal wrapped in three pairs of single or double quotes
-        else if (match = this._tripleQuotedString.exec(input)) {
-          unescaped = match[1] || match[2];
-          // Count the newlines and advance line counter
-          this._line += unescaped.split(/\r\n|\r|\n/).length - 1;
-          unescaped = this._unescape(unescaped);
-          if (unescaped === null)
-            return reportSyntaxError(this);
-          type = 'literal', value = unescaped.replace(/^'|'$/g, '"');
-        }
-        break;
-
-      case '?':
-        // Try to find a variable
-        if (this._n3Mode && (match = this._variable.exec(input)))
-          type = 'var', value = match[0];
-        break;
-
-      case '@':
-        // Try to find a language code
-        if (this._previousMarker === 'literal' && (match = this._langcode.exec(input)))
-          type = 'langcode', value = match[1];
-        // Try to find a keyword
-        else if (match = this._keyword.exec(input))
-          type = match[0];
-        break;
-
-      case '.':
-        // Try to find a dot as punctuation
-        if (input.length === 1 ? inputFinished : (input[1] < '0' || input[1] > '9')) {
-          type = '.';
-          matchLength = 1;
-          break;
-        }
-        // Fall through to numerical case (could be a decimal dot)
-
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-      case '+':
-      case '-':
-        // Try to find a number. Since it can contain (but not end with) a dot,
-        // we always need a non-dot character before deciding it is a number.
-        // Therefore, try inserting a space if we're at the end of the input.
-        if (match = this._number.exec(input) ||
-            inputFinished && (match = this._number.exec(input + ' '))) {
-          type = 'literal';
-          value = '"' + match[0] + '"^^http://www.w3.org/2001/XMLSchema#' +
-                  (match[1] ? 'double' : (/^[+\-]?\d+$/.test(match[0]) ? 'integer' : 'decimal'));
-        }
-        break;
-
-      case 'B':
-      case 'b':
-      case 'p':
-      case 'P':
-      case 'G':
-      case 'g':
-        // Try to find a SPARQL-style keyword
-        if (match = this._sparqlKeyword.exec(input))
-          type = match[0].toUpperCase();
-        else
-          inconclusive = true;
-        break;
-
-      case 'f':
-      case 't':
-        // Try to match a boolean
-        if (match = this._boolean.exec(input))
-          type = 'literal', value = '"' + match[0] + '"^^http://www.w3.org/2001/XMLSchema#boolean';
-        else
-          inconclusive = true;
-        break;
-
-      case 'a':
-        // Try to find an abbreviated predicate
-        if (match = this._shortPredicates.exec(input))
-          type = 'abbreviation', value = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-        else
-          inconclusive = true;
-        break;
-
-      case '=':
-        // Try to find an implication arrow or equals sign
-        if (this._n3Mode && input.length > 1) {
-          type = 'abbreviation';
-          if (input[1] !== '>')
-            matchLength = 1, value = 'http://www.w3.org/2002/07/owl#sameAs';
-          else
-            matchLength = 2, value = 'http://www.w3.org/2000/10/swap/log#implies';
-        }
-        break;
-
-      case '!':
-        if (!this._n3Mode)
-          break;
-      case ',':
-      case ';':
-      case '[':
-      case ']':
-      case '(':
-      case ')':
-      case '{':
-      case '}':
-        // The next token is punctuation
-        matchLength = 1;
-        type = firstChar;
-        break;
-
-      default:
-        inconclusive = true;
-      }
-
-      // Some first characters do not allow an immediate decision, so inspect more
-      if (inconclusive) {
-        // Try to find a prefix
-        if ((this._previousMarker === '@prefix' || this._previousMarker === 'PREFIX') &&
-            (match = this._prefix.exec(input)))
-          type = 'prefix', value = match[1] || '';
-        // Try to find a prefixed name. Since it can contain (but not end with) a dot,
-        // we always need a non-dot character before deciding it is a prefixed name.
-        // Therefore, try inserting a space if we're at the end of the input.
-        else if ((match = this._prefixed.exec(input)) ||
-                 inputFinished && (match = this._prefixed.exec(input + ' ')))
-          type = 'prefixed', prefix = match[1] || '', value = this._unescape(match[2]);
-      }
-
-      // A type token is special: it can only be emitted after an IRI or prefixed name is read
-      if (this._previousMarker === '^^') {
-        switch (type) {
-        case 'prefixed': type = 'type';    break;
-        case 'IRI':      type = 'typeIRI'; break;
-        default:         type = '';
-        }
-      }
-
-      // What if nothing of the above was found?
-      if (!type) {
-        // We could be in streaming mode, and then we just wait for more input to arrive.
-        // Otherwise, a syntax error has occurred in the input.
-        // One exception: error on an unaccounted linebreak (= not inside a triple-quoted literal).
-        if (inputFinished || (!/^'''|^"""/.test(input) && /\n|\r/.test(input)))
-          return reportSyntaxError(this);
-        else
-          return this._input = input;
-      }
-
-      // Emit the parsed token
-      var token = { line: line, type: type, value: value, prefix: prefix };
-      callback(null, token);
-      this.previousToken = token;
-      this._previousMarker = type;
-      // Advance to next part to tokenize
-      input = input.substr(matchLength || match[0].length, input.length);
-    }
-
-    // Signals the syntax error through the callback
-    function reportSyntaxError(self) { callback(self._syntaxError(/^\S*/.exec(input)[0])); }
-  },
-
-  // ### `_unescape` replaces N3 escape codes by their corresponding characters
-  _unescape: function (item) {
-    try {
-      return item.replace(escapeSequence, function (sequence, unicode4, unicode8, escapedChar) {
-        var charCode;
-        if (unicode4) {
-          charCode = parseInt(unicode4, 16);
-          if (isNaN(charCode)) throw new Error(); // can never happen (regex), but helps performance
-          return fromCharCode(charCode);
-        }
-        else if (unicode8) {
-          charCode = parseInt(unicode8, 16);
-          if (isNaN(charCode)) throw new Error(); // can never happen (regex), but helps performance
-          if (charCode <= 0xFFFF) return fromCharCode(charCode);
-          return fromCharCode(0xD800 + ((charCode -= 0x10000) / 0x400), 0xDC00 + (charCode & 0x3FF));
-        }
-        else {
-          var replacement = escapeReplacements[escapedChar];
-          if (!replacement)
-            throw new Error();
-          return replacement;
-        }
-      });
-    }
-    catch (error) { return null; }
-  },
-
-  // ### `_syntaxError` creates a syntax error for the given issue
-  _syntaxError: function (issue) {
-    this._input = null;
-    var err = new Error('Unexpected "' + issue + '" on line ' + this._line + '.');
-    err.context = {
-      token: undefined,
-      line: this._line,
-      previousToken: this.previousToken,
-    };
-    return err;
-  },
-
-
-  // ## Public methods
-
-  // ### `tokenize` starts the transformation of an N3 document into an array of tokens.
-  // The input can be a string or a stream.
-  tokenize: function (input, callback) {
-    var self = this;
-    this._line = 1;
-
-    // If the input is a string, continuously emit tokens through the callback until the end
-    if (typeof input === 'string') {
-      this._input = input;
-      // If a callback was passed, asynchronously call it
-      if (typeof callback === 'function')
-        immediately(function () { self._tokenizeToEnd(callback, true); });
-      // If no callback was passed, tokenize synchronously and return
-      else {
-        var tokens = [], error;
-        this._tokenizeToEnd(function (e, t) { e ? (error = e) : tokens.push(t); }, true);
-        if (error) throw error;
-        return tokens;
-      }
-    }
-    // Otherwise, the input must be a stream
-    else {
-      this._input = '';
-      if (typeof input.setEncoding === 'function')
-        input.setEncoding('utf8');
-      // Adds the data chunk to the buffer and parses as far as possible
-      input.on('data', function (data) {
-        if (self._input !== null) {
-          self._input += data;
-          self._tokenizeToEnd(callback, false);
-        }
-      });
-      // Parses until the end
-      input.on('end', function () {
-        if (self._input !== null)
-          self._tokenizeToEnd(callback, true);
-      });
-      input.on('error', callback);
-    }
-  },
-};
-
-// ## Exports
-module.exports = N3Lexer;
-
-},{}],187:[function(require,module,exports){
-// **N3Parser** parses N3 documents.
-var N3Lexer = require('./N3Lexer');
-
-var RDF_PREFIX = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-    RDF_NIL    = RDF_PREFIX + 'nil',
-    RDF_FIRST  = RDF_PREFIX + 'first',
-    RDF_REST   = RDF_PREFIX + 'rest';
-
-var QUANTIFIERS_GRAPH = 'urn:n3:quantifiers';
-
-var absoluteIRI = /^[a-z][a-z0-9+.-]*:/i,
-    schemeAuthority = /^(?:([a-z][a-z0-9+.-]*:))?(?:\/\/[^\/]*)?/i,
-    dotSegments = /(?:^|\/)\.\.?(?:$|[\/#?])/;
-
-// The next ID for new blank nodes
-var blankNodePrefix = 0, blankNodeCount = 0;
-
-// ## Constructor
-function N3Parser(options) {
-  if (!(this instanceof N3Parser))
-    return new N3Parser(options);
-  this._contextStack = [];
-  this._graph = null;
-
-  // Set the document IRI
-  options = options || {};
-  this._setBase(options.documentIRI);
-
-  // Set supported features depending on the format
-  var format = (typeof options.format === 'string') ?
-               options.format.match(/\w*$/)[0].toLowerCase() : '',
-      isTurtle = format === 'turtle', isTriG = format === 'trig',
-      isNTriples = /triple/.test(format), isNQuads = /quad/.test(format),
-      isN3 = this._n3Mode = /n3/.test(format),
-      isLineMode = isNTriples || isNQuads;
-  console.log("format",format);
-  if (!(this._supportsNamedGraphs = !(isTurtle || isN3)))
-    this._readPredicateOrNamedGraph = this._readPredicate;
-  this._supportsQuads = !(isTurtle || isTriG || isNTriples || isN3);
-  // Disable relative IRIs in N-Triples or N-Quads mode
-  if (isLineMode) {
-    this._base = '';
-    this._resolveIRI = function (token) {
-      this._error('Disallowed relative IRI', token);
-      return this._callback = noop, this._subject = null;
-    };
-  }
-  this._blankNodePrefix = typeof options.blankNodePrefix !== 'string' ? '' :
-                            '_:' + options.blankNodePrefix.replace(/^_:/, '');
-  this._lexer = options.lexer || new N3Lexer({ lineMode: isLineMode, n3: isN3 });
-  // Disable explicit quantifiers by default
-  this._explicitQuantifiers = !!options.explicitQuantifiers;
-}
-
-// ## Private class methods
-
-// ### `_resetBlankNodeIds` restarts blank node identification
-N3Parser._resetBlankNodeIds = function () {
-  blankNodePrefix = blankNodeCount = 0;
-};
-
-N3Parser.prototype = {
-  // ## Private methods
-
-  // ### `_setBase` sets the base IRI to resolve relative IRIs
-  _setBase: function (baseIRI) {
-    if (!baseIRI)
-      this._base = null;
-    else {
-      // Remove fragment if present
-      var fragmentPos = baseIRI.indexOf('#');
-      if (fragmentPos >= 0)
-        baseIRI = baseIRI.substr(0, fragmentPos);
-      // Set base IRI and its components
-      this._base = baseIRI;
-      this._basePath   = baseIRI.indexOf('/') < 0 ? baseIRI :
-                         baseIRI.replace(/[^\/?]*(?:\?.*)?$/, '');
-      baseIRI = baseIRI.match(schemeAuthority);
-      this._baseRoot   = baseIRI[0];
-      this._baseScheme = baseIRI[1];
-    }
-  },
-
-  // ### `_saveContext` stores the current parsing context
-  // when entering a new scope (list, blank node, formula)
-  _saveContext: function (type, graph, subject, predicate, object) {
-    var n3Mode = this._n3Mode;
-    this._contextStack.push({
-      subject: subject, predicate: predicate, object: object,
-      graph: graph, type: type,
-      inverse: n3Mode ? this._inversePredicate : false,
-      blankPrefix: n3Mode ? this._prefixes._ : '',
-      quantified: n3Mode ? this._quantified : null,
-    });
-    // The settings below only apply to N3 streams
-    if (n3Mode) {
-      // Every new scope resets the predicate direction
-      this._inversePredicate = false;
-      // In N3, blank nodes are scoped to a formula
-      // (using a dot as separator, as a blank node label cannot start with it)
-      this._prefixes._ = this._graph + '.';
-      // Quantifiers are scoped to a formula
-      this._quantified = Object.create(this._quantified);
-    }
-  },
-
-  // ### `_restoreContext` restores the parent context
-  // when leaving a scope (list, blank node, formula)
-  _restoreContext: function () {
-    var context = this._contextStack.pop(), n3Mode = this._n3Mode;
-    this._subject   = context.subject;
-    this._predicate = context.predicate;
-    this._object    = context.object;
-    this._graph     = context.graph;
-    // The settings below only apply to N3 streams
-    if (n3Mode) {
-      this._inversePredicate = context.inverse;
-      this._prefixes._ = context.blankPrefix;
-      this._quantified = context.quantified;
-    }
-  },
-
-  // ### `_readInTopContext` reads a token when in the top context
-  _readInTopContext: function (token) {
-    switch (token.type) {
-    // If an EOF token arrives in the top context, signal that we're done
-    case 'eof':
-      if (this._graph !== null)
-        return this._error('Unclosed graph', token);
-      delete this._prefixes._;
-      return this._callback(null, null, this._prefixes);
-    // It could be a prefix declaration
-    case 'PREFIX':
-      this._sparqlStyle = true;
-    case '@prefix':
-      return this._readPrefix;
-    // It could be a base declaration
-    case 'BASE':
-      this._sparqlStyle = true;
-    case '@base':
-      return this._readBaseIRI;
-    // It could be a graph
-    case '{':
-      if (this._supportsNamedGraphs) {
-        this._graph = '';
-        this._subject = null;
-        return this._readSubject;
-      }
-    case 'GRAPH':
-      if (this._supportsNamedGraphs)
-        return this._readNamedGraphLabel;
-    // Otherwise, the next token must be a subject
-    default:
-      console.log('default case N3Parser');
-      return this._readSubject(token);
-    }
-  },
-
-  // ### `_readEntity` reads an IRI, prefixed name, blank node, or variable
-  _readEntity: function (token, quantifier) {
-    var value;
-    switch (token.type) {
-    // Read a relative or absolute IRI
-    case 'IRI':
-    case 'typeIRI':
-      value = (this._base === null || absoluteIRI.test(token.value)) ?
-              token.value : this._resolveIRI(token);
-      break;
-    // Read a blank node or prefixed name
-    case 'type':
-    case 'blank':
-    case 'prefixed':
-      var prefix = this._prefixes[token.prefix];
-      if (prefix === undefined)
-        return this._error('Undefined prefix "' + token.prefix + ':"', token);
-      value = prefix + token.value;
-      break;
-    // Read a variable
-    case 'var':
-      return token.value;
-    // Everything else is not an entity
-    default:
-      return this._error('Expected entity but got ' + token.type, token);
-    }
-    // In N3 mode, replace the entity if it is quantified
-    if (!quantifier && this._n3Mode && (value in this._quantified))
-      value = this._quantified[value];
-    return value;
-  },
-
-  // ### `_readSubject` reads a triple's subject
-  _readSubject: function (token) {
-    this._predicate = null;
-    switch (token.type) {
-    case '[':
-      // Start a new triple with a new blank node as subject
-      this._saveContext('blank', this._graph,
-                        this._subject = '_:b' + blankNodeCount++, null, null);
-      return this._readBlankNodeHead;
-    case '(':
-      // Start a new list
-      this._saveContext('list', this._graph, RDF_NIL, null, null);
-      this._subject = null;
-      return this._readListItem;
-    case '{':
-      // Start a new formula
-      if (!this._n3Mode)
-        return this._error('Unexpected graph', token);
-      this._saveContext('formula', this._graph,
-                        this._graph = '_:b' + blankNodeCount++, null, null);
-      return this._readSubject;
-    case '}':
-       // No subject; the graph in which we are reading is closed instead
-      return this._readPunctuation(token);
-    case '@forSome':
-      if (!this._n3Mode)
-        return this._error('Unexpected "@forSome"', token);
-      this._subject = null;
-      this._predicate = 'http://www.w3.org/2000/10/swap/reify#forSome';
-      this._quantifiedPrefix = '_:b';
-      return this._readQuantifierList;
-    case '@forAll':
-      if (!this._n3Mode)
-        return this._error('Unexpected "@forAll"', token);
-      this._subject = null;
-      this._predicate = 'http://www.w3.org/2000/10/swap/reify#forAll';
-      this._quantifiedPrefix = '?b-';
-      return this._readQuantifierList;
-    default:
-      // Read the subject entity
-      if ((this._subject = this._readEntity(token)) === undefined)
-        return;
-      // In N3 mode, the subject might be a path
-      if (this._n3Mode)
-        return this._getPathReader(this._readPredicateOrNamedGraph);
-    }
-
-    // The next token must be a predicate,
-    // or, if the subject was actually a graph IRI, a named graph
-    return this._readPredicateOrNamedGraph;
-  },
-
-  // ### `_readPredicate` reads a triple's predicate
-  _readPredicate: function (token) {
-    var type = token.type;
-    switch (type) {
-    case 'inverse':
-      this._inversePredicate = true;
-    case 'abbreviation':
-      this._predicate = token.value;
-      break;
-    case '.':
-    case ']':
-    case '}':
-      // Expected predicate didn't come, must have been trailing semicolon
-      if (this._predicate === null)
-        return this._error('Unexpected ' + type, token);
-      this._subject = null;
-      return type === ']' ? this._readBlankNodeTail(token) : this._readPunctuation(token);
-    case ';':
-      // Additional semicolons can be safely ignored
-      return this._predicate !== null ? this._readPredicate :
-             this._error('Expected predicate but got ;', token);
-    case 'blank':
-      if (!this._n3Mode)
-        return this._error('Disallowed blank node as predicate', token);
-    default:
-      if ((this._predicate = this._readEntity(token)) === undefined)
-        return;
-    }
-    // The next token must be an object
-    return this._readObject;
-  },
-
-  // ### `_readObject` reads a triple's object
-  _readObject: function (token) {
-    switch (token.type) {
-    case 'literal':
-      this._object = token.value;
-      return this._readDataTypeOrLang;
-    case '[':
-      // Start a new triple with a new blank node as subject
-      this._saveContext('blank', this._graph, this._subject, this._predicate,
-                        this._subject = '_:b' + blankNodeCount++);
-      return this._readBlankNodeHead;
-    case '(':
-      // Start a new list
-      this._saveContext('list', this._graph, this._subject, this._predicate, RDF_NIL);
-      this._subject = null;
-      return this._readListItem;
-    case '{':
-      // Start a new formula
-      if (!this._n3Mode)
-        return this._error('Unexpected graph', token);
-      this._saveContext('formula', this._graph, this._subject, this._predicate,
-                        this._graph = '_:b' + blankNodeCount++);
-      return this._readSubject;
-    default:
-      // Read the object entity
-      if ((this._object = this._readEntity(token)) === undefined)
-        return;
-      // In N3 mode, the object might be a path
-      if (this._n3Mode)
-        return this._getPathReader(this._getContextEndReader());
-    }
-    return this._getContextEndReader();
-  },
-
-  // ### `_readPredicateOrNamedGraph` reads a triple's predicate, or a named graph
-  _readPredicateOrNamedGraph: function (token) {
-    return token.type === '{' ? this._readGraph(token) : this._readPredicate(token);
-  },
-
-  // ### `_readGraph` reads a graph
-  _readGraph: function (token) {
-    if (token.type !== '{')
-      return this._error('Expected graph but got ' + token.type, token);
-    // The "subject" we read is actually the GRAPH's label
-    this._graph = this._subject, this._subject = null;
-    return this._readSubject;
-  },
-
-  // ### `_readBlankNodeHead` reads the head of a blank node
-  _readBlankNodeHead: function (token) {
-    if (token.type === ']') {
-      this._subject = null;
-      return this._readBlankNodeTail(token);
-    }
-    else {
-      this._predicate = null;
-      return this._readPredicate(token);
-    }
-  },
-
-  // ### `_readBlankNodeTail` reads the end of a blank node
-  _readBlankNodeTail: function (token) {
-    if (token.type !== ']')
-      return this._readBlankNodePunctuation(token);
-
-    // Store blank node triple
-    if (this._subject !== null)
-      this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
-
-    // Restore the parent context containing this blank node
-    var empty = this._predicate === null;
-    this._restoreContext();
-    // If the blank node was the subject, continue reading the predicate
-    if (this._object === null)
-      // If the blank node was empty, it could be a named graph label
-      return empty ? this._readPredicateOrNamedGraph : this._readPredicateAfterBlank;
-    // If the blank node was the object, restore previous context and read punctuation
-    else
-      return this._getContextEndReader();
-  },
-
-  // ### `_readPredicateAfterBlank` reads a predicate after an anonymous blank node
-  _readPredicateAfterBlank: function (token) {
-    // If a dot follows a blank node in top context, there is no predicate
-    if (token.type === '.' && !this._contextStack.length) {
-      this._subject = null; // cancel the current triple
-      return this._readPunctuation(token);
-    }
-    return this._readPredicate(token);
-  },
-
-  // ### `_readListItem` reads items from a list
-  _readListItem: function (token) {
-    var item = null,                      // The item of the list
-        list = null,                      // The list itself
-        prevList = this._subject,         // The previous list that contains this list
-        stack = this._contextStack,       // The stack of parent contexts
-        parent = stack[stack.length - 1], // The parent containing the current list
-        next = this._readListItem,        // The next function to execute
-        itemComplete = true;              // Whether the item has been read fully
-
-    switch (token.type) {
-    case '[':
-      // Stack the current list triple and start a new triple with a blank node as subject
-      this._saveContext('blank', this._graph, list = '_:b' + blankNodeCount++,
-                        RDF_FIRST, this._subject = item = '_:b' + blankNodeCount++);
-      next = this._readBlankNodeHead;
-      break;
-    case '(':
-      // Stack the current list triple and start a new list
-      this._saveContext('list', this._graph, list = '_:b' + blankNodeCount++,
-                        RDF_FIRST, RDF_NIL);
-      this._subject = null;
-      break;
-    case ')':
-      // Closing the list; restore the parent context
-      this._restoreContext();
-      // If this list is contained within a parent list, return the membership triple here.
-      // This will be `<parent list element> rdf:first <this list>.`.
-      if (stack.length !== 0 && stack[stack.length - 1].type === 'list')
-        this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
-      // Was this list the parent's subject?
-      if (this._predicate === null) {
-        // The next token is the predicate
-        next = this._readPredicate;
-        // No list tail if this was an empty list
-        if (this._subject === RDF_NIL)
-          return next;
-      }
-      // The list was in the parent context's object
-      else {
-        next = this._getContextEndReader();
-        // No list tail if this was an empty list
-        if (this._object === RDF_NIL)
-          return next;
-      }
-      // Close the list by making the head nil
-      list = RDF_NIL;
-      break;
-    case 'literal':
-      item = token.value;
-      itemComplete = false; // Can still have a datatype or language
-      next = this._readListItemDataTypeOrLang;
-      break;
-    default:
-      if ((item = this._readEntity(token)) === undefined)
-        return;
-    }
-
-     // Create a new blank node if no item head was assigned yet
-    if (list === null)
-      this._subject = list = '_:b' + blankNodeCount++;
-
-    // Is this the first element of the list?
-    if (prevList === null) {
-      // This list is either the subject or the object of its parent
-      if (parent.predicate === null)
-        parent.subject = list;
-      else
-        parent.object = list;
-    }
-    else {
-      // Continue the previous list with the current list
-      this._triple(prevList, RDF_REST, list, this._graph, token.line);
-    }
-    // Add the item's value
-    if (item !== null) {
-      // In N3 mode, the item might be a path
-      if (this._n3Mode && (token.type === 'IRI' || token.type === 'prefixed')) {
-        // Create a new context to add the item's path
-        this._saveContext('item', this._graph, list, RDF_FIRST, item);
-        this._subject = item, this._predicate = null;
-        // _readPath will restore the context and output the item
-        return this._getPathReader(this._readListItem);
-      }
-      // Output the item if it is complete
-      if (itemComplete)
-        this._triple(list, RDF_FIRST, item, this._graph, token.line);
-      // Otherwise, save it for completion
-      else
-        this._object = item;
-    }
-    return next;
-  },
-
-  // ### `_readDataTypeOrLang` reads an _optional_ data type or language
-  _readDataTypeOrLang: function (token) {
-    return this._completeLiteral(token, false);
-  },
-
-  // ### `_readListItemDataTypeOrLang` reads an _optional_ data type or language in a list
-  _readListItemDataTypeOrLang: function (token) {
-    return this._completeLiteral(token, true);
-  },
-
-  // ### `_completeLiteral` completes the object with a data type or language
-  _completeLiteral: function (token, listItem) {
-    var suffix = false;
-    switch (token.type) {
-    // Add a "^^type" suffix for types (IRIs and blank nodes)
-    case 'type':
-    case 'typeIRI':
-      suffix = true;
-      this._object += '^^' + this._readEntity(token);
-      break;
-    // Add an "@lang" suffix for language tags
-    case 'langcode':
-      suffix = true;
-      this._object += '@' + token.value.toLowerCase();
-      break;
-    }
-    // If this literal was part of a list, write the item
-    // (we could also check the context stack, but passing in a flag is faster)
-    if (listItem)
-      this._triple(this._subject, RDF_FIRST, this._object, this._graph, token.line);
-    // Continue with the rest of the input
-    if (suffix)
-      return this._getContextEndReader();
-    else {
-      this._readCallback = this._getContextEndReader();
-      return this._readCallback(token);
-    }
-  },
-
-  // ### `_readFormulaTail` reads the end of a formula
-  _readFormulaTail: function (token) {
-    if (token.type !== '}')
-      return this._readPunctuation(token);
-
-    // Store the last triple of the formula
-    if (this._subject !== null)
-      this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
-
-    // Restore the parent context containing this formula
-    this._restoreContext();
-    // If the formula was the subject, continue reading the predicate.
-    // If the formula was the object, read punctuation.
-    return this._object === null ? this._readPredicate : this._getContextEndReader();
-  },
-
-  // ### `_readPunctuation` reads punctuation between triples or triple parts
-  _readPunctuation: function (token) {
-    var next, subject = this._subject, graph = this._graph,
-        inversePredicate = this._inversePredicate;
-    switch (token.type) {
-    // A closing brace ends a graph
-    case '}':
-      if (this._graph === null)
-        return this._error('Unexpected graph closing', token);
-      if (this._n3Mode)
-        return this._readFormulaTail(token);
-      this._graph = null;
-    // A dot just ends the statement, without sharing anything with the next
-    case '.':
-      this._subject = null;
-      next = this._contextStack.length ? this._readSubject : this._readInTopContext;
-      if (inversePredicate) this._inversePredicate = false;
-      break;
-    // Semicolon means the subject is shared; predicate and object are different
-    case ';':
-      next = this._readPredicate;
-      break;
-    // Comma means both the subject and predicate are shared; the object is different
-    case ',':
-      next = this._readObject;
-      break;
-    default:
-      // An entity means this is a quad (only allowed if not already inside a graph)
-      if (this._supportsQuads && this._graph === null && (graph = this._readEntity(token)) !== undefined) {
-        next = this._readQuadPunctuation;
-        break;
-      }
-      return this._error('Expected punctuation to follow "' + this._object + '"', token);
-    }
-    // A triple has been completed now, so return it
-    if (subject !== null) {
-      var predicate = this._predicate, object = this._object;
-      if (!inversePredicate)
-        this._triple(subject, predicate, object,  graph, token.line);
-      else
-        this._triple(object,  predicate, subject, graph, token.line);
-    }
-    return next;
-  },
-
-    // ### `_readBlankNodePunctuation` reads punctuation in a blank node
-  _readBlankNodePunctuation: function (token) {
-    var next;
-    switch (token.type) {
-    // Semicolon means the subject is shared; predicate and object are different
-    case ';':
-      next = this._readPredicate;
-      break;
-    // Comma means both the subject and predicate are shared; the object is different
-    case ',':
-      next = this._readObject;
-      break;
-    default:
-      return this._error('Expected punctuation to follow "' + this._object + '"', token);
-    }
-    // A triple has been completed now, so return it
-    this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
-    return next;
-  },
-
-  // ### `_readQuadPunctuation` reads punctuation after a quad
-  _readQuadPunctuation: function (token) {
-    if (token.type !== '.')
-      return this._error('Expected dot to follow quad', token);
-    return this._readInTopContext;
-  },
-
-  // ### `_readPrefix` reads the prefix of a prefix declaration
-  _readPrefix: function (token) {
-    if (token.type !== 'prefix')
-      return this._error('Expected prefix to follow @prefix', token);
-    this._prefix = token.value;
-    return this._readPrefixIRI;
-  },
-
-  // ### `_readPrefixIRI` reads the IRI of a prefix declaration
-  _readPrefixIRI: function (token) {
-    if (token.type !== 'IRI')
-      return this._error('Expected IRI to follow prefix "' + this._prefix + ':"', token);
-    var prefixIRI = this._readEntity(token);
-    this._prefixes[this._prefix] = prefixIRI;
-    this._prefixCallback(this._prefix, prefixIRI);
-    return this._readDeclarationPunctuation;
-  },
-
-  // ### `_readBaseIRI` reads the IRI of a base declaration
-  _readBaseIRI: function (token) {
-    if (token.type !== 'IRI')
-      return this._error('Expected IRI to follow base declaration', token);
-    this._setBase(this._base === null || absoluteIRI.test(token.value) ?
-                  token.value : this._resolveIRI(token));
-    return this._readDeclarationPunctuation;
-  },
-
-  // ### `_readNamedGraphLabel` reads the label of a named graph
-  _readNamedGraphLabel: function (token) {
-    switch (token.type) {
-    case 'IRI':
-    case 'blank':
-    case 'prefixed':
-      return this._readSubject(token), this._readGraph;
-    case '[':
-      return this._readNamedGraphBlankLabel;
-    default:
-      return this._error('Invalid graph label', token);
-    }
-  },
-
-  // ### `_readNamedGraphLabel` reads a blank node label of a named graph
-  _readNamedGraphBlankLabel: function (token) {
-    if (token.type !== ']')
-      return this._error('Invalid graph label', token);
-    this._subject = '_:b' + blankNodeCount++;
-    return this._readGraph;
-  },
-
-  // ### `_readDeclarationPunctuation` reads the punctuation of a declaration
-  _readDeclarationPunctuation: function (token) {
-    // SPARQL-style declarations don't have punctuation
-    if (this._sparqlStyle) {
-      this._sparqlStyle = false;
-      return this._readInTopContext(token);
-    }
-
-    if (token.type !== '.')
-      return this._error('Expected declaration to end with a dot', token);
-    return this._readInTopContext;
-  },
-
-  // Reads a list of quantified symbols from a @forSome or @forAll statement
-  _readQuantifierList: function (token) {
-    var entity;
-    switch (token.type) {
-    case 'IRI':
-    case 'prefixed':
-      if ((entity = this._readEntity(token, true)) !== undefined)
-        break;
-    default:
-      return this._error('Unexpected ' + token.type, token);
-    }
-    // Without explicit quantifiers, map entities to a quantified entity
-    if (!this._explicitQuantifiers)
-      this._quantified[entity] = this._quantifiedPrefix + blankNodeCount++;
-    // With explicit quantifiers, output the reified quantifier
-    else {
-      // If this is the first item, start a new quantifier list
-      if (this._subject === null)
-        this._triple(this._graph || '', this._predicate,
-                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH, token.line);
-      // Otherwise, continue the previous list
-      else
-        this._triple(this._subject, RDF_REST,
-                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH, token.line);
-      // Output the list item
-      this._triple(this._subject, RDF_FIRST, entity, QUANTIFIERS_GRAPH, token.line);
-    }
-    return this._readQuantifierPunctuation;
-  },
-
-  // Reads punctuation from a @forSome or @forAll statement
-  _readQuantifierPunctuation: function (token) {
-    // Read more quantifiers
-    if (token.type === ',')
-      return this._readQuantifierList;
-    // End of the quantifier list
-    else {
-      // With explicit quantifiers, close the quantifier list
-      if (this._explicitQuantifiers) {
-        this._triple(this._subject, RDF_REST, RDF_NIL, QUANTIFIERS_GRAPH, token.line);
-        this._subject = null;
-      }
-      // Read a dot
-      this._readCallback = this._getContextEndReader();
-      return this._readCallback(token);
-    }
-  },
-
-  // ### `_getPathReader` reads a potential path and then resumes with the given function
-  _getPathReader: function (afterPath) {
-    this._afterPath = afterPath;
-    return this._readPath;
-  },
-
-  // ### `_readPath` reads a potential path
-  _readPath: function (token) {
-    switch (token.type) {
-    // Forward path
-    case '!': return this._readForwardPath;
-    // Backward path
-    case '^': return this._readBackwardPath;
-    // Not a path; resume reading where we left off
-    default:
-      var stack = this._contextStack, parent = stack.length && stack[stack.length - 1];
-      // If we were reading a list item, we still need to output it
-      if (parent && parent.type === 'item') {
-        // The list item is the remaining subejct after reading the path
-        var item = this._subject;
-        // Switch back to the context of the list
-        this._restoreContext();
-        // Output the list item
-        this._triple(this._subject, RDF_FIRST, item, this._graph, token.line);
-      }
-      return this._afterPath(token);
-    }
-  },
-
-  // ### `_readForwardPath` reads a '!' path
-  _readForwardPath: function (token) {
-    var subject, predicate, object = '_:b' + blankNodeCount++;
-    // The next token is the predicate
-    if ((predicate = this._readEntity(token)) === undefined)
-      return;
-    // If we were reading a subject, replace the subject by the path's object
-    if (this._predicate === null)
-      subject = this._subject, this._subject = object;
-    // If we were reading an object, replace the subject by the path's object
-    else
-      subject = this._object,  this._object  = object;
-    // Emit the path's current triple and read its next section
-    this._triple(subject, predicate, object, this._graph, token.line);
-    return this._readPath;
-  },
-
-  // ### `_readBackwardPath` reads a '^' path
-  _readBackwardPath: function (token) {
-    var subject = '_:b' + blankNodeCount++, predicate, object;
-    // The next token is the predicate
-    if ((predicate = this._readEntity(token)) === undefined)
-      return;
-    // If we were reading a subject, replace the subject by the path's subject
-    if (this._predicate === null)
-      object = this._subject, this._subject = subject;
-    // If we were reading an object, replace the subject by the path's subject
-    else
-      object = this._object,  this._object  = subject;
-    // Emit the path's current triple and read its next section
-    this._triple(subject, predicate, object, this._graph, token.line);
-    return this._readPath;
-  },
-
-  // ### `_getContextEndReader` gets the next reader function at the end of a context
-  _getContextEndReader: function () {
-    var contextStack = this._contextStack;
-    if (!contextStack.length)
-      return this._readPunctuation;
-
-    switch (contextStack[contextStack.length - 1].type) {
-    case 'blank':
-      return this._readBlankNodeTail;
-    case 'list':
-      return this._readListItem;
-    case 'formula':
-      return this._readFormulaTail;
-    }
-  },
-
-  // ### `_triple` emits a triple through the callback
-  _triple: function (subject, predicate, object, graph, line) {
-    this._callback(null,
-      { subject: subject, predicate: predicate, object: object, graph: graph || '' ,line:line});
-  },
-
-  // ### `_error` emits an error message through the callback
-  _error: function (message, token) {
-    var err = new Error(message + ' on line ' + token.line + '.');
-    err.context = {
-      token: token,
-      line: token.line,
-      previousToken: this._lexer.previousToken,
-    };
-    this._callback(err);
-  },
-
-  // ### `_resolveIRI` resolves a relative IRI token against the base path,
-  // assuming that a base path has been set and that the IRI is indeed relative
-  _resolveIRI: function (token) {
-    var iri = token.value;
-    switch (iri[0]) {
-    // An empty relative IRI indicates the base IRI
-    case undefined: return this._base;
-    // Resolve relative fragment IRIs against the base IRI
-    case '#': return this._base + iri;
-    // Resolve relative query string IRIs by replacing the query string
-    case '?': return this._base.replace(/(?:\?.*)?$/, iri);
-    // Resolve root-relative IRIs at the root of the base IRI
-    case '/':
-      // Resolve scheme-relative IRIs to the scheme
-      return (iri[1] === '/' ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri);
-    // Resolve all other IRIs at the base IRI's path
-    default:
-      return this._removeDotSegments(this._basePath + iri);
-    }
-  },
-
-  // ### `_removeDotSegments` resolves './' and '../' path segments in an IRI as per RFC3986
-  _removeDotSegments: function (iri) {
-    // Don't modify the IRI if it does not contain any dot segments
-    if (!dotSegments.test(iri))
-      return iri;
-
-    // Start with an imaginary slash before the IRI in order to resolve trailing './' and '../'
-    var result = '', length = iri.length, i = -1, pathStart = -1, segmentStart = 0, next = '/';
-
-    while (i < length) {
-      switch (next) {
-      // The path starts with the first slash after the authority
-      case ':':
-        if (pathStart < 0) {
-          // Skip two slashes before the authority
-          if (iri[++i] === '/' && iri[++i] === '/')
-            // Skip to slash after the authority
-            while ((pathStart = i + 1) < length && iri[pathStart] !== '/')
-              i = pathStart;
-        }
-        break;
-      // Don't modify a query string or fragment
-      case '?':
-      case '#':
-        i = length;
-        break;
-      // Handle '/.' or '/..' path segments
-      case '/':
-        if (iri[i + 1] === '.') {
-          next = iri[++i + 1];
-          switch (next) {
-          // Remove a '/.' segment
-          case '/':
-            result += iri.substring(segmentStart, i - 1);
-            segmentStart = i + 1;
-            break;
-          // Remove a trailing '/.' segment
-          case undefined:
-          case '?':
-          case '#':
-            return result + iri.substring(segmentStart, i) + iri.substr(i + 1);
-          // Remove a '/..' segment
-          case '.':
-            next = iri[++i + 1];
-            if (next === undefined || next === '/' || next === '?' || next === '#') {
-              result += iri.substring(segmentStart, i - 2);
-              // Try to remove the parent path from result
-              if ((segmentStart = result.lastIndexOf('/')) >= pathStart)
-                result = result.substr(0, segmentStart);
-              // Remove a trailing '/..' segment
-              if (next !== '/')
-                return result + '/' + iri.substr(i + 1);
-              segmentStart = i + 1;
-            }
-          }
-        }
-      }
-      next = iri[++i];
-    }
-    return result + iri.substring(segmentStart);
-  },
-
-  // ## Public methods
-
-  // ### `parse` parses the N3 input and emits each parsed triple through the callback
-  parse: function (input, tripleCallback, prefixCallback) {
-    // console.log('tripleCallback',tripleCallback);
-    // console.log('prefixCallback',prefixCallback);
-    var self = this;
-    // The read callback is the next function to be executed when a token arrives.
-    // We start reading in the top context.
-    this._readCallback = this._readInTopContext;
-    this._sparqlStyle = false;
-    this._prefixes = Object.create(null);
-    this._prefixes._ = this._blankNodePrefix || '_:b' + blankNodePrefix++ + '_';
-    this._prefixCallback = prefixCallback || noop;
-    this._inversePredicate = false;
-    this._quantified = Object.create(null);
-
-    // Parse synchronously if no triple callback is given
-    if (!tripleCallback) {
-      var triples = [], error;
-      this._callback = function (e, t) { e ? (error = e) : t && triples.push(t); };
-      this._lexer.tokenize(input).every(function (token) {
-        console.log("token line",token);
-        return self._readCallback = self._readCallback(token);
-      });
-      if (error) throw error;
-      return triples;
-    }
-
-    // Parse asynchronously otherwise, executing the read callback when a token arrives
-    this._callback = tripleCallback;
-    this._lexer.tokenize(input, function (error, token) {
-      // console.log("token line asynchronously",token);
-      if (error !== null)
-        self._callback(error), self._callback = noop;
-      else if (self._readCallback)
-        self._readCallback = self._readCallback(token);
-    });
-  },
-};
-
-// The empty function
-function noop() {}
-
-// ## Exports
-module.exports = N3Parser;
-
-},{"./N3Lexer":186}],188:[function(require,module,exports){
-// **N3Store** objects store N3 triples by graph in memory.
-
-var expandPrefixedName = require('./N3Util').expandPrefixedName;
-
-// ## Constructor
-function N3Store(triples, options) {
-  if (!(this instanceof N3Store))
-    return new N3Store(triples, options);
-
-  // The number of triples is initially zero
-  this._size = 0;
-  // `_graphs` contains subject, predicate, and object indexes per graph
-  this._graphs = Object.create(null);
-  // `_ids` maps entities such as `http://xmlns.com/foaf/0.1/name` to numbers,
-  // saving memory by using only numbers as keys in `_graphs`
-  this._id = 0;
-  this._ids = Object.create(null);
-  this._ids['><'] = 0; // dummy entry, so the first actual key is non-zero
-  this._entities = Object.create(null); // inverse of `_ids`
-  // `_blankNodeIndex` is the index of the last automatically named blank node
-  this._blankNodeIndex = 0;
-
-  // Shift parameters if `triples` is not given
-  if (!options && triples && !triples[0])
-    options = triples, triples = null;
-  options = options || {};
-
-  // Add triples and prefixes if passed
-  this._prefixes = Object.create(null);
-  if (options.prefixes)
-    this.addPrefixes(options.prefixes);
-  if (triples)
-    this.addTriples(triples);
-}
-
-N3Store.prototype = {
-  // ## Public properties
-
-  // ### `size` returns the number of triples in the store
-  get size() {
-    // Return the triple count if if was cached
-    var size = this._size;
-    if (size !== null)
-      return size;
-
-    // Calculate the number of triples by counting to the deepest level
-    size = 0;
-    var graphs = this._graphs, subjects, subject;
-    for (var graphKey in graphs)
-      for (var subjectKey in (subjects = graphs[graphKey].subjects))
-        for (var predicateKey in (subject = subjects[subjectKey]))
-          size += Object.keys(subject[predicateKey]).length;
-    return this._size = size;
-  },
-
-  // ## Private methods
-
-  // ### `_addToIndex` adds a triple to a three-layered index.
-  // Returns if the index has changed, if the entry did not already exist.
-  _addToIndex: function (index0, key0, key1, key2) {
-    // Create layers as necessary
-    var index1 = index0[key0] || (index0[key0] = {});
-    var index2 = index1[key1] || (index1[key1] = {});
-    // Setting the key to _any_ value signals the presence of the triple
-    var existed = key2 in index2;
-    if (!existed)
-      index2[key2] = null;
-    return !existed;
-  },
-
-  // ### `_removeFromIndex` removes a triple from a three-layered index
-  _removeFromIndex: function (index0, key0, key1, key2) {
-    // Remove the triple from the index
-    var index1 = index0[key0], index2 = index1[key1], key;
-    delete index2[key2];
-
-    // Remove intermediary index layers if they are empty
-    for (key in index2) return;
-    delete index1[key1];
-    for (key in index1) return;
-    delete index0[key0];
-  },
-
-  // ### `_findInIndex` finds a set of triples in a three-layered index.
-  // The index base is `index0` and the keys at each level are `key0`, `key1`, and `key2`.
-  // Any of these keys can be undefined, which is interpreted as a wildcard.
-  // `name0`, `name1`, and `name2` are the names of the keys at each level,
-  // used when reconstructing the resulting triple
-  // (for instance: _subject_, _predicate_, and _object_).
-  // Finally, `graph` will be the graph of the created triples.
-  // If `callback` is given, each result is passed through it
-  // and iteration halts when it returns truthy for any triple.
-  // If instead `array` is given, each result is added to the array.
-  _findInIndex: function (index0, key0, key1, key2, name0, name1, name2, graph, callback, array) {
-    var tmp, index1, index2, varCount = !key0 + !key1 + !key2,
-        // depending on the number of variables, keys or reverse index are faster
-        entityKeys = varCount > 1 ? Object.keys(this._ids) : this._entities;
-
-    // If a key is specified, use only that part of index 0.
-    if (key0) (tmp = index0, index0 = {})[key0] = tmp[key0];
-    for (var value0 in index0) {
-      var entity0 = entityKeys[value0];
-
-      if (index1 = index0[value0]) {
-        // If a key is specified, use only that part of index 1.
-        if (key1) (tmp = index1, index1 = {})[key1] = tmp[key1];
-        for (var value1 in index1) {
-          var entity1 = entityKeys[value1];
-
-          if (index2 = index1[value1]) {
-            // If a key is specified, use only that part of index 2, if it exists.
-            var values = key2 ? (key2 in index2 ? [key2] : []) : Object.keys(index2);
-            // Create triples for all items found in index 2.
-            for (var l = values.length - 1; l >= 0; l--) {
-              var result = { subject: '', predicate: '', object: '', graph: graph };
-              result[name0] = entity0;
-              result[name1] = entity1;
-              result[name2] = entityKeys[values[l]];
-              if (array)
-                array.push(result);
-              else if (callback(result))
-                return true;
-            }
-          }
-        }
-      }
-    }
-    return array;
-  },
-
-  // ### `_loop` executes the callback on all keys of index 0
-  _loop: function (index0, callback) {
-    for (var key0 in index0)
-      callback(key0);
-  },
-
-  // ### `_loopByKey0` executes the callback on all keys of a certain entry in index 0
-  _loopByKey0: function (index0, key0, callback) {
-    var index1, key1;
-    if (index1 = index0[key0]) {
-      for (key1 in index1)
-        callback(key1);
-    }
-  },
-
-  // ### `_loopByKey1` executes the callback on given keys of all entries in index 0
-  _loopByKey1: function (index0, key1, callback) {
-    var key0, index1;
-    for (key0 in index0) {
-      index1 = index0[key0];
-      if (index1[key1])
-        callback(key0);
-    }
-  },
-
-  // ### `_loopBy2Keys` executes the callback on given keys of certain entries in index 2
-  _loopBy2Keys: function (index0, key0, key1, callback) {
-    var index1, index2, key2;
-    if ((index1 = index0[key0]) && (index2 = index1[key1])) {
-      for (key2 in index2)
-        callback(key2);
-    }
-  },
-
-  // ### `_countInIndex` counts matching triples in a three-layered index.
-  // The index base is `index0` and the keys at each level are `key0`, `key1`, and `key2`.
-  // Any of these keys can be undefined, which is interpreted as a wildcard.
-  _countInIndex: function (index0, key0, key1, key2) {
-    var count = 0, tmp, index1, index2;
-
-    // If a key is specified, count only that part of index 0
-    if (key0) (tmp = index0, index0 = {})[key0] = tmp[key0];
-    for (var value0 in index0) {
-      if (index1 = index0[value0]) {
-        // If a key is specified, count only that part of index 1
-        if (key1) (tmp = index1, index1 = {})[key1] = tmp[key1];
-        for (var value1 in index1) {
-          if (index2 = index1[value1]) {
-            // If a key is specified, count the triple if it exists
-            if (key2) (key2 in index2) && count++;
-            // Otherwise, count all triples
-            else count += Object.keys(index2).length;
-          }
-        }
-      }
-    }
-    return count;
-  },
-
-  // ### `_getGraphs` returns an array with the given graph,
-  // or all graphs if the argument is null or undefined.
-  _getGraphs: function (graph) {
-    if (!isString(graph))
-      return this._graphs;
-    var graphs = {};
-    graphs[graph] = this._graphs[graph];
-    return graphs;
-  },
-
-  // ### `_uniqueEntities` returns a function that accepts an entity ID
-  // and passes the corresponding entity to callback if it hasn't occurred before.
-  _uniqueEntities: function (callback) {
-    var uniqueIds = Object.create(null), entities = this._entities;
-    return function (id) {
-      if (!(id in uniqueIds)) {
-        uniqueIds[id] = true;
-        callback(entities[id]);
-      }
-    };
-  },
-
-  // ## Public methods
-
-  // ### `addTriple` adds a new N3 triple to the store.
-  // Returns if the triple index has changed, if the triple did not already exist.
-  addTriple: function (subject, predicate, object, graph) {
-    // Shift arguments if a triple object is given instead of components
-    if (!predicate)
-      graph = subject.graph, object = subject.object,
-        predicate = subject.predicate, subject = subject.subject;
-
-    // Find the graph that will contain the triple
-    graph = graph || '';
-    var graphItem = this._graphs[graph];
-    // Create the graph if it doesn't exist yet
-    if (!graphItem) {
-      graphItem = this._graphs[graph] = { subjects: {}, predicates: {}, objects: {} };
-      // Freezing a graph helps subsequent `add` performance,
-      // and properties will never be modified anyway
-      Object.freeze(graphItem);
-    }
-
-    // Since entities can often be long IRIs, we avoid storing them in every index.
-    // Instead, we have a separate index that maps entities to numbers,
-    // which are then used as keys in the other indexes.
-    var ids = this._ids;
-    var entities = this._entities;
-    subject   = ids[subject]   || (ids[entities[++this._id] = subject]   = this._id);
-    predicate = ids[predicate] || (ids[entities[++this._id] = predicate] = this._id);
-    object    = ids[object]    || (ids[entities[++this._id] = object]    = this._id);
-
-    var changed = this._addToIndex(graphItem.subjects,   subject,   predicate, object);
-    this._addToIndex(graphItem.predicates, predicate, object,    subject);
-    this._addToIndex(graphItem.objects,    object,    subject,   predicate);
-
-    // The cached triple count is now invalid
-    this._size = null;
-    return changed;
-  },
-
-  // ### `addTriples` adds multiple N3 triples to the store
-  addTriples: function (triples) {
-    for (var i = triples.length - 1; i >= 0; i--)
-      this.addTriple(triples[i]);
-  },
-
-  // ### `addPrefix` adds support for querying with the given prefix
-  addPrefix: function (prefix, iri) {
-    this._prefixes[prefix] = iri;
-  },
-
-  // ### `addPrefixes` adds support for querying with the given prefixes
-  addPrefixes: function (prefixes) {
-    for (var prefix in prefixes)
-      this.addPrefix(prefix, prefixes[prefix]);
-  },
-
-  // ### `removeTriple` removes an N3 triple from the store if it exists
-  removeTriple: function (subject, predicate, object, graph) {
-    // Shift arguments if a triple object is given instead of components
-    if (!predicate)
-      graph = subject.graph, object = subject.object,
-        predicate = subject.predicate, subject = subject.subject;
-    graph = graph || '';
-
-    // Find internal identifiers for all components
-    // and verify the triple exists.
-    var graphItem, ids = this._ids, graphs = this._graphs, subjects, predicates;
-    if (!(subject    = ids[subject]) || !(predicate = ids[predicate]) ||
-        !(object     = ids[object])  || !(graphItem = graphs[graph])  ||
-        !(subjects   = graphItem.subjects[subject]) ||
-        !(predicates = subjects[predicate]) ||
-        !(object in predicates))
-      return false;
-
-    // Remove it from all indexes
-    this._removeFromIndex(graphItem.subjects,   subject,   predicate, object);
-    this._removeFromIndex(graphItem.predicates, predicate, object,    subject);
-    this._removeFromIndex(graphItem.objects,    object,    subject,   predicate);
-    if (this._size !== null) this._size--;
-
-    // Remove the graph if it is empty
-    for (subject in graphItem.subjects) return true;
-    delete graphs[graph];
-    return true;
-  },
-
-  // ### `removeTriples` removes multiple N3 triples from the store
-  removeTriples: function (triples) {
-    for (var i = triples.length - 1; i >= 0; i--)
-      this.removeTriple(triples[i]);
-  },
-
-  // ### `getTriples` returns an array of triples matching a pattern, expanding prefixes as necessary.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getTriples: function (subject, predicate, object, graph) {
-    var prefixes = this._prefixes;
-    return this.getTriplesByIRI(
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `getTriplesByIRI` returns an array of triples matching a pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getTriplesByIRI: function (subject, predicate, object, graph) {
-    var quads = [], graphs = this._getGraphs(graph), content,
-        ids = this._ids, subjectId, predicateId, objectId;
-
-    // Translate IRIs to internal index keys.
-    if (isString(subject)   && !(subjectId   = ids[subject])   ||
-        isString(predicate) && !(predicateId = ids[predicate]) ||
-        isString(object)    && !(objectId    = ids[object]))
-      return quads;
-
-    for (var graphId in graphs) {
-      // Only if the specified graph contains triples, there can be results
-      if (content = graphs[graphId]) {
-        // Choose the optimal index, based on what fields are present
-        if (subjectId) {
-          if (objectId)
-            // If subject and object are given, the object index will be the fastest
-            this._findInIndex(content.objects, objectId, subjectId, predicateId,
-                              'object', 'subject', 'predicate', graphId, null, quads);
-          else
-            // If only subject and possibly predicate are given, the subject index will be the fastest
-            this._findInIndex(content.subjects, subjectId, predicateId, null,
-                              'subject', 'predicate', 'object', graphId, null, quads);
-        }
-        else if (predicateId)
-          // If only predicate and possibly object are given, the predicate index will be the fastest
-          this._findInIndex(content.predicates, predicateId, objectId, null,
-                            'predicate', 'object', 'subject', graphId, null, quads);
-        else if (objectId)
-          // If only object is given, the object index will be the fastest
-          this._findInIndex(content.objects, objectId, null, null,
-                            'object', 'subject', 'predicate', graphId, null, quads);
-        else
-          // If nothing is given, iterate subjects and predicates first
-          this._findInIndex(content.subjects, null, null, null,
-                            'subject', 'predicate', 'object', graphId, null, quads);
-      }
-    }
-    return quads;
-  },
-
-  // ### `countTriples` returns the number of triples matching a pattern, expanding prefixes as necessary.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  countTriples: function (subject, predicate, object, graph) {
-    var prefixes = this._prefixes;
-    return this.countTriplesByIRI(
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `countTriplesByIRI` returns the number of triples matching a pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  countTriplesByIRI: function (subject, predicate, object, graph) {
-    var count = 0, graphs = this._getGraphs(graph), content,
-        ids = this._ids, subjectId, predicateId, objectId;
-
-    // Translate IRIs to internal index keys.
-    if (isString(subject)   && !(subjectId   = ids[subject])   ||
-        isString(predicate) && !(predicateId = ids[predicate]) ||
-        isString(object)    && !(objectId    = ids[object]))
-      return 0;
-
-    for (var graphId in graphs) {
-      // Only if the specified graph contains triples, there can be results
-      if (content = graphs[graphId]) {
-        // Choose the optimal index, based on what fields are present
-        if (subject) {
-          if (object)
-            // If subject and object are given, the object index will be the fastest
-            count += this._countInIndex(content.objects, objectId, subjectId, predicateId);
-          else
-            // If only subject and possibly predicate are given, the subject index will be the fastest
-            count += this._countInIndex(content.subjects, subjectId, predicateId, objectId);
-        }
-        else if (predicate) {
-          // If only predicate and possibly object are given, the predicate index will be the fastest
-          count += this._countInIndex(content.predicates, predicateId, objectId, subjectId);
-        }
-        else {
-          // If only object is possibly given, the object index will be the fastest
-          count += this._countInIndex(content.objects, objectId, subjectId, predicateId);
-        }
-      }
-    }
-    return count;
-  },
-
-  // ### `forEach` executes the callback on all triples.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forEach: function (callback, subject, predicate, object, graph) {
-    var prefixes = this._prefixes;
-    this.forEachByIRI(
-      callback,
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `forEachByIRI` executes the callback on all triples.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forEachByIRI: function (callback, subject, predicate, object, graph) {
-    this.someByIRI(function (quad) {
-      callback(quad);
-      return false;
-    }, subject, predicate, object, graph);
-  },
-
-  // ### `every` executes the callback on all triples,
-  // and returns `true` if it returns truthy for all them.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  every: function (callback, subject, predicate, object, graph) {
-    var prefixes = this._prefixes;
-    return this.everyByIRI(
-      callback,
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `everyByIRI` executes the callback on all triples,
-  // and returns `true` if it returns truthy for all them.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  everyByIRI: function (callback, subject, predicate, object, graph) {
-    var some = false;
-    var every = !this.someByIRI(function (quad) {
-      some = true;
-      return !callback(quad);
-    }, subject, predicate, object, graph);
-    return some && every;
-  },
-
-  // ### `some` executes the callback on all triples,
-  // and returns `true` if it returns truthy for any of them.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  some: function (callback, subject, predicate, object, graph) {
-    var prefixes = this._prefixes;
-    return this.someByIRI(
-      callback,
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `someByIRI` executes the callback on all triples,
-  // and returns `true` if it returns truthy for any of them.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  someByIRI: function (callback, subject, predicate, object, graph) {
-    var graphs = this._getGraphs(graph), content,
-        ids = this._ids, subjectId, predicateId, objectId;
-
-    // Translate IRIs to internal index keys.
-    if (isString(subject)   && !(subjectId   = ids[subject])   ||
-        isString(predicate) && !(predicateId = ids[predicate]) ||
-        isString(object)    && !(objectId    = ids[object]))
-      return false;
-
-    for (var graphId in graphs) {
-      // Only if the specified graph contains triples, there can be result
-      if (content = graphs[graphId]) {
-        // Choose the optimal index, based on what fields are present
-        if (subjectId) {
-          if (objectId) {
-          // If subject and object are given, the object index will be the fastest
-            if (this._findInIndex(content.objects, objectId, subjectId, predicateId,
-                                  'object', 'subject', 'predicate', graphId, callback, null))
-              return true;
-          }
-          else
-            // If only subject and possibly predicate are given, the subject index will be the fastest
-            if (this._findInIndex(content.subjects, subjectId, predicateId, null,
-                                  'subject', 'predicate', 'object', graphId, callback, null))
-              return true;
-        }
-        else if (predicateId) {
-          // If only predicate and possibly object are given, the predicate index will be the fastest
-          if (this._findInIndex(content.predicates, predicateId, objectId, null,
-                                'predicate', 'object', 'subject', graphId, callback, null)) {
-            return true;
-          }
-        }
-        else if (objectId) {
-          // If only object is given, the object index will be the fastest
-          if (this._findInIndex(content.objects, objectId, null, null,
-                                'object', 'subject', 'predicate', graphId, callback, null)) {
-            return true;
-          }
-        }
-        else
-        // If nothing is given, iterate subjects and predicates first
-        if (this._findInIndex(content.subjects, null, null, null,
-                              'subject', 'predicate', 'object', graphId, callback, null)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  },
-
-  // ### `getSubjects` returns all subjects that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getSubjects: function (predicate, object, graph) {
-    var prefixes = this._prefixes;
-    return this.getSubjectsByIRI(
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `getSubjectsByIRI` returns all subjects that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getSubjectsByIRI: function (predicate, object, graph) {
-    var results = [];
-    this.forSubjectsByIRI(function (s) { results.push(s); }, predicate, object, graph);
-    return results;
-  },
-
-  // ### `forSubjects` executes the callback on all subjects that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forSubjects: function (callback, predicate, object, graph) {
-    var prefixes = this._prefixes;
-    this.forSubjectsByIRI(
-      callback,
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `forSubjectsByIRI` executes the callback on all subjects that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forSubjectsByIRI: function (callback, predicate, object, graph) {
-    var ids = this._ids, graphs = this._getGraphs(graph), content, predicateId, objectId;
-    callback = this._uniqueEntities(callback);
-
-    // Translate IRIs to internal index keys.
-    if (isString(predicate) && !(predicateId = ids[predicate]) ||
-        isString(object)    && !(objectId    = ids[object]))
-      return;
-
-    for (graph in graphs) {
-      // Only if the specified graph contains triples, there can be results
-      if (content = graphs[graph]) {
-        // Choose optimal index based on which fields are wildcards
-        if (predicateId) {
-          if (objectId)
-            // If predicate and object are given, the POS index is best.
-            this._loopBy2Keys(content.predicates, predicateId, objectId, callback);
-          else
-            // If only predicate is given, the SPO index is best.
-            this._loopByKey1(content.subjects, predicateId, callback);
-        }
-        else if (objectId)
-          // If only object is given, the OSP index is best.
-          this._loopByKey0(content.objects, objectId, callback);
-        else
-          // If no params given, iterate all the subjects
-          this._loop(content.subjects, callback);
-      }
-    }
-  },
-
-  // ### `getPredicates` returns all predicates that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getPredicates: function (subject, object, graph) {
-    var prefixes = this._prefixes;
-    return this.getPredicatesByIRI(
-      expandPrefixedName(subject, prefixes),
-      expandPrefixedName(object,  prefixes),
-      expandPrefixedName(graph,   prefixes)
-    );
-  },
-
-  // ### `getPredicatesByIRI` returns all predicates that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getPredicatesByIRI: function (subject, object, graph) {
-    var results = [];
-    this.forPredicatesByIRI(function (p) { results.push(p); }, subject, object, graph);
-    return results;
-  },
-
-  // ### `forPredicates` executes the callback on all predicates that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forPredicates: function (callback, subject, object, graph) {
-    var prefixes = this._prefixes;
-    this.forPredicatesByIRI(
-      callback,
-      expandPrefixedName(subject, prefixes),
-      expandPrefixedName(object,  prefixes),
-      expandPrefixedName(graph,   prefixes)
-    );
-  },
-
-  // ### `forPredicatesByIRI` executes the callback on all predicates that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forPredicatesByIRI: function (callback, subject, object, graph) {
-    var ids = this._ids, graphs = this._getGraphs(graph), content, subjectId, objectId;
-    callback = this._uniqueEntities(callback);
-
-    // Translate IRIs to internal index keys.
-    if (isString(subject) && !(subjectId = ids[subject]) ||
-        isString(object)  && !(objectId  = ids[object]))
-      return;
-
-    for (graph in graphs) {
-      // Only if the specified graph contains triples, there can be results
-      if (content = graphs[graph]) {
-        // Choose optimal index based on which fields are wildcards
-        if (subjectId) {
-          if (objectId)
-            // If subject and object are given, the OSP index is best.
-            this._loopBy2Keys(content.objects, objectId, subjectId, callback);
-          else
-            // If only subject is given, the SPO index is best.
-            this._loopByKey0(content.subjects, subjectId, callback);
-        }
-        else if (objectId)
-          // If only object is given, the POS index is best.
-          this._loopByKey1(content.predicates, objectId, callback);
-        else
-          // If no params given, iterate all the predicates.
-          this._loop(content.predicates, callback);
-      }
-    }
-  },
-
-  // ### `getObjects` returns all objects that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getObjects: function (subject, predicate, graph) {
-    var prefixes = this._prefixes;
-    return this.getObjectsByIRI(
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `getObjectsByIRI` returns all objects that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getObjectsByIRI: function (subject, predicate, graph) {
-    var results = [];
-    this.forObjectsByIRI(function (o) { results.push(o); }, subject, predicate, graph);
-    return results;
-  },
-
-  // ### `forObjects` executes the callback on all objects that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forObjects: function (callback, subject, predicate, graph) {
-    var prefixes = this._prefixes;
-    this.forObjectsByIRI(
-      callback,
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(graph,     prefixes)
-    );
-  },
-
-  // ### `forObjectsByIRI` executes the callback on all objects that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forObjectsByIRI: function (callback, subject, predicate, graph) {
-    var ids = this._ids, graphs = this._getGraphs(graph), content, subjectId, predicateId;
-    callback = this._uniqueEntities(callback);
-
-    // Translate IRIs to internal index keys.
-    if (isString(subject)   && !(subjectId   = ids[subject]) ||
-        isString(predicate) && !(predicateId = ids[predicate]))
-      return;
-
-    for (graph in graphs) {
-      // Only if the specified graph contains triples, there can be results
-      if (content = graphs[graph]) {
-        // Choose optimal index based on which fields are wildcards
-        if (subjectId) {
-          if (predicateId)
-            // If subject and predicate are given, the SPO index is best.
-            this._loopBy2Keys(content.subjects, subjectId, predicateId, callback);
-          else
-            // If only subject is given, the OSP index is best.
-            this._loopByKey1(content.objects, subjectId, callback);
-        }
-        else if (predicateId)
-          // If only predicate is given, the POS index is best.
-          this._loopByKey0(content.predicates, predicateId, callback);
-        else
-          // If no params given, iterate all the objects.
-          this._loop(content.objects, callback);
-      }
-    }
-  },
-
-  // ### `getGraphs` returns all graphs that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getGraphs: function (subject, predicate, object) {
-    var prefixes = this._prefixes;
-    return this.getGraphsByIRI(
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes)
-    );
-  },
-
-  // ### `getGraphsByIRI` returns all graphs that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  getGraphsByIRI: function (subject, predicate, object) {
-    var results = [];
-    this.forGraphsByIRI(function (g) { results.push(g); }, subject, predicate, object);
-    return results;
-  },
-
-  // ### `forGraphs` executes the callback on all graphs that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forGraphs: function (callback, subject, predicate, object) {
-    var prefixes = this._prefixes;
-    this.forGraphsByIRI(
-      callback,
-      expandPrefixedName(subject,   prefixes),
-      expandPrefixedName(predicate, prefixes),
-      expandPrefixedName(object,    prefixes)
-    );
-  },
-
-  // ### `forGraphsByIRI` executes the callback on all graphs that match the pattern.
-  // Setting any field to `undefined` or `null` indicates a wildcard.
-  forGraphsByIRI: function (callback, subject, predicate, object) {
-    for (var graph in this._graphs) {
-      this.someByIRI(function (quad) {
-        callback(quad.graph);
-        return true; // Halt iteration of some()
-      }, subject, predicate, object, graph);
-    }
-  },
-
-  // ### `createBlankNode` creates a new blank node, returning its name
-  createBlankNode: function (suggestedName) {
-    var name, index;
-    // Generate a name based on the suggested name
-    if (suggestedName) {
-      name = suggestedName = '_:' + suggestedName, index = 1;
-      while (this._ids[name])
-        name = suggestedName + index++;
-    }
-    // Generate a generic blank node name
-    else {
-      do { name = '_:b' + this._blankNodeIndex++; }
-      while (this._ids[name]);
-    }
-    // Add the blank node to the entities, avoiding the generation of duplicates
-    this._ids[name] = ++this._id;
-    this._entities[this._id] = name;
-    return name;
-  },
-};
-
-// Determines whether the argument is a string
-function isString(s) {
-  return typeof s === 'string' || s instanceof String;
-}
-
-// ## Exports
-module.exports = N3Store;
-
-},{"./N3Util":191}],189:[function(require,module,exports){
-// **N3StreamParser** parses an N3 stream into a triple stream.
-var Transform = require('stream').Transform,
-    util = require('util'),
-    N3Parser = require('./N3Parser.js');
-
-// ## Constructor
-function N3StreamParser(options) {
-  if (!(this instanceof N3StreamParser))
-    return new N3StreamParser(options);
-
-  // Initialize Transform base class
-  Transform.call(this, { decodeStrings: true });
-  this._readableState.objectMode = true;
-
-  // Set up parser
-  var self = this, parser = new N3Parser(options), onData, onEnd;
-  // Pass dummy stream to obtain `data` and `end` callbacks
-  parser.parse({
-    on: function (event, cb) {
-      switch (event) {
-      case 'data': onData = cb; break;
-      case 'end':   onEnd = cb; break;
-      }
-    },
-  },
-  // Handle triples by pushing them down the pipeline
-  function (error, t) { error && self.emit('error', error) || t && self.push(t); },
-  // Emit prefixes through the `prefix` event
-  function (prefix, uri) { self.emit('prefix', prefix, uri); });
-
-  // Implement Transform methods through parser callbacks
-  this._transform = function (chunk, encoding, done) { onData(chunk); done(); };
-  this._flush = function (done) { onEnd(); done(); };
-}
-util.inherits(N3StreamParser, Transform);
-
-// ## Exports
-module.exports = N3StreamParser;
-
-},{"./N3Parser.js":187,"stream":465,"util":477}],190:[function(require,module,exports){
-// **N3StreamWriter** serializes a triple stream into an N3 stream.
-var Transform = require('stream').Transform,
-    util = require('util'),
-    N3Writer = require('./N3Writer.js');
-
-// ## Constructor
-function N3StreamWriter(options) {
-  if (!(this instanceof N3StreamWriter))
-    return new N3StreamWriter(options);
-
-  // Initialize Transform base class
-  Transform.call(this, { encoding: 'utf8' });
-  this._writableState.objectMode = true;
-
-  // Set up writer with a dummy stream object
-  var self = this;
-  var writer = new N3Writer({
-    write: function (chunk, encoding, callback) { self.push(chunk); callback && callback(); },
-    end: function (callback) { self.push(null); callback && callback(); },
-  }, options);
-
-  // Implement Transform methods on top of writer
-  this._transform = function (triple, encoding, done) { writer.addTriple(triple, done); };
-  this._flush = function (done) { writer.end(done); };
-}
-util.inherits(N3StreamWriter, Transform);
-
-// ## Exports
-module.exports = N3StreamWriter;
-
-},{"./N3Writer.js":192,"stream":465,"util":477}],191:[function(require,module,exports){
-// **N3Util** provides N3 utility functions.
-
-var Xsd = 'http://www.w3.org/2001/XMLSchema#';
-var XsdString  = Xsd + 'string';
-var XsdInteger = Xsd + 'integer';
-var XsdDouble = Xsd + 'double';
-var XsdBoolean = Xsd + 'boolean';
-var RdfLangString = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString';
-
-var N3Util = {
-  // Tests whether the given entity (triple object) represents an IRI in the N3 library
-  isIRI: function (entity) {
-    if (typeof entity !== 'string')
-      return false;
-    else if (entity.length === 0)
-      return true;
-    else {
-      var firstChar = entity[0];
-      return firstChar !== '"' && firstChar !== '_';
-    }
-  },
-
-  // Tests whether the given entity (triple object) represents a literal in the N3 library
-  isLiteral: function (entity) {
-    return typeof entity === 'string' && entity[0] === '"';
-  },
-
-  // Tests whether the given entity (triple object) represents a blank node in the N3 library
-  isBlank: function (entity) {
-    return typeof entity === 'string' && entity.substr(0, 2) === '_:';
-  },
-
-  // Tests whether the given entity represents the default graph
-  isDefaultGraph: function (entity) {
-    return !entity;
-  },
-
-  // Tests whether the given triple is in the default graph
-  inDefaultGraph: function (triple) {
-    return !triple.graph;
-  },
-
-  // Gets the string value of a literal in the N3 library
-  getLiteralValue: function (literal) {
-    var match = /^"([^]*)"/.exec(literal);
-    if (!match)
-      throw new Error(literal + ' is not a literal');
-    return match[1];
-  },
-
-  // Gets the type of a literal in the N3 library
-  getLiteralType: function (literal) {
-    var match = /^"[^]*"(?:\^\^([^"]+)|(@)[^@"]+)?$/.exec(literal);
-    if (!match)
-      throw new Error(literal + ' is not a literal');
-    return match[1] || (match[2] ? RdfLangString : XsdString);
-  },
-
-  // Gets the language of a literal in the N3 library
-  getLiteralLanguage: function (literal) {
-    var match = /^"[^]*"(?:@([^@"]+)|\^\^[^"]+)?$/.exec(literal);
-    if (!match)
-      throw new Error(literal + ' is not a literal');
-    return match[1] ? match[1].toLowerCase() : '';
-  },
-
-  // Tests whether the given entity (triple object) represents a prefixed name
-  isPrefixedName: function (entity) {
-    return typeof entity === 'string' && /^[^:\/"']*:[^:\/"']+$/.test(entity);
-  },
-
-  // Expands the prefixed name to a full IRI (also when it occurs as a literal's type)
-  expandPrefixedName: function (prefixedName, prefixes) {
-    var match = /(?:^|"\^\^)([^:\/#"'\^_]*):[^\/]*$/.exec(prefixedName), prefix, base, index;
-    if (match)
-      prefix = match[1], base = prefixes[prefix], index = match.index;
-    if (base === undefined)
-      return prefixedName;
-
-    // The match index is non-zero when expanding a literal's type
-    return index === 0 ? base + prefixedName.substr(prefix.length + 1)
-                       : prefixedName.substr(0, index + 3) +
-                         base + prefixedName.substr(index + prefix.length + 4);
-  },
-
-  // Creates an IRI in N3.js representation
-  createIRI: function (iri) {
-    return iri && iri[0] === '"' ? N3Util.getLiteralValue(iri) : iri;
-  },
-
-  // Creates a literal in N3.js representation
-  createLiteral: function (value, modifier) {
-    if (!modifier) {
-      switch (typeof value) {
-      case 'boolean':
-        modifier = XsdBoolean;
-        break;
-      case 'number':
-        if (isFinite(value))
-          modifier = value % 1 === 0 ? XsdInteger : XsdDouble;
-        else {
-          modifier = XsdDouble;
-          if (!isNaN(value))
-            value = value > 0 ? 'INF' : '-INF';
-        }
-        break;
-      default:
-        return '"' + value + '"';
-      }
-    }
-    return '"' + value +
-           (/^[a-z]+(-[a-z0-9]+)*$/i.test(modifier) ? '"@'  + modifier.toLowerCase()
-                                                    : '"^^' + modifier);
-  },
-
-  // Creates a function that prepends the given IRI to a local name
-  prefix: function (iri) {
-    return N3Util.prefixes({ '': iri })('');
-  },
-
-  // Creates a function that allows registering and expanding prefixes
-  prefixes: function (defaultPrefixes) {
-    // Add all of the default prefixes
-    var prefixes = Object.create(null);
-    for (var prefix in defaultPrefixes)
-      processPrefix(prefix, defaultPrefixes[prefix]);
-
-    // Registers a new prefix (if an IRI was specified)
-    // or retrieves a function that expands an existing prefix (if no IRI was specified)
-    function processPrefix(prefix, iri) {
-      // Create a new prefix if an IRI is specified or the prefix doesn't exist
-      if (iri || !(prefix in prefixes)) {
-        var cache = Object.create(null);
-        iri = iri || '';
-        // Create a function that expands the prefix
-        prefixes[prefix] = function (localName) {
-          return cache[localName] || (cache[localName] = iri + localName);
-        };
-      }
-      return prefixes[prefix];
-    }
-    return processPrefix;
-  },
-};
-
-// ## Exports
-module.exports = N3Util;
-
-},{}],192:[function(require,module,exports){
-// **N3Writer** writes N3 documents.
-
-// Matches a literal as represented in memory by the N3 library
-var N3LiteralMatcher = /^"([^]*)"(?:\^\^(.+)|@([\-a-z]+))?$/i;
-
-// rdf:type predicate (for 'a' abbreviation)
-var RDF_PREFIX = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-    RDF_TYPE   = RDF_PREFIX + 'type';
-
-// Characters in literals that require escaping
-var escape    = /["\\\t\n\r\b\f\u0000-\u0019\ud800-\udbff]/,
-    escapeAll = /["\\\t\n\r\b\f\u0000-\u0019]|[\ud800-\udbff][\udc00-\udfff]/g,
-    escapedCharacters = {
-      '\\': '\\\\', '"': '\\"', '\t': '\\t',
-      '\n': '\\n', '\r': '\\r', '\b': '\\b', '\f': '\\f',
-    };
-
-// ## Constructor
-function N3Writer(outputStream, options) {
-  if (!(this instanceof N3Writer))
-    return new N3Writer(outputStream, options);
-
-  // Shift arguments if the first argument is not a stream
-  if (outputStream && typeof outputStream.write !== 'function')
-    options = outputStream, outputStream = null;
-  options = options || {};
-
-  // If no output stream given, send the output as string through the end callback
-  if (!outputStream) {
-    var output = '';
-    this._outputStream = {
-      write: function (chunk, encoding, done) { output += chunk; done && done(); },
-      end:   function (done) { done && done(null, output); },
-    };
-    this._endStream = true;
-  }
-  else {
-    this._outputStream = outputStream;
-    this._endStream = options.end === undefined ? true : !!options.end;
-  }
-
-  // Initialize writer, depending on the format
-  this._subject = null;
-  if (!(/triple|quad/i).test(options.format)) {
-    this._graph = '';
-    this._prefixIRIs = Object.create(null);
-    options.prefixes && this.addPrefixes(options.prefixes);
-  }
-  else {
-    this._writeTriple = this._writeTripleLine;
-  }
-}
-
-N3Writer.prototype = {
-  // ## Private methods
-
-  // ### `_write` writes the argument to the output stream
-  _write: function (string, callback) {
-    this._outputStream.write(string, 'utf8', callback);
-  },
-
-    // ### `_writeTriple` writes the triple to the output stream
-  _writeTriple: function (subject, predicate, object, graph, done) {
-    try {
-      // Write the graph's label if it has changed
-      if (this._graph !== graph) {
-        // Close the previous graph and start the new one
-        this._write((this._subject === null ? '' : (this._graph ? '\n}\n' : '.\n')) +
-                    (graph ? this._encodeIriOrBlankNode(graph) + ' {\n' : ''));
-        this._subject = null;
-        // Don't treat identical blank nodes as repeating graphs
-        this._graph = graph[0] !== '[' ? graph : ']';
-      }
-      // Don't repeat the subject if it's the same
-      if (this._subject === subject) {
-        // Don't repeat the predicate if it's the same
-        if (this._predicate === predicate)
-          this._write(', ' + this._encodeObject(object), done);
-        // Same subject, different predicate
-        else
-          this._write(';\n    ' +
-                      this._encodePredicate(this._predicate = predicate) + ' ' +
-                      this._encodeObject(object), done);
-      }
-      // Different subject; write the whole triple
-      else
-        this._write((this._subject === null ? '' : '.\n') +
-                    this._encodeSubject(this._subject = subject) + ' ' +
-                    this._encodePredicate(this._predicate = predicate) + ' ' +
-                    this._encodeObject(object), done);
-    }
-    catch (error) { done && done(error); }
-  },
-
-  // ### `_writeTripleLine` writes the triple or quad to the output stream as a single line
-  _writeTripleLine: function (subject, predicate, object, graph, done) {
-    // Write the triple without prefixes
-    delete this._prefixMatch;
-    try { this._write(this.tripleToString(subject, predicate, object, graph), done); }
-    catch (error) { done && done(error); }
-  },
-
-  // ### `tripleToString` serializes a triple or quad as a string
-  tripleToString: function (subject, predicate, object, graph) {
-    return  this._encodeIriOrBlankNode(subject)   + ' ' +
-            this._encodeIriOrBlankNode(predicate) + ' ' +
-            this._encodeObject(object) +
-            (graph ? ' ' + this._encodeIriOrBlankNode(graph) + '.\n' : '.\n');
-  },
-
-  // ### `triplesToString` serializes an array of triples or quads as a string
-  triplesToString: function (triples) {
-    return triples.map(function (t) {
-      return this.tripleToString(t.subject, t.predicate, t.object, t.graph);
-    }, this).join('');
-  },
-
-  // ### `_encodeIriOrBlankNode` represents an IRI or blank node
-  _encodeIriOrBlankNode: function (entity) {
-    // A blank node or list is represented as-is
-    var firstChar = entity[0];
-    if (firstChar === '[' || firstChar === '(' || firstChar === '_' && entity[1] === ':')
-      return entity;
-    // Escape special characters
-    if (escape.test(entity))
-      entity = entity.replace(escapeAll, characterReplacer);
-    // Try to represent the IRI as prefixed name
-    var prefixMatch = this._prefixRegex.exec(entity);
-    return !prefixMatch ? '<' + entity + '>' :
-           (!prefixMatch[1] ? entity : this._prefixIRIs[prefixMatch[1]] + prefixMatch[2]);
-  },
-
-  // ### `_encodeLiteral` represents a literal
-  _encodeLiteral: function (value, type, language) {
-    // Escape special characters
-    if (escape.test(value))
-      value = value.replace(escapeAll, characterReplacer);
-    // Write the literal, possibly with type or language
-    if (language)
-      return '"' + value + '"@' + language;
-    else if (type)
-      return '"' + value + '"^^' + this._encodeIriOrBlankNode(type);
-    else
-      return '"' + value + '"';
-  },
-
-  // ### `_encodeSubject` represents a subject
-  _encodeSubject: function (subject) {
-    if (subject[0] === '"')
-      throw new Error('A literal as subject is not allowed: ' + subject);
-    // Don't treat identical blank nodes as repeating subjects
-    if (subject[0] === '[')
-      this._subject = ']';
-    return this._encodeIriOrBlankNode(subject);
-  },
-
-  // ### `_encodePredicate` represents a predicate
-  _encodePredicate: function (predicate) {
-    if (predicate[0] === '"')
-      throw new Error('A literal as predicate is not allowed: ' + predicate);
-    return predicate === RDF_TYPE ? 'a' : this._encodeIriOrBlankNode(predicate);
-  },
-
-  // ### `_encodeObject` represents an object
-  _encodeObject: function (object) {
-    // Represent an IRI or blank node
-    if (object[0] !== '"')
-      return this._encodeIriOrBlankNode(object);
-    // Represent a literal
-    var match = N3LiteralMatcher.exec(object);
-    if (!match) throw new Error('Invalid literal: ' + object);
-    return this._encodeLiteral(match[1], match[2], match[3]);
-  },
-
-  // ### `_blockedWrite` replaces `_write` after the writer has been closed
-  _blockedWrite: function () {
-    throw new Error('Cannot write because the writer has been closed.');
-  },
-
-  // ### `addTriple` adds the triple to the output stream
-  addTriple: function (subject, predicate, object, graph, done) {
-    // The triple was given as a triple object, so shift parameters
-    if (object === undefined)
-      this._writeTriple(subject.subject, subject.predicate, subject.object,
-                        subject.graph || '', predicate);
-    // The optional `graph` parameter was not provided
-    else if (typeof graph !== 'string')
-      this._writeTriple(subject, predicate, object, '', graph);
-    // The `graph` parameter was provided
-    else
-      this._writeTriple(subject, predicate, object, graph, done);
-  },
-
-  // ### `addTriples` adds the triples to the output stream
-  addTriples: function (triples) {
-    for (var i = 0; i < triples.length; i++)
-      this.addTriple(triples[i]);
-  },
-
-  // ### `addPrefix` adds the prefix to the output stream
-  addPrefix: function (prefix, iri, done) {
-    var prefixes = {};
-    prefixes[prefix] = iri;
-    this.addPrefixes(prefixes, done);
-  },
-
-  // ### `addPrefixes` adds the prefixes to the output stream
-  addPrefixes: function (prefixes, done) {
-    // Add all useful prefixes
-    var prefixIRIs = this._prefixIRIs, hasPrefixes = false;
-    for (var prefix in prefixes) {
-      // Verify whether the prefix can be used and does not exist yet
-      var iri = prefixes[prefix];
-      if (/[#\/]$/.test(iri) && prefixIRIs[iri] !== (prefix += ':')) {
-        hasPrefixes = true;
-        prefixIRIs[iri] = prefix;
-        // Finish a possible pending triple
-        if (this._subject !== null) {
-          this._write(this._graph ? '\n}\n' : '.\n');
-          this._subject = null, this._graph = '';
-        }
-        // Write prefix
-        this._write('@prefix ' + prefix + ' <' + iri + '>.\n');
-      }
-    }
-    // Recreate the prefix matcher
-    if (hasPrefixes) {
-      var IRIlist = '', prefixList = '';
-      for (var prefixIRI in prefixIRIs) {
-        IRIlist += IRIlist ? '|' + prefixIRI : prefixIRI;
-        prefixList += (prefixList ? '|' : '') + prefixIRIs[prefixIRI];
-      }
-      IRIlist = IRIlist.replace(/[\]\/\(\)\*\+\?\.\\\$]/g, '\\$&');
-      this._prefixRegex = new RegExp('^(?:' + prefixList + ')[^\/]*$|' +
-                                     '^(' + IRIlist + ')([a-zA-Z][\\-_a-zA-Z0-9]*)$');
-    }
-    // End a prefix block with a newline
-    this._write(hasPrefixes ? '\n' : '', done);
-  },
-
-  // ### `blank` creates a blank node with the given content
-  blank: function (predicate, object) {
-    var children = predicate, child, length;
-    // Empty blank node
-    if (predicate === undefined)
-      children = [];
-    // Blank node passed as blank("predicate", "object")
-    else if (typeof predicate === 'string')
-      children = [{ predicate: predicate, object: object }];
-    // Blank node passed as blank({ predicate: predicate, object: object })
-    else if (!('length' in predicate))
-      children = [predicate];
-
-    switch (length = children.length) {
-    // Generate an empty blank node
-    case 0:
-      return '[]';
-    // Generate a non-nested one-triple blank node
-    case 1:
-      child = children[0];
-      if (child.object[0] !== '[')
-        return '[ ' + this._encodePredicate(child.predicate) + ' ' +
-                      this._encodeObject(child.object) + ' ]';
-    // Generate a multi-triple or nested blank node
-    default:
-      var contents = '[';
-      // Write all triples in order
-      for (var i = 0; i < length; i++) {
-        child = children[i];
-        // Write only the object is the predicate is the same as the previous
-        if (child.predicate === predicate)
-          contents += ', ' + this._encodeObject(child.object);
-        // Otherwise, write the predicate and the object
-        else {
-          contents += (i ? ';\n  ' : '\n  ') +
-                      this._encodePredicate(child.predicate) + ' ' +
-                      this._encodeObject(child.object);
-          predicate = child.predicate;
-        }
-      }
-      return contents + '\n]';
-    }
-  },
-
-  // ### `list` creates a list node with the given content
-  list: function (elements) {
-    var length = elements && elements.length || 0, contents = new Array(length);
-    for (var i = 0; i < length; i++)
-      contents[i] = this._encodeObject(elements[i]);
-    return '(' + contents.join(' ') + ')';
-  },
-
-  // ### `_prefixRegex` matches a prefixed name or IRI that begins with one of the added prefixes
-  _prefixRegex: /$0^/,
-
-  // ### `end` signals the end of the output stream
-  end: function (done) {
-    // Finish a possible pending triple
-    if (this._subject !== null) {
-      this._write(this._graph ? '\n}\n' : '.\n');
-      this._subject = null;
-    }
-    // Disallow further writing
-    this._write = this._blockedWrite;
-
-    // Try to end the underlying stream, ensuring done is called exactly one time
-    var singleDone = done && function (error, result) { singleDone = null, done(error, result); };
-    if (this._endStream) {
-      try { return this._outputStream.end(singleDone); }
-      catch (error) { /* error closing stream */ }
-    }
-    singleDone && singleDone();
-  },
-};
-
-// Replaces a character by its escaped version
-function characterReplacer(character) {
-  // Replace a single character by its escaped version
-  var result = escapedCharacters[character];
-  if (result === undefined) {
-    // Replace a single character with its 4-bit unicode escape sequence
-    if (character.length === 1) {
-      result = character.charCodeAt(0).toString(16);
-      result = '\\u0000'.substr(0, 6 - result.length) + result;
-    }
-    // Replace a surrogate pair with its 8-bit unicode escape sequence
-    else {
-      result = ((character.charCodeAt(0) - 0xD800) * 0x400 +
-                 character.charCodeAt(1) + 0x2400).toString(16);
-      result = '\\U00000000'.substr(0, 10 - result.length) + result;
-    }
-  }
-  return result;
-}
-
-// ## Exports
-module.exports = N3Writer;
-
-},{}],193:[function(require,module,exports){
-var crypto = require('crypto')
-  , qs = require('querystring')
-  ;
-
-function sha1 (key, body) {
-  return crypto.createHmac('sha1', key).update(body).digest('base64')
-}
-
-function rsa (key, body) {
-  return crypto.createSign("RSA-SHA1").update(body).sign(key, 'base64');
-}
-
-function rfc3986 (str) {
-  return encodeURIComponent(str)
-    .replace(/!/g,'%21')
-    .replace(/\*/g,'%2A')
-    .replace(/\(/g,'%28')
-    .replace(/\)/g,'%29')
-    .replace(/'/g,'%27')
-    ;
-}
-
-// Maps object to bi-dimensional array
-// Converts { foo: 'A', bar: [ 'b', 'B' ]} to
-// [ ['foo', 'A'], ['bar', 'b'], ['bar', 'B'] ]
-function map (obj) {
-  var key, val, arr = []
-  for (key in obj) {
-    val = obj[key]
-    if (Array.isArray(val))
-      for (var i = 0; i < val.length; i++)
-        arr.push([key, val[i]])
-    else if (typeof val === "object")
-      for (var prop in val)
-        arr.push([key + '[' + prop + ']', val[prop]]);
-    else
-      arr.push([key, val])
-  }
-  return arr
-}
-
-// Compare function for sort
-function compare (a, b) {
-  return a > b ? 1 : a < b ? -1 : 0
-}
-
-function generateBase (httpMethod, base_uri, params) {
-  // adapted from https://dev.twitter.com/docs/auth/oauth and 
-  // https://dev.twitter.com/docs/auth/creating-signature
-
-  // Parameter normalization
-  // http://tools.ietf.org/html/rfc5849#section-3.4.1.3.2
-  var normalized = map(params)
-  // 1.  First, the name and value of each parameter are encoded
-  .map(function (p) {
-    return [ rfc3986(p[0]), rfc3986(p[1] || '') ]
-  })
-  // 2.  The parameters are sorted by name, using ascending byte value
-  //     ordering.  If two or more parameters share the same name, they
-  //     are sorted by their value.
-  .sort(function (a, b) {
-    return compare(a[0], b[0]) || compare(a[1], b[1])
-  })
-  // 3.  The name of each parameter is concatenated to its corresponding
-  //     value using an "=" character (ASCII code 61) as a separator, even
-  //     if the value is empty.
-  .map(function (p) { return p.join('=') })
-   // 4.  The sorted name/value pairs are concatenated together into a
-   //     single string by using an "&" character (ASCII code 38) as
-   //     separator.
-  .join('&')
-
-  var base = [
-    rfc3986(httpMethod ? httpMethod.toUpperCase() : 'GET'),
-    rfc3986(base_uri),
-    rfc3986(normalized)
-  ].join('&')
-
-  return base
-}
-
-function hmacsign (httpMethod, base_uri, params, consumer_secret, token_secret) {
-  var base = generateBase(httpMethod, base_uri, params)
-  var key = [
-    consumer_secret || '',
-    token_secret || ''
-  ].map(rfc3986).join('&')
-
-  return sha1(key, base)
-}
-
-function rsasign (httpMethod, base_uri, params, private_key, token_secret) {
-  var base = generateBase(httpMethod, base_uri, params)
-  var key = private_key || ''
-
-  return rsa(key, base)
-}
-
-function plaintext (consumer_secret, token_secret) {
-  var key = [
-    consumer_secret || '',
-    token_secret || ''
-  ].map(rfc3986).join('&')
-
-  return key
-}
-
-function sign (signMethod, httpMethod, base_uri, params, consumer_secret, token_secret) {
-  var method
-  var skipArgs = 1
-
-  switch (signMethod) {
-    case 'RSA-SHA1':
-      method = rsasign
-      break
-    case 'HMAC-SHA1':
-      method = hmacsign
-      break
-    case 'PLAINTEXT':
-      method = plaintext
-      skipArgs = 4
-      break
-    default:
-     throw new Error("Signature method not supported: " + signMethod)
-  }
-
-  return method.apply(null, [].slice.call(arguments, skipArgs))
-}
-
-exports.hmacsign = hmacsign
-exports.rsasign = rsasign
-exports.plaintext = plaintext
-exports.sign = sign
-exports.rfc3986 = rfc3986
-exports.generateBase = generateBase
-
-
-},{"crypto":354,"querystring":439}],194:[function(require,module,exports){
-(function (process){
-// Generated by CoffeeScript 1.12.2
-(function() {
-  var getNanoSeconds, hrtime, loadTime, moduleLoadTime, nodeLoadTime, upTime;
-
-  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
-    module.exports = function() {
-      return performance.now();
-    };
-  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
-    module.exports = function() {
-      return (getNanoSeconds() - nodeLoadTime) / 1e6;
-    };
-    hrtime = process.hrtime;
-    getNanoSeconds = function() {
-      var hr;
-      hr = hrtime();
-      return hr[0] * 1e9 + hr[1];
-    };
-    moduleLoadTime = getNanoSeconds();
-    upTime = process.uptime() * 1e9;
-    nodeLoadTime = moduleLoadTime - upTime;
-  } else if (Date.now) {
-    module.exports = function() {
-      return Date.now() - loadTime;
-    };
-    loadTime = Date.now();
-  } else {
-    module.exports = function() {
-      return new Date().getTime() - loadTime;
-    };
-    loadTime = new Date().getTime();
-  }
-
-}).call(this);
-
-
-
-}).call(this,require('_process'))
-},{"_process":429}],195:[function(require,module,exports){
-'use strict';
-
-module.exports = require('./lib/core.js')
-require('./lib/done.js')
-require('./lib/es6-extensions.js')
-require('./lib/node-extensions.js')
-},{"./lib/core.js":196,"./lib/done.js":197,"./lib/es6-extensions.js":198,"./lib/node-extensions.js":199}],196:[function(require,module,exports){
-'use strict';
-
-var asap = require('asap')
-
-module.exports = Promise;
-function Promise(fn) {
-  if (typeof this !== 'object') throw new TypeError('Promises must be constructed via new')
-  if (typeof fn !== 'function') throw new TypeError('not a function')
-  var state = null
-  var value = null
-  var deferreds = []
-  var self = this
-
-  this.then = function(onFulfilled, onRejected) {
-    return new self.constructor(function(resolve, reject) {
-      handle(new Handler(onFulfilled, onRejected, resolve, reject))
-    })
-  }
-
-  function handle(deferred) {
-    if (state === null) {
-      deferreds.push(deferred)
-      return
-    }
-    asap(function() {
-      var cb = state ? deferred.onFulfilled : deferred.onRejected
-      if (cb === null) {
-        (state ? deferred.resolve : deferred.reject)(value)
-        return
-      }
-      var ret
-      try {
-        ret = cb(value)
-      }
-      catch (e) {
-        deferred.reject(e)
-        return
-      }
-      deferred.resolve(ret)
-    })
-  }
-
-  function resolve(newValue) {
-    try { //Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
-      if (newValue === self) throw new TypeError('A promise cannot be resolved with itself.')
-      if (newValue && (typeof newValue === 'object' || typeof newValue === 'function')) {
-        var then = newValue.then
-        if (typeof then === 'function') {
-          doResolve(then.bind(newValue), resolve, reject)
-          return
-        }
-      }
-      state = true
-      value = newValue
-      finale()
-    } catch (e) { reject(e) }
-  }
-
-  function reject(newValue) {
-    state = false
-    value = newValue
-    finale()
-  }
-
-  function finale() {
-    for (var i = 0, len = deferreds.length; i < len; i++)
-      handle(deferreds[i])
-    deferreds = null
-  }
-
-  doResolve(fn, resolve, reject)
-}
-
-
-function Handler(onFulfilled, onRejected, resolve, reject){
-  this.onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : null
-  this.onRejected = typeof onRejected === 'function' ? onRejected : null
-  this.resolve = resolve
-  this.reject = reject
-}
-
-/**
- * Take a potentially misbehaving resolver function and make sure
- * onFulfilled and onRejected are only called once.
- *
- * Makes no guarantees about asynchrony.
- */
-function doResolve(fn, onFulfilled, onRejected) {
-  var done = false;
-  try {
-    fn(function (value) {
-      if (done) return
-      done = true
-      onFulfilled(value)
-    }, function (reason) {
-      if (done) return
-      done = true
-      onRejected(reason)
-    })
-  } catch (ex) {
-    if (done) return
-    done = true
-    onRejected(ex)
-  }
-}
-
-},{"asap":44}],197:[function(require,module,exports){
-'use strict';
-
-var Promise = require('./core.js')
-var asap = require('asap')
-
-module.exports = Promise
-Promise.prototype.done = function (onFulfilled, onRejected) {
-  var self = arguments.length ? this.then.apply(this, arguments) : this
-  self.then(null, function (err) {
-    asap(function () {
-      throw err
-    })
-  })
-}
-},{"./core.js":196,"asap":44}],198:[function(require,module,exports){
-'use strict';
-
-//This file contains the ES6 extensions to the core Promises/A+ API
-
-var Promise = require('./core.js')
-var asap = require('asap')
-
-module.exports = Promise
-
-/* Static Functions */
-
-function ValuePromise(value) {
-  this.then = function (onFulfilled) {
-    if (typeof onFulfilled !== 'function') return this
-    return new Promise(function (resolve, reject) {
-      asap(function () {
-        try {
-          resolve(onFulfilled(value))
-        } catch (ex) {
-          reject(ex);
-        }
-      })
-    })
-  }
-}
-ValuePromise.prototype = Promise.prototype
-
-var TRUE = new ValuePromise(true)
-var FALSE = new ValuePromise(false)
-var NULL = new ValuePromise(null)
-var UNDEFINED = new ValuePromise(undefined)
-var ZERO = new ValuePromise(0)
-var EMPTYSTRING = new ValuePromise('')
-
-Promise.resolve = function (value) {
-  if (value instanceof Promise) return value
-
-  if (value === null) return NULL
-  if (value === undefined) return UNDEFINED
-  if (value === true) return TRUE
-  if (value === false) return FALSE
-  if (value === 0) return ZERO
-  if (value === '') return EMPTYSTRING
-
-  if (typeof value === 'object' || typeof value === 'function') {
-    try {
-      var then = value.then
-      if (typeof then === 'function') {
-        return new Promise(then.bind(value))
-      }
-    } catch (ex) {
-      return new Promise(function (resolve, reject) {
-        reject(ex)
-      })
-    }
-  }
-
-  return new ValuePromise(value)
-}
-
-Promise.all = function (arr) {
-  var args = Array.prototype.slice.call(arr)
-
-  return new Promise(function (resolve, reject) {
-    if (args.length === 0) return resolve([])
-    var remaining = args.length
-    function res(i, val) {
-      try {
-        if (val && (typeof val === 'object' || typeof val === 'function')) {
-          var then = val.then
-          if (typeof then === 'function') {
-            then.call(val, function (val) { res(i, val) }, reject)
-            return
-          }
-        }
-        args[i] = val
-        if (--remaining === 0) {
-          resolve(args);
-        }
-      } catch (ex) {
-        reject(ex)
-      }
-    }
-    for (var i = 0; i < args.length; i++) {
-      res(i, args[i])
-    }
-  })
-}
-
-Promise.reject = function (value) {
-  return new Promise(function (resolve, reject) { 
-    reject(value);
-  });
-}
-
-Promise.race = function (values) {
-  return new Promise(function (resolve, reject) { 
-    values.forEach(function(value){
-      Promise.resolve(value).then(resolve, reject);
-    })
-  });
-}
-
-/* Prototype Methods */
-
-Promise.prototype['catch'] = function (onRejected) {
-  return this.then(null, onRejected);
-}
-
-},{"./core.js":196,"asap":44}],199:[function(require,module,exports){
-'use strict';
-
-//This file contains then/promise specific extensions that are only useful for node.js interop
-
-var Promise = require('./core.js')
-var asap = require('asap')
-
-module.exports = Promise
-
-/* Static Functions */
-
-Promise.denodeify = function (fn, argumentCount) {
-  argumentCount = argumentCount || Infinity
-  return function () {
-    var self = this
-    var args = Array.prototype.slice.call(arguments)
-    return new Promise(function (resolve, reject) {
-      while (args.length && args.length > argumentCount) {
-        args.pop()
-      }
-      args.push(function (err, res) {
-        if (err) reject(err)
-        else resolve(res)
-      })
-      var res = fn.apply(self, args)
-      if (res && (typeof res === 'object' || typeof res === 'function') && typeof res.then === 'function') {
-        resolve(res)
-      }
-    })
-  }
-}
-Promise.nodeify = function (fn) {
-  return function () {
-    var args = Array.prototype.slice.call(arguments)
-    var callback = typeof args[args.length - 1] === 'function' ? args.pop() : null
-    var ctx = this
-    try {
-      return fn.apply(this, arguments).nodeify(callback, ctx)
-    } catch (ex) {
-      if (callback === null || typeof callback == 'undefined') {
-        return new Promise(function (resolve, reject) { reject(ex) })
-      } else {
-        asap(function () {
-          callback.call(ctx, ex)
-        })
-      }
-    }
-  }
-}
-
-Promise.prototype.nodeify = function (callback, ctx) {
-  if (typeof callback != 'function') return this
-
-  this.then(function (value) {
-    asap(function () {
-      callback.call(ctx, null, value)
-    })
-  }, function (err) {
-    asap(function () {
-      callback.call(ctx, err)
-    })
-  })
-}
-
-},{"./core.js":196,"asap":44}],200:[function(require,module,exports){
-module.exports = require("bluebird/js/main/captured_trace")();
-
-},{"bluebird/js/main/captured_trace":61}],201:[function(require,module,exports){
-// See: https://github.com/petkaantonov/bluebird#for-library-authors
-module.exports = require("bluebird/js/main/promise")();
-
-},{"bluebird/js/main/promise":77}],202:[function(require,module,exports){
-'use strict';
-
-
-function RequestError(cause) {
-
-    this.name = 'RequestError';
-    this.message = String(cause);
-    this.cause = cause;
-
-    if (Error.captureStackTrace) {
-        Error.captureStackTrace(this);
-    }
-
-}
-RequestError.prototype = Object.create(Error.prototype);
-RequestError.prototype.constructor = RequestError;
-
-
-function StatusCodeError(statusCode, message) {
-
-    this.name = 'StatusCodeError';
-    this.statusCode = statusCode;
-    this.message = statusCode + ' - ' + message;
-
-    if (Error.captureStackTrace) {
-        Error.captureStackTrace(this);
-    }
-
-}
-StatusCodeError.prototype = Object.create(Error.prototype);
-StatusCodeError.prototype.constructor = StatusCodeError;
-
-
-module.exports = {
-    RequestError: RequestError,
-    StatusCodeError: StatusCodeError
-};
-
-},{}],203:[function(require,module,exports){
-'use strict';
-
-var Bluebird = require('./bluebird-fresh.js'),
-    CapturedTrace = require('./bluebird-captured-trace-fresh.js'),
-    assign = require('lodash/object/assign'),
-    forEach = require('lodash/collection/forEach'),
-    isFunction = require('lodash/lang/isFunction'),
-    isPlainObject = require('lodash/lang/isPlainObject'),
-    isString = require('lodash/lang/isString'),
-    isUndefined = require('lodash/lang/isUndefined'),
-    keys = require('lodash/object/keys'),
-    chalk = require('chalk'),
-    errors = require('./errors.js');
-
-
-// Load Request freshly - so that users can require an unaltered request instance!
-var request = (function () {
-
-    function clearCache() {
-        forEach(keys(require.cache), function (key) {
-            delete require.cache[key];
-        });
-    }
-
-    var temp = assign({}, require.cache);
-    clearCache();
-
-    var freshRequest = require('request');
-
-    clearCache();
-    assign(require.cache, temp);
-
-    return freshRequest;
-
-})();
-
-
-function RP$callback(err, response, body) {
-
-    /* jshint validthis:true */
-    var self = this;
-
-    var origCallbackThrewException = false, thrownException;
-
-    if (isFunction(self._rp_callbackOrig)) {
-        try {
-            self._rp_callbackOrig.apply(self, arguments);
-        } catch (e) {
-            origCallbackThrewException = true;
-            thrownException = e;
-        }
-    }
-
-    if (err) {
-
-        self._rp_reject(assign(new errors.RequestError(err), {
-            error: err,
-            options: self._rp_options,
-            response: response
-        }));
-
-    } else if (self._rp_options.simple && !(/^2/.test('' + response.statusCode))) {
-
-        self._rp_reject(assign(new errors.StatusCodeError(response.statusCode, body), {
-            error: body,
-            options: self._rp_options,
-            response: response
-        }));
-
-    } else {
-        if (isFunction(self._rp_options.transform)) {
-            try {
-                self._rp_resolve(self._rp_options.transform(body, response));
-            } catch (e) {
-                self._rp_reject(e);
-            }
-        } else if (self._rp_options.resolveWithFullResponse) {
-            self._rp_resolve(response);
-        } else {
-            self._rp_resolve(body);
-        }
-    }
-
-    if (origCallbackThrewException) {
-        throw thrownException;
-    }
-
-    // Mimic original behavior of errors emitted by request with no error listener registered
-    if (err && isFunction(self._rp_callbackOrig) === false && self._rp_promise_in_use !== true && self.listeners('error').length === 1) {
-        throw err;
-    }
-
-}
-
-var originalInit = request.Request.prototype.init;
-
-request.Request.prototype.init = function RP$initInterceptor(options) {
-
-    var self = this;
-
-    // Init may be called again - currently in case of redirects
-    if (isPlainObject(options) && self._callback === undefined && self._rp_promise === undefined) {
-
-        self._rp_promise = new Bluebird(function (resolve, reject) {
-            self._rp_resolve = resolve;
-            self._rp_reject = reject;
-        });
-        self._rp_promise._rp_in_use = false;
-
-        self._rp_callbackOrig = self.callback;
-        self.callback = RP$callback;
-
-        if (isString(options.method)) {
-            options.method = options.method.toUpperCase();
-        }
-
-        self._rp_options = options;
-        self._rp_options.simple = options.simple === false ? false : true;
-        self._rp_options.resolveWithFullResponse = options.resolveWithFullResponse === true ? true : false;
-
-    }
-
-    return originalInit.apply(self, arguments);
-
-};
-
-function markPromiseInUse(requestInstance) {
-    requestInstance._rp_promise_in_use = true;
-    requestInstance._rp_promise._rp_in_use = true;
-}
-
-function expose(methodToExpose, exposeAs) {
-
-    exposeAs = exposeAs || methodToExpose;
-
-    /* istanbul ignore if */
-    if (!isUndefined(request.Request.prototype[exposeAs])) {
-        console.error(chalk.bold.bgRed('[Request-Promise] Unable to expose method "' + exposeAs + '". It is already implemented by Request. Please visit https://github.com/request/request-promise/wiki/Troubleshooting'));
-        return;
-    }
-
-    request.Request.prototype[exposeAs] = function RP$exposed() {
-        markPromiseInUse(this);
-        return this._rp_promise[methodToExpose].apply(this._rp_promise, arguments);
-    };
-
-}
-
-expose('then');
-expose('catch');
-expose('finally');
-
-request.Request.prototype.promise = function RP$promise() {
-    markPromiseInUse(this);
-    return this._rp_promise;
-};
-
-
-var printRejectionReason = CapturedTrace.formatAndLogError || CapturedTrace.possiblyUnhandledRejection;
-
-Bluebird.onPossiblyUnhandledRejection(function (reason, promise) {
-    // For whatever reason we don't see _rp_in_use here at all after then is called. --> We compare to false instead of true.
-    if (promise._rp_in_use !== false) {
-        printRejectionReason(reason, 'Possibly unhandled ');
-    }
-    // else: The user did not call .then(...)
-    // --> We need to assume that this request is processed with a callback or a pipe etc.
-});
-
-
-module.exports = request;
-
-},{"./bluebird-captured-trace-fresh.js":200,"./bluebird-fresh.js":201,"./errors.js":202,"chalk":94,"lodash/collection/forEach":148,"lodash/lang/isFunction":175,"lodash/lang/isPlainObject":178,"lodash/lang/isString":179,"lodash/lang/isUndefined":180,"lodash/object/assign":181,"lodash/object/keys":182,"request":204}],204:[function(require,module,exports){
-// Copyright 2010-2012 Mikeal Rogers
-//
-//    Licensed under the Apache License, Version 2.0 (the "License");
-//    you may not use this file except in compliance with the License.
-//    You may obtain a copy of the License at
-//
-//        http://www.apache.org/licenses/LICENSE-2.0
-//
-//    Unless required by applicable law or agreed to in writing, software
-//    distributed under the License is distributed on an "AS IS" BASIS,
-//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//    See the License for the specific language governing permissions and
-//    limitations under the License.
-
-'use strict'
-
-var extend = require('extend')
-var cookies = require('./lib/cookies')
-var helpers = require('./lib/helpers')
-
-var paramsHaveRequestBody = helpers.paramsHaveRequestBody
-
-// organize params for patch, post, put, head, del
-function initParams (uri, options, callback) {
-  if (typeof options === 'function') {
-    callback = options
-  }
-
-  var params = {}
-  if (typeof options === 'object') {
-    extend(params, options, {uri: uri})
-  } else if (typeof uri === 'string') {
-    extend(params, {uri: uri})
-  } else {
-    extend(params, uri)
-  }
-
-  params.callback = callback || params.callback
-  return params
-}
-
-function request (uri, options, callback) {
-  if (typeof uri === 'undefined') {
-    throw new Error('undefined is not a valid uri or options object.')
-  }
-
-  var params = initParams(uri, options, callback)
-
-  if (params.method === 'HEAD' && paramsHaveRequestBody(params)) {
-    throw new Error('HTTP HEAD requests MUST NOT include a request body.')
-  }
-
-  return new request.Request(params)
-}
-
-function verbFunc (verb) {
-  var method = verb.toUpperCase()
-  return function (uri, options, callback) {
-    var params = initParams(uri, options, callback)
-    params.method = method
-    return request(params, params.callback)
-  }
-}
-
-// define like this to please codeintel/intellisense IDEs
-request.get = verbFunc('get')
-request.head = verbFunc('head')
-request.options = verbFunc('options')
-request.post = verbFunc('post')
-request.put = verbFunc('put')
-request.patch = verbFunc('patch')
-request.del = verbFunc('delete')
-request['delete'] = verbFunc('delete')
-
-request.jar = function (store) {
-  return cookies.jar(store)
-}
-
-request.cookie = function (str) {
-  return cookies.parse(str)
-}
-
-function wrapRequestMethod (method, options, requester, verb) {
-  return function (uri, opts, callback) {
-    var params = initParams(uri, opts, callback)
-
-    var target = {}
-    extend(true, target, options, params)
-
-    target.pool = params.pool || options.pool
-
-    if (verb) {
-      target.method = verb.toUpperCase()
-    }
-
-    if (typeof requester === 'function') {
-      method = requester
-    }
-
-    return method(target, target.callback)
-  }
-}
-
-request.defaults = function (options, requester) {
-  var self = this
-
-  options = options || {}
-
-  if (typeof options === 'function') {
-    requester = options
-    options = {}
-  }
-
-  var defaults = wrapRequestMethod(self, options, requester)
-
-  var verbs = ['get', 'head', 'post', 'put', 'patch', 'del', 'delete']
-  verbs.forEach(function (verb) {
-    defaults[verb] = wrapRequestMethod(self[verb], options, requester, verb)
-  })
-
-  defaults.cookie = wrapRequestMethod(self.cookie, options, requester)
-  defaults.jar = self.jar
-  defaults.defaults = self.defaults
-  return defaults
-}
-
-request.forever = function (agentOptions, optionsArg) {
-  var options = {}
-  if (optionsArg) {
-    extend(options, optionsArg)
-  }
-  if (agentOptions) {
-    options.agentOptions = agentOptions
-  }
-
-  options.forever = true
-  return request.defaults(options)
-}
-
-// Exports
-
-module.exports = request
-request.Request = require('./request')
-request.initParams = initParams
-
-// Backwards compatibility for request.debug
-Object.defineProperty(request, 'debug', {
-  enumerable: true,
-  get: function () {
-    return request.Request.debug
-  },
-  set: function (debug) {
-    request.Request.debug = debug
-  }
-})
-
-},{"./lib/cookies":206,"./lib/helpers":209,"./request":223,"extend":105}],205:[function(require,module,exports){
-'use strict'
-
-var caseless = require('caseless')
-var uuid = require('uuid')
-var helpers = require('./helpers')
-
-var md5 = helpers.md5
-var toBase64 = helpers.toBase64
-
-function Auth (request) {
-  // define all public properties here
-  this.request = request
-  this.hasAuth = false
-  this.sentAuth = false
-  this.bearerToken = null
-  this.user = null
-  this.pass = null
-}
-
-Auth.prototype.basic = function (user, pass, sendImmediately) {
-  var self = this
-  if (typeof user !== 'string' || (pass !== undefined && typeof pass !== 'string')) {
-    self.request.emit('error', new Error('auth() received invalid user or password'))
-  }
-  self.user = user
-  self.pass = pass
-  self.hasAuth = true
-  var header = user + ':' + (pass || '')
-  if (sendImmediately || typeof sendImmediately === 'undefined') {
-    var authHeader = 'Basic ' + toBase64(header)
-    self.sentAuth = true
-    return authHeader
-  }
-}
-
-Auth.prototype.bearer = function (bearer, sendImmediately) {
-  var self = this
-  self.bearerToken = bearer
-  self.hasAuth = true
-  if (sendImmediately || typeof sendImmediately === 'undefined') {
-    if (typeof bearer === 'function') {
-      bearer = bearer()
-    }
-    var authHeader = 'Bearer ' + (bearer || '')
-    self.sentAuth = true
-    return authHeader
-  }
-}
-
-Auth.prototype.digest = function (method, path, authHeader) {
-  // TODO: More complete implementation of RFC 2617.
-  //   - handle challenge.domain
-  //   - support qop="auth-int" only
-  //   - handle Authentication-Info (not necessarily?)
-  //   - check challenge.stale (not necessarily?)
-  //   - increase nc (not necessarily?)
-  // For reference:
-  // http://tools.ietf.org/html/rfc2617#section-3
-  // https://github.com/bagder/curl/blob/master/lib/http_digest.c
-
-  var self = this
-
-  var challenge = {}
-  var re = /([a-z0-9_-]+)=(?:"([^"]+)"|([a-z0-9_-]+))/gi
-  for (;;) {
-    var match = re.exec(authHeader)
-    if (!match) {
-      break
-    }
-    challenge[match[1]] = match[2] || match[3]
-  }
-
-  /**
-   * RFC 2617: handle both MD5 and MD5-sess algorithms.
-   *
-   * If the algorithm directive's value is "MD5" or unspecified, then HA1 is
-   *   HA1=MD5(username:realm:password)
-   * If the algorithm directive's value is "MD5-sess", then HA1 is
-   *   HA1=MD5(MD5(username:realm:password):nonce:cnonce)
-   */
-  var ha1Compute = function (algorithm, user, realm, pass, nonce, cnonce) {
-    var ha1 = md5(user + ':' + realm + ':' + pass)
-    if (algorithm && algorithm.toLowerCase() === 'md5-sess') {
-      return md5(ha1 + ':' + nonce + ':' + cnonce)
-    } else {
-      return ha1
-    }
-  }
-
-  var qop = /(^|,)\s*auth\s*($|,)/.test(challenge.qop) && 'auth'
-  var nc = qop && '00000001'
-  var cnonce = qop && uuid().replace(/-/g, '')
-  var ha1 = ha1Compute(challenge.algorithm, self.user, challenge.realm, self.pass, challenge.nonce, cnonce)
-  var ha2 = md5(method + ':' + path)
-  var digestResponse = qop
-    ? md5(ha1 + ':' + challenge.nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + ha2)
-    : md5(ha1 + ':' + challenge.nonce + ':' + ha2)
-  var authValues = {
-    username: self.user,
-    realm: challenge.realm,
-    nonce: challenge.nonce,
-    uri: path,
-    qop: qop,
-    response: digestResponse,
-    nc: nc,
-    cnonce: cnonce,
-    algorithm: challenge.algorithm,
-    opaque: challenge.opaque
-  }
-
-  authHeader = []
-  for (var k in authValues) {
-    if (authValues[k]) {
-      if (k === 'qop' || k === 'nc' || k === 'algorithm') {
-        authHeader.push(k + '=' + authValues[k])
-      } else {
-        authHeader.push(k + '="' + authValues[k] + '"')
-      }
-    }
-  }
-  authHeader = 'Digest ' + authHeader.join(', ')
-  self.sentAuth = true
-  return authHeader
-}
-
-Auth.prototype.onRequest = function (user, pass, sendImmediately, bearer) {
-  var self = this
-  var request = self.request
-
-  var authHeader
-  if (bearer === undefined && user === undefined) {
-    self.request.emit('error', new Error('no auth mechanism defined'))
-  } else if (bearer !== undefined) {
-    authHeader = self.bearer(bearer, sendImmediately)
-  } else {
-    authHeader = self.basic(user, pass, sendImmediately)
-  }
-  if (authHeader) {
-    request.setHeader('authorization', authHeader)
-  }
-}
-
-Auth.prototype.onResponse = function (response) {
-  var self = this
-  var request = self.request
-
-  if (!self.hasAuth || self.sentAuth) { return null }
-
-  var c = caseless(response.headers)
-
-  var authHeader = c.get('www-authenticate')
-  var authVerb = authHeader && authHeader.split(' ')[0].toLowerCase()
-  request.debug('reauth', authVerb)
-
-  switch (authVerb) {
-    case 'basic':
-      return self.basic(self.user, self.pass, true)
-
-    case 'bearer':
-      return self.bearer(self.bearerToken, true)
-
-    case 'digest':
-      return self.digest(request.method, request.path, authHeader)
-  }
-}
-
-exports.Auth = Auth
-
-},{"./helpers":209,"caseless":93,"uuid":288}],206:[function(require,module,exports){
-'use strict'
-
-var tough = require('tough-cookie')
-
-var Cookie = tough.Cookie
-var CookieJar = tough.CookieJar
-
-exports.parse = function (str) {
-  if (str && str.uri) {
-    str = str.uri
-  }
-  if (typeof str !== 'string') {
-    throw new Error('The cookie function only accepts STRING as param')
-  }
-  return Cookie.parse(str, {loose: true})
-}
-
-// Adapt the sometimes-Async api of tough.CookieJar to our requirements
-function RequestJar (store) {
-  var self = this
-  self._jar = new CookieJar(store, {looseMode: true})
-}
-RequestJar.prototype.setCookie = function (cookieOrStr, uri, options) {
-  var self = this
-  return self._jar.setCookieSync(cookieOrStr, uri, options || {})
-}
-RequestJar.prototype.getCookieString = function (uri) {
-  var self = this
-  return self._jar.getCookieStringSync(uri)
-}
-RequestJar.prototype.getCookies = function (uri) {
-  var self = this
-  return self._jar.getCookiesSync(uri)
-}
-
-exports.jar = function (store) {
-  return new RequestJar(store)
-}
-
-},{"tough-cookie":279}],207:[function(require,module,exports){
-(function (process){
-'use strict'
-
-function formatHostname (hostname) {
-  // canonicalize the hostname, so that 'oogle.com' won't match 'google.com'
-  return hostname.replace(/^\.*/, '.').toLowerCase()
-}
-
-function parseNoProxyZone (zone) {
-  zone = zone.trim().toLowerCase()
-
-  var zoneParts = zone.split(':', 2)
-  var zoneHost = formatHostname(zoneParts[0])
-  var zonePort = zoneParts[1]
-  var hasPort = zone.indexOf(':') > -1
-
-  return {hostname: zoneHost, port: zonePort, hasPort: hasPort}
-}
-
-function uriInNoProxy (uri, noProxy) {
-  var port = uri.port || (uri.protocol === 'https:' ? '443' : '80')
-  var hostname = formatHostname(uri.hostname)
-  var noProxyList = noProxy.split(',')
-
-  // iterate through the noProxyList until it finds a match.
-  return noProxyList.map(parseNoProxyZone).some(function (noProxyZone) {
-    var isMatchedAt = hostname.indexOf(noProxyZone.hostname)
-    var hostnameMatched = (
-      isMatchedAt > -1 &&
-        (isMatchedAt === hostname.length - noProxyZone.hostname.length)
-    )
-
-    if (noProxyZone.hasPort) {
-      return (port === noProxyZone.port) && hostnameMatched
-    }
-
-    return hostnameMatched
-  })
-}
-
-function getProxyFromURI (uri) {
-  // Decide the proper request proxy to use based on the request URI object and the
-  // environmental variables (NO_PROXY, HTTP_PROXY, etc.)
-  // respect NO_PROXY environment variables (see: http://lynx.isc.org/current/breakout/lynx_help/keystrokes/environments.html)
-
-  var noProxy = process.env.NO_PROXY || process.env.no_proxy || ''
-
-  // if the noProxy is a wildcard then return null
-
-  if (noProxy === '*') {
-    return null
-  }
-
-  // if the noProxy is not empty and the uri is found return null
-
-  if (noProxy !== '' && uriInNoProxy(uri, noProxy)) {
-    return null
-  }
-
-  // Check for HTTP or HTTPS Proxy in environment Else default to null
-
-  if (uri.protocol === 'http:') {
-    return process.env.HTTP_PROXY ||
-      process.env.http_proxy || null
-  }
-
-  if (uri.protocol === 'https:') {
-    return process.env.HTTPS_PROXY ||
-      process.env.https_proxy ||
-      process.env.HTTP_PROXY ||
-      process.env.http_proxy || null
-  }
-
-  // if none of that works, return null
-  // (What uri protocol are you using then?)
-
-  return null
-}
-
-module.exports = getProxyFromURI
-
-}).call(this,require('_process'))
-},{"_process":429}],208:[function(require,module,exports){
-'use strict'
-
-var fs = require('fs')
-var qs = require('querystring')
-var validate = require('har-validator')
-var extend = require('extend')
-
-function Har (request) {
-  this.request = request
-}
-
-Har.prototype.reducer = function (obj, pair) {
-  // new property ?
-  if (obj[pair.name] === undefined) {
-    obj[pair.name] = pair.value
-    return obj
-  }
-
-  // existing? convert to array
-  var arr = [
-    obj[pair.name],
-    pair.value
-  ]
-
-  obj[pair.name] = arr
-
-  return obj
-}
-
-Har.prototype.prep = function (data) {
-  // construct utility properties
-  data.queryObj = {}
-  data.headersObj = {}
-  data.postData.jsonObj = false
-  data.postData.paramsObj = false
-
-  // construct query objects
-  if (data.queryString && data.queryString.length) {
-    data.queryObj = data.queryString.reduce(this.reducer, {})
-  }
-
-  // construct headers objects
-  if (data.headers && data.headers.length) {
-    // loweCase header keys
-    data.headersObj = data.headers.reduceRight(function (headers, header) {
-      headers[header.name] = header.value
-      return headers
-    }, {})
-  }
-
-  // construct Cookie header
-  if (data.cookies && data.cookies.length) {
-    var cookies = data.cookies.map(function (cookie) {
-      return cookie.name + '=' + cookie.value
-    })
-
-    if (cookies.length) {
-      data.headersObj.cookie = cookies.join('; ')
-    }
-  }
-
-  // prep body
-  function some (arr) {
-    return arr.some(function (type) {
-      return data.postData.mimeType.indexOf(type) === 0
-    })
-  }
-
-  if (some([
-    'multipart/mixed',
-    'multipart/related',
-    'multipart/form-data',
-    'multipart/alternative'])) {
-    // reset values
-    data.postData.mimeType = 'multipart/form-data'
-  } else if (some([
-    'application/x-www-form-urlencoded'])) {
-    if (!data.postData.params) {
-      data.postData.text = ''
-    } else {
-      data.postData.paramsObj = data.postData.params.reduce(this.reducer, {})
-
-      // always overwrite
-      data.postData.text = qs.stringify(data.postData.paramsObj)
-    }
-  } else if (some([
-    'text/json',
-    'text/x-json',
-    'application/json',
-    'application/x-json'])) {
-    data.postData.mimeType = 'application/json'
-
-    if (data.postData.text) {
-      try {
-        data.postData.jsonObj = JSON.parse(data.postData.text)
-      } catch (e) {
-        this.request.debug(e)
-
-        // force back to text/plain
-        data.postData.mimeType = 'text/plain'
-      }
-    }
-  }
-
-  return data
-}
-
-Har.prototype.options = function (options) {
-  // skip if no har property defined
-  if (!options.har) {
-    return options
-  }
-
-  var har = {}
-  extend(har, options.har)
-
-  // only process the first entry
-  if (har.log && har.log.entries) {
-    har = har.log.entries[0]
-  }
-
-  // add optional properties to make validation successful
-  har.url = har.url || options.url || options.uri || options.baseUrl || '/'
-  har.httpVersion = har.httpVersion || 'HTTP/1.1'
-  har.queryString = har.queryString || []
-  har.headers = har.headers || []
-  har.cookies = har.cookies || []
-  har.postData = har.postData || {}
-  har.postData.mimeType = har.postData.mimeType || 'application/octet-stream'
-
-  har.bodySize = 0
-  har.headersSize = 0
-  har.postData.size = 0
-
-  if (!validate.request(har)) {
-    return options
-  }
-
-  // clean up and get some utility properties
-  var req = this.prep(har)
-
-  // construct new options
-  if (req.url) {
-    options.url = req.url
-  }
-
-  if (req.method) {
-    options.method = req.method
-  }
-
-  if (Object.keys(req.queryObj).length) {
-    options.qs = req.queryObj
-  }
-
-  if (Object.keys(req.headersObj).length) {
-    options.headers = req.headersObj
-  }
-
-  function test (type) {
-    return req.postData.mimeType.indexOf(type) === 0
-  }
-  if (test('application/x-www-form-urlencoded')) {
-    options.form = req.postData.paramsObj
-  } else if (test('application/json')) {
-    if (req.postData.jsonObj) {
-      options.body = req.postData.jsonObj
-      options.json = true
-    }
-  } else if (test('multipart/form-data')) {
-    options.formData = {}
-
-    req.postData.params.forEach(function (param) {
-      var attachment = {}
-
-      if (!param.fileName && !param.fileName && !param.contentType) {
-        options.formData[param.name] = param.value
-        return
-      }
-
-      // attempt to read from disk!
-      if (param.fileName && !param.value) {
-        attachment.value = fs.createReadStream(param.fileName)
-      } else if (param.value) {
-        attachment.value = param.value
-      }
-
-      if (param.fileName) {
-        attachment.options = {
-          filename: param.fileName,
-          contentType: param.contentType ? param.contentType : null
-        }
-      }
-
-      options.formData[param.name] = attachment
-    })
-  } else {
-    if (req.postData.text) {
-      options.body = req.postData.text
-    }
-  }
-
-  return options
-}
-
-exports.Har = Har
-
-},{"extend":105,"fs":295,"har-validator":131,"querystring":439}],209:[function(require,module,exports){
-(function (process){
-'use strict'
-
-var jsonSafeStringify = require('json-stringify-safe')
-var crypto = require('crypto')
-var Buffer = require('safe-buffer').Buffer
-
-var defer = typeof setImmediate === 'undefined'
-  ? process.nextTick
-  : setImmediate
-
-function paramsHaveRequestBody (params) {
-  return (
-    params.body ||
-    params.requestBodyStream ||
-    (params.json && typeof params.json !== 'boolean') ||
-    params.multipart
-  )
-}
-
-function safeStringify (obj, replacer) {
-  var ret
-  try {
-    ret = JSON.stringify(obj, replacer)
-  } catch (e) {
-    ret = jsonSafeStringify(obj, replacer)
-  }
-  return ret
-}
-
-function md5 (str) {
-  return crypto.createHash('md5').update(str).digest('hex')
-}
-
-function isReadStream (rs) {
-  return rs.readable && rs.path && rs.mode
-}
-
-function toBase64 (str) {
-  return Buffer.from(str || '', 'utf8').toString('base64')
-}
-
-function copy (obj) {
-  var o = {}
-  Object.keys(obj).forEach(function (i) {
-    o[i] = obj[i]
-  })
-  return o
-}
-
-function version () {
-  var numbers = process.version.replace('v', '').split('.')
-  return {
-    major: parseInt(numbers[0], 10),
-    minor: parseInt(numbers[1], 10),
-    patch: parseInt(numbers[2], 10)
-  }
-}
-
-exports.paramsHaveRequestBody = paramsHaveRequestBody
-exports.safeStringify = safeStringify
-exports.md5 = md5
-exports.isReadStream = isReadStream
-exports.toBase64 = toBase64
-exports.copy = copy
-exports.version = version
-exports.defer = defer
-
-}).call(this,require('_process'))
-},{"_process":429,"crypto":354,"json-stringify-safe":144,"safe-buffer":224}],210:[function(require,module,exports){
-'use strict'
-
-var uuid = require('uuid')
-var CombinedStream = require('combined-stream')
-var isstream = require('isstream')
-var Buffer = require('safe-buffer').Buffer
-
-function Multipart (request) {
-  this.request = request
-  this.boundary = uuid()
-  this.chunked = false
-  this.body = null
-}
-
-Multipart.prototype.isChunked = function (options) {
-  var self = this
-  var chunked = false
-  var parts = options.data || options
-
-  if (!parts.forEach) {
-    self.request.emit('error', new Error('Argument error, options.multipart.'))
-  }
-
-  if (options.chunked !== undefined) {
-    chunked = options.chunked
-  }
-
-  if (self.request.getHeader('transfer-encoding') === 'chunked') {
-    chunked = true
-  }
-
-  if (!chunked) {
-    parts.forEach(function (part) {
-      if (typeof part.body === 'undefined') {
-        self.request.emit('error', new Error('Body attribute missing in multipart.'))
-      }
-      if (isstream(part.body)) {
-        chunked = true
-      }
-    })
-  }
-
-  return chunked
-}
-
-Multipart.prototype.setHeaders = function (chunked) {
-  var self = this
-
-  if (chunked && !self.request.hasHeader('transfer-encoding')) {
-    self.request.setHeader('transfer-encoding', 'chunked')
-  }
-
-  var header = self.request.getHeader('content-type')
-
-  if (!header || header.indexOf('multipart') === -1) {
-    self.request.setHeader('content-type', 'multipart/related; boundary=' + self.boundary)
-  } else {
-    if (header.indexOf('boundary') !== -1) {
-      self.boundary = header.replace(/.*boundary=([^\s;]+).*/, '$1')
-    } else {
-      self.request.setHeader('content-type', header + '; boundary=' + self.boundary)
-    }
-  }
-}
-
-Multipart.prototype.build = function (parts, chunked) {
-  var self = this
-  var body = chunked ? new CombinedStream() : []
-
-  function add (part) {
-    if (typeof part === 'number') {
-      part = part.toString()
-    }
-    return chunked ? body.append(part) : body.push(Buffer.from(part))
-  }
-
-  if (self.request.preambleCRLF) {
-    add('\r\n')
-  }
-
-  parts.forEach(function (part) {
-    var preamble = '--' + self.boundary + '\r\n'
-    Object.keys(part).forEach(function (key) {
-      if (key === 'body') { return }
-      preamble += key + ': ' + part[key] + '\r\n'
-    })
-    preamble += '\r\n'
-    add(preamble)
-    add(part.body)
-    add('\r\n')
-  })
-  add('--' + self.boundary + '--')
-
-  if (self.request.postambleCRLF) {
-    add('\r\n')
-  }
-
-  return body
-}
-
-Multipart.prototype.onRequest = function (options) {
-  var self = this
-
-  var chunked = self.isChunked(options)
-  var parts = options.data || options
-
-  self.setHeaders(chunked)
-  self.chunked = chunked
-  self.body = self.build(parts, chunked)
-}
-
-exports.Multipart = Multipart
-
-},{"combined-stream":96,"isstream":140,"safe-buffer":224,"uuid":288}],211:[function(require,module,exports){
-'use strict'
-
-var url = require('url')
-var qs = require('qs')
-var caseless = require('caseless')
-var uuid = require('uuid')
-var oauth = require('oauth-sign')
-var crypto = require('crypto')
-var Buffer = require('safe-buffer').Buffer
-
-function OAuth (request) {
-  this.request = request
-  this.params = null
-}
-
-OAuth.prototype.buildParams = function (_oauth, uri, method, query, form, qsLib) {
-  var oa = {}
-  for (var i in _oauth) {
-    oa['oauth_' + i] = _oauth[i]
-  }
-  if (!oa.oauth_version) {
-    oa.oauth_version = '1.0'
-  }
-  if (!oa.oauth_timestamp) {
-    oa.oauth_timestamp = Math.floor(Date.now() / 1000).toString()
-  }
-  if (!oa.oauth_nonce) {
-    oa.oauth_nonce = uuid().replace(/-/g, '')
-  }
-  if (!oa.oauth_signature_method) {
-    oa.oauth_signature_method = 'HMAC-SHA1'
-  }
-
-  var consumer_secret_or_private_key = oa.oauth_consumer_secret || oa.oauth_private_key // eslint-disable-line camelcase
-  delete oa.oauth_consumer_secret
-  delete oa.oauth_private_key
-
-  var token_secret = oa.oauth_token_secret // eslint-disable-line camelcase
-  delete oa.oauth_token_secret
-
-  var realm = oa.oauth_realm
-  delete oa.oauth_realm
-  delete oa.oauth_transport_method
-
-  var baseurl = uri.protocol + '//' + uri.host + uri.pathname
-  var params = qsLib.parse([].concat(query, form, qsLib.stringify(oa)).join('&'))
-
-  oa.oauth_signature = oauth.sign(
-    oa.oauth_signature_method,
-    method,
-    baseurl,
-    params,
-    consumer_secret_or_private_key, // eslint-disable-line camelcase
-    token_secret // eslint-disable-line camelcase
-  )
-
-  if (realm) {
-    oa.realm = realm
-  }
-
-  return oa
-}
-
-OAuth.prototype.buildBodyHash = function (_oauth, body) {
-  if (['HMAC-SHA1', 'RSA-SHA1'].indexOf(_oauth.signature_method || 'HMAC-SHA1') < 0) {
-    this.request.emit('error', new Error('oauth: ' + _oauth.signature_method +
-      ' signature_method not supported with body_hash signing.'))
-  }
-
-  var shasum = crypto.createHash('sha1')
-  shasum.update(body || '')
-  var sha1 = shasum.digest('hex')
-
-  return Buffer.from(sha1, 'hex').toString('base64')
-}
-
-OAuth.prototype.concatParams = function (oa, sep, wrap) {
-  wrap = wrap || ''
-
-  var params = Object.keys(oa).filter(function (i) {
-    return i !== 'realm' && i !== 'oauth_signature'
-  }).sort()
-
-  if (oa.realm) {
-    params.splice(0, 0, 'realm')
-  }
-  params.push('oauth_signature')
-
-  return params.map(function (i) {
-    return i + '=' + wrap + oauth.rfc3986(oa[i]) + wrap
-  }).join(sep)
-}
-
-OAuth.prototype.onRequest = function (_oauth) {
-  var self = this
-  self.params = _oauth
-
-  var uri = self.request.uri || {}
-  var method = self.request.method || ''
-  var headers = caseless(self.request.headers)
-  var body = self.request.body || ''
-  var qsLib = self.request.qsLib || qs
-
-  var form
-  var query
-  var contentType = headers.get('content-type') || ''
-  var formContentType = 'application/x-www-form-urlencoded'
-  var transport = _oauth.transport_method || 'header'
-
-  if (contentType.slice(0, formContentType.length) === formContentType) {
-    contentType = formContentType
-    form = body
-  }
-  if (uri.query) {
-    query = uri.query
-  }
-  if (transport === 'body' && (method !== 'POST' || contentType !== formContentType)) {
-    self.request.emit('error', new Error('oauth: transport_method of body requires POST ' +
-      'and content-type ' + formContentType))
-  }
-
-  if (!form && typeof _oauth.body_hash === 'boolean') {
-    _oauth.body_hash = self.buildBodyHash(_oauth, self.request.body.toString())
-  }
-
-  var oa = self.buildParams(_oauth, uri, method, query, form, qsLib)
-
-  switch (transport) {
-    case 'header':
-      self.request.setHeader('Authorization', 'OAuth ' + self.concatParams(oa, ',', '"'))
-      break
-
-    case 'query':
-      var href = self.request.uri.href += (query ? '&' : '?') + self.concatParams(oa, '&')
-      self.request.uri = url.parse(href)
-      self.request.path = self.request.uri.path
-      break
-
-    case 'body':
-      self.request.body = (form ? form + '&' : '') + self.concatParams(oa, '&')
-      break
-
-    default:
-      self.request.emit('error', new Error('oauth: transport_method invalid'))
-  }
-}
-
-exports.OAuth = OAuth
-
-},{"caseless":93,"crypto":354,"oauth-sign":193,"qs":219,"safe-buffer":224,"url":472,"uuid":288}],212:[function(require,module,exports){
-'use strict'
-
-var qs = require('qs')
-var querystring = require('querystring')
-
-function Querystring (request) {
-  this.request = request
-  this.lib = null
-  this.useQuerystring = null
-  this.parseOptions = null
-  this.stringifyOptions = null
-}
-
-Querystring.prototype.init = function (options) {
-  if (this.lib) { return }
-
-  this.useQuerystring = options.useQuerystring
-  this.lib = (this.useQuerystring ? querystring : qs)
-
-  this.parseOptions = options.qsParseOptions || {}
-  this.stringifyOptions = options.qsStringifyOptions || {}
-}
-
-Querystring.prototype.stringify = function (obj) {
-  return (this.useQuerystring)
-    ? this.rfc3986(this.lib.stringify(obj,
-      this.stringifyOptions.sep || null,
-      this.stringifyOptions.eq || null,
-      this.stringifyOptions))
-    : this.lib.stringify(obj, this.stringifyOptions)
-}
-
-Querystring.prototype.parse = function (str) {
-  return (this.useQuerystring)
-    ? this.lib.parse(str,
-      this.parseOptions.sep || null,
-      this.parseOptions.eq || null,
-      this.parseOptions)
-    : this.lib.parse(str, this.parseOptions)
-}
-
-Querystring.prototype.rfc3986 = function (str) {
-  return str.replace(/[!'()*]/g, function (c) {
-    return '%' + c.charCodeAt(0).toString(16).toUpperCase()
-  })
-}
-
-Querystring.prototype.unescape = querystring.unescape
-
-exports.Querystring = Querystring
-
-},{"qs":219,"querystring":439}],213:[function(require,module,exports){
-'use strict'
-
-var url = require('url')
-var isUrl = /^https?:/
-
-function Redirect (request) {
-  this.request = request
-  this.followRedirect = true
-  this.followRedirects = true
-  this.followAllRedirects = false
-  this.followOriginalHttpMethod = false
-  this.allowRedirect = function () { return true }
-  this.maxRedirects = 10
-  this.redirects = []
-  this.redirectsFollowed = 0
-  this.removeRefererHeader = false
-}
-
-Redirect.prototype.onRequest = function (options) {
-  var self = this
-
-  if (options.maxRedirects !== undefined) {
-    self.maxRedirects = options.maxRedirects
-  }
-  if (typeof options.followRedirect === 'function') {
-    self.allowRedirect = options.followRedirect
-  }
-  if (options.followRedirect !== undefined) {
-    self.followRedirects = !!options.followRedirect
-  }
-  if (options.followAllRedirects !== undefined) {
-    self.followAllRedirects = options.followAllRedirects
-  }
-  if (self.followRedirects || self.followAllRedirects) {
-    self.redirects = self.redirects || []
-  }
-  if (options.removeRefererHeader !== undefined) {
-    self.removeRefererHeader = options.removeRefererHeader
-  }
-  if (options.followOriginalHttpMethod !== undefined) {
-    self.followOriginalHttpMethod = options.followOriginalHttpMethod
-  }
-}
-
-Redirect.prototype.redirectTo = function (response) {
-  var self = this
-  var request = self.request
-
-  var redirectTo = null
-  if (response.statusCode >= 300 && response.statusCode < 400 && response.caseless.has('location')) {
-    var location = response.caseless.get('location')
-    request.debug('redirect', location)
-
-    if (self.followAllRedirects) {
-      redirectTo = location
-    } else if (self.followRedirects) {
-      switch (request.method) {
-        case 'PATCH':
-        case 'PUT':
-        case 'POST':
-        case 'DELETE':
-          // Do not follow redirects
-          break
-        default:
-          redirectTo = location
-          break
-      }
-    }
-  } else if (response.statusCode === 401) {
-    var authHeader = request._auth.onResponse(response)
-    if (authHeader) {
-      request.setHeader('authorization', authHeader)
-      redirectTo = request.uri
-    }
-  }
-  return redirectTo
-}
-
-Redirect.prototype.onResponse = function (response) {
-  var self = this
-  var request = self.request
-
-  var redirectTo = self.redirectTo(response)
-  if (!redirectTo || !self.allowRedirect.call(request, response)) {
-    return false
-  }
-
-  request.debug('redirect to', redirectTo)
-
-  // ignore any potential response body.  it cannot possibly be useful
-  // to us at this point.
-  // response.resume should be defined, but check anyway before calling. Workaround for browserify.
-  if (response.resume) {
-    response.resume()
-  }
-
-  if (self.redirectsFollowed >= self.maxRedirects) {
-    request.emit('error', new Error('Exceeded maxRedirects. Probably stuck in a redirect loop ' + request.uri.href))
-    return false
-  }
-  self.redirectsFollowed += 1
-
-  if (!isUrl.test(redirectTo)) {
-    redirectTo = url.resolve(request.uri.href, redirectTo)
-  }
-
-  var uriPrev = request.uri
-  request.uri = url.parse(redirectTo)
-
-  // handle the case where we change protocol from https to http or vice versa
-  if (request.uri.protocol !== uriPrev.protocol) {
-    delete request.agent
-  }
-
-  self.redirects.push({ statusCode: response.statusCode, redirectUri: redirectTo })
-
-  if (self.followAllRedirects && request.method !== 'HEAD' &&
-    response.statusCode !== 401 && response.statusCode !== 307) {
-    request.method = self.followOriginalHttpMethod ? request.method : 'GET'
-  }
-  // request.method = 'GET' // Force all redirects to use GET || commented out fixes #215
-  delete request.src
-  delete request.req
-  delete request._started
-  if (response.statusCode !== 401 && response.statusCode !== 307) {
-    // Remove parameters from the previous response, unless this is the second request
-    // for a server that requires digest authentication.
-    delete request.body
-    delete request._form
-    if (request.headers) {
-      request.removeHeader('host')
-      request.removeHeader('content-type')
-      request.removeHeader('content-length')
-      if (request.uri.hostname !== request.originalHost.split(':')[0]) {
-        // Remove authorization if changing hostnames (but not if just
-        // changing ports or protocols).  This matches the behavior of curl:
-        // https://github.com/bagder/curl/blob/6beb0eee/lib/http.c#L710
-        request.removeHeader('authorization')
-      }
-    }
-  }
-
-  if (!self.removeRefererHeader) {
-    request.setHeader('referer', uriPrev.href)
-  }
-
-  request.emit('redirect')
-
-  request.init()
-
-  return true
-}
-
-exports.Redirect = Redirect
-
-},{"url":472}],214:[function(require,module,exports){
-'use strict'
-
-var url = require('url')
-var tunnel = require('tunnel-agent')
-
-var defaultProxyHeaderWhiteList = [
-  'accept',
-  'accept-charset',
-  'accept-encoding',
-  'accept-language',
-  'accept-ranges',
-  'cache-control',
-  'content-encoding',
-  'content-language',
-  'content-location',
-  'content-md5',
-  'content-range',
-  'content-type',
-  'connection',
-  'date',
-  'expect',
-  'max-forwards',
-  'pragma',
-  'referer',
-  'te',
-  'user-agent',
-  'via'
-]
-
-var defaultProxyHeaderExclusiveList = [
-  'proxy-authorization'
-]
-
-function constructProxyHost (uriObject) {
-  var port = uriObject.port
-  var protocol = uriObject.protocol
-  var proxyHost = uriObject.hostname + ':'
-
-  if (port) {
-    proxyHost += port
-  } else if (protocol === 'https:') {
-    proxyHost += '443'
-  } else {
-    proxyHost += '80'
-  }
-
-  return proxyHost
-}
-
-function constructProxyHeaderWhiteList (headers, proxyHeaderWhiteList) {
-  var whiteList = proxyHeaderWhiteList
-    .reduce(function (set, header) {
-      set[header.toLowerCase()] = true
-      return set
-    }, {})
-
-  return Object.keys(headers)
-    .filter(function (header) {
-      return whiteList[header.toLowerCase()]
-    })
-    .reduce(function (set, header) {
-      set[header] = headers[header]
-      return set
-    }, {})
-}
-
-function constructTunnelOptions (request, proxyHeaders) {
-  var proxy = request.proxy
-
-  var tunnelOptions = {
-    proxy: {
-      host: proxy.hostname,
-      port: +proxy.port,
-      proxyAuth: proxy.auth,
-      headers: proxyHeaders
-    },
-    headers: request.headers,
-    ca: request.ca,
-    cert: request.cert,
-    key: request.key,
-    passphrase: request.passphrase,
-    pfx: request.pfx,
-    ciphers: request.ciphers,
-    rejectUnauthorized: request.rejectUnauthorized,
-    secureOptions: request.secureOptions,
-    secureProtocol: request.secureProtocol
-  }
-
-  return tunnelOptions
-}
-
-function constructTunnelFnName (uri, proxy) {
-  var uriProtocol = (uri.protocol === 'https:' ? 'https' : 'http')
-  var proxyProtocol = (proxy.protocol === 'https:' ? 'Https' : 'Http')
-  return [uriProtocol, proxyProtocol].join('Over')
-}
-
-function getTunnelFn (request) {
-  var uri = request.uri
-  var proxy = request.proxy
-  var tunnelFnName = constructTunnelFnName(uri, proxy)
-  return tunnel[tunnelFnName]
-}
-
-function Tunnel (request) {
-  this.request = request
-  this.proxyHeaderWhiteList = defaultProxyHeaderWhiteList
-  this.proxyHeaderExclusiveList = []
-  if (typeof request.tunnel !== 'undefined') {
-    this.tunnelOverride = request.tunnel
-  }
-}
-
-Tunnel.prototype.isEnabled = function () {
-  var self = this
-  var request = self.request
-    // Tunnel HTTPS by default. Allow the user to override this setting.
-
-  // If self.tunnelOverride is set (the user specified a value), use it.
-  if (typeof self.tunnelOverride !== 'undefined') {
-    return self.tunnelOverride
-  }
-
-  // If the destination is HTTPS, tunnel.
-  if (request.uri.protocol === 'https:') {
-    return true
-  }
-
-  // Otherwise, do not use tunnel.
-  return false
-}
-
-Tunnel.prototype.setup = function (options) {
-  var self = this
-  var request = self.request
-
-  options = options || {}
-
-  if (typeof request.proxy === 'string') {
-    request.proxy = url.parse(request.proxy)
-  }
-
-  if (!request.proxy || !request.tunnel) {
-    return false
-  }
-
-  // Setup Proxy Header Exclusive List and White List
-  if (options.proxyHeaderWhiteList) {
-    self.proxyHeaderWhiteList = options.proxyHeaderWhiteList
-  }
-  if (options.proxyHeaderExclusiveList) {
-    self.proxyHeaderExclusiveList = options.proxyHeaderExclusiveList
-  }
-
-  var proxyHeaderExclusiveList = self.proxyHeaderExclusiveList.concat(defaultProxyHeaderExclusiveList)
-  var proxyHeaderWhiteList = self.proxyHeaderWhiteList.concat(proxyHeaderExclusiveList)
-
-  // Setup Proxy Headers and Proxy Headers Host
-  // Only send the Proxy White Listed Header names
-  var proxyHeaders = constructProxyHeaderWhiteList(request.headers, proxyHeaderWhiteList)
-  proxyHeaders.host = constructProxyHost(request.uri)
-
-  proxyHeaderExclusiveList.forEach(request.removeHeader, request)
-
-  // Set Agent from Tunnel Data
-  var tunnelFn = getTunnelFn(request)
-  var tunnelOptions = constructTunnelOptions(request, proxyHeaders)
-  request.agent = tunnelFn(tunnelOptions)
-
-  return true
-}
-
-Tunnel.defaultProxyHeaderWhiteList = defaultProxyHeaderWhiteList
-Tunnel.defaultProxyHeaderExclusiveList = defaultProxyHeaderExclusiveList
-exports.Tunnel = Tunnel
-
-},{"tunnel-agent":286,"url":472}],215:[function(require,module,exports){
+},{}],184:[function(require,module,exports){
 module.exports={
   "application/1d-interleaved-parityfec": {
     "source": "iana"
@@ -42286,7 +37324,7 @@ module.exports={
   }
 }
 
-},{}],216:[function(require,module,exports){
+},{}],185:[function(require,module,exports){
 /*!
  * mime-db
  * Copyright(c) 2014 Jonathan Ong
@@ -42299,7 +37337,7 @@ module.exports={
 
 module.exports = require('./db.json')
 
-},{"./db.json":215}],217:[function(require,module,exports){
+},{"./db.json":184}],186:[function(require,module,exports){
 /*!
  * mime-types
  * Copyright(c) 2014 Jonathan Ong
@@ -42489,7 +37527,3208 @@ function populateMaps (extensions, types) {
   })
 }
 
-},{"mime-db":216,"path":422}],218:[function(require,module,exports){
+},{"mime-db":185,"path":422}],187:[function(require,module,exports){
+// Replace local require by a lazy loader
+var globalRequire = require;
+require = function () {};
+
+// Expose submodules
+var exports = module.exports = {
+  Lexer:        require('./lib/N3Lexer'),
+  Parser:       require('./lib/N3Parser'),
+  Writer:       require('./lib/N3Writer'),
+  Store:        require('./lib/N3Store'),
+  StreamParser: require('./lib/N3StreamParser'),
+  StreamWriter: require('./lib/N3StreamWriter'),
+  Util:         require('./lib/N3Util'),
+};
+
+// Load submodules on first access
+Object.keys(exports).forEach(function (submodule) {
+  Object.defineProperty(exports, submodule, {
+    configurable: true,
+    enumerable: true,
+    get: function () {
+      delete exports[submodule];
+      return exports[submodule] = globalRequire('./lib/N3' + submodule);
+    },
+  });
+});
+
+},{"./lib/N3Lexer":188,"./lib/N3Parser":189,"./lib/N3Store":190,"./lib/N3StreamParser":191,"./lib/N3StreamWriter":192,"./lib/N3Util":193,"./lib/N3Writer":194}],188:[function(require,module,exports){
+// **N3Lexer** tokenizes N3 documents.
+var fromCharCode = String.fromCharCode;
+var immediately = typeof setImmediate === 'function' ? setImmediate :
+                  function setImmediate(func) { setTimeout(func, 0); };
+
+// Regular expression and replacement string to escape N3 strings.
+// Note how we catch invalid unicode sequences separately (they will trigger an error).
+var escapeSequence = /\\u([a-fA-F0-9]{4})|\\U([a-fA-F0-9]{8})|\\[uU]|\\(.)/g;
+var escapeReplacements = {
+  '\\': '\\', "'": "'", '"': '"',
+  'n': '\n', 'r': '\r', 't': '\t', 'f': '\f', 'b': '\b',
+  '_': '_', '~': '~', '.': '.', '-': '-', '!': '!', '$': '$', '&': '&',
+  '(': '(', ')': ')', '*': '*', '+': '+', ',': ',', ';': ';', '=': '=',
+  '/': '/', '?': '?', '#': '#', '@': '@', '%': '%',
+};
+var illegalIriChars = /[\x00-\x20<>\\"\{\}\|\^\`]/;
+
+// ## Constructor
+function N3Lexer(options) {
+  if (!(this instanceof N3Lexer))
+    return new N3Lexer(options);
+  options = options || {};
+
+  // In line mode (N-Triples or N-Quads), only simple features may be parsed
+  if (options.lineMode) {
+    // Don't tokenize special literals
+    this._tripleQuotedString = this._number = this._boolean = /$0^/;
+    // Swap the tokenize method for a restricted version
+    var self = this;
+    this._tokenize = this.tokenize;
+    this.tokenize = function (input, callback) {
+      this._tokenize(input, function (error, token) {
+        if (!error && /^(?:IRI|blank|literal|langcode|typeIRI|\.|eof)$/.test(token.type))
+          callback && callback(error, token);
+        else
+          callback && callback(error || self._syntaxError(token.type, callback = null));
+      });
+    };
+  }
+  // Enable N3 functionality by default
+  this._n3Mode = options.n3 !== false;
+  // Disable comment tokens by default
+  this._comments = !!options.comments;
+}
+
+N3Lexer.prototype = {
+  // ## Regular expressions
+  // It's slightly faster to have these as properties than as in-scope variables
+
+  _iri: /^<((?:[^ <>{}\\]|\\[uU])+)>[ \t]*/, // IRI with escape sequences; needs sanity check after unescaping
+  _unescapedIri: /^<([^\x00-\x20<>\\"\{\}\|\^\`]*)>[ \t]*/, // IRI without escape sequences; no unescaping
+  _unescapedString: /^"[^"\\\r\n]+"/, // non-empty string without escape sequences
+  _singleQuotedString: /^"(?:[^"\\\r\n]|\\.)*"(?=[^"])|^'(?:[^'\\\r\n]|\\.)*'(?=[^'])/,
+  _tripleQuotedString: /^""("[^"\\]*(?:(?:\\.|"(?!""))[^"\\]*)*")""|^''('[^'\\]*(?:(?:\\.|'(?!''))[^'\\]*)*')''/,
+  _langcode: /^@([a-z]+(?:-[a-z0-9]+)*)(?=[^a-z0-9\-])/i,
+  _prefix: /^((?:[A-Za-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])(?:\.?[\-0-9A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])*)?:(?=[#\s<])/,
+  _prefixed: /^((?:[A-Za-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])(?:\.?[\-0-9A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])*)?:((?:(?:[0-:A-Z_a-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff]|%[0-9a-fA-F]{2}|\\[!#-\/;=?\-@_~])(?:(?:[\.\-0-:A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff]|%[0-9a-fA-F]{2}|\\[!#-\/;=?\-@_~])*(?:[\-0-:A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff]|%[0-9a-fA-F]{2}|\\[!#-\/;=?\-@_~]))?)?)(?:[ \t]+|(?=\.?[,;!\^\s#()\[\]\{\}"'<]))/,
+  _variable: /^\?(?:(?:[A-Z_a-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])(?:[\-0-:A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])*)(?=[.,;!\^\s#()\[\]\{\}"'<])/,
+  _blank: /^_:((?:[0-9A-Z_a-z\xc0-\xd6\xd8-\xf6\xf8-\u02ff\u0370-\u037d\u037f-\u1fff\u200c\u200d\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])(?:\.?[\-0-9A-Z_a-z\xb7\xc0-\xd6\xd8-\xf6\xf8-\u037d\u037f-\u1fff\u200c\u200d\u203f\u2040\u2070-\u218f\u2c00-\u2fef\u3001-\ud7ff\uf900-\ufdcf\ufdf0-\ufffd]|[\ud800-\udb7f][\udc00-\udfff])*)(?:[ \t]+|(?=\.?[,;:\s#()\[\]\{\}"'<]))/,
+  _number: /^[\-+]?(?:\d+\.?\d*([eE](?:[\-\+])?\d+)|\d*\.?\d+)(?=\.?[,;:\s#()\[\]\{\}"'<])/,
+  _boolean: /^(?:true|false)(?=[.,;\s#()\[\]\{\}"'<])/,
+  _keyword: /^@[a-z]+(?=[\s#<:])/i,
+  _sparqlKeyword: /^(?:PREFIX|BASE|GRAPH)(?=[\s#<])/i,
+  _shortPredicates: /^a(?=\s+|<)/,
+  _newline: /^[ \t]*(?:#[^\n\r]*)?(?:\r\n|\n|\r)[ \t]*/,
+  _comment: /#([^\n\r]*)/,
+  _whitespace: /^[ \t]+/,
+  _endOfFile: /^(?:#[^\n\r]*)?$/,
+
+  // ## Private methods
+
+  // ### `_tokenizeToEnd` tokenizes as for as possible, emitting tokens through the callback
+  _tokenizeToEnd: function (callback, inputFinished) {
+    // Continue parsing as far as possible; the loop will return eventually
+    var input = this._input, outputComments = this._comments;
+    while (true) {
+      // Count and skip whitespace lines
+      var whiteSpaceMatch, comment;
+      while (whiteSpaceMatch = this._newline.exec(input)) {
+        // Try to find a comment
+        if (outputComments && (comment = this._comment.exec(whiteSpaceMatch[0])))
+          callback(null, { line: this._line, type: 'comment', value: comment[1], prefix: '' });
+        // Advance the input
+        input = input.substr(whiteSpaceMatch[0].length, input.length);
+        this._line++;
+      }
+      // Skip whitespace on current line
+      if (whiteSpaceMatch = this._whitespace.exec(input))
+        input = input.substr(whiteSpaceMatch[0].length, input.length);
+
+      // Stop for now if we're at the end
+      if (this._endOfFile.test(input)) {
+        // If the input is finished, emit EOF
+        if (inputFinished) {
+          // Try to find a final comment
+          if (outputComments && (comment = this._comment.exec(input)))
+            callback(null, { line: this._line, type: 'comment', value: comment[1], prefix: '' });
+          callback(input = null, { line: this._line, type: 'eof', value: '', prefix: '' });
+        }
+        return this._input = input;
+      }
+
+      // Look for specific token types based on the first character
+      var line = this._line, type = '', value = '', prefix = '',
+          firstChar = input[0], match = null, matchLength = 0, unescaped, inconclusive = false;
+      switch (firstChar) {
+      case '^':
+        // We need at least 3 tokens lookahead to distinguish ^^<IRI> and ^^pre:fixed
+        if (input.length < 3)
+          break;
+        // Try to match a type
+        else if (input[1] === '^') {
+          this._previousMarker = '^^';
+          // Move to type IRI or prefixed name
+          input = input.substr(2);
+          if (input[0] !== '<') {
+            inconclusive = true;
+            break;
+          }
+        }
+        // If no type, it must be a path expression
+        else {
+          if (this._n3Mode) {
+            matchLength = 1;
+            type = '^';
+          }
+          break;
+        }
+        // Fall through in case the type is an IRI
+      case '<':
+        // Try to find a full IRI without escape sequences
+        if (match = this._unescapedIri.exec(input))
+          type = 'IRI', value = match[1];
+        // Try to find a full IRI with escape sequences
+        else if (match = this._iri.exec(input)) {
+          unescaped = this._unescape(match[1]);
+          if (unescaped === null || illegalIriChars.test(unescaped))
+            return reportSyntaxError(this);
+          type = 'IRI', value = unescaped;
+        }
+        // Try to find a backwards implication arrow
+        else if (this._n3Mode && input.length > 1 && input[1] === '=')
+          type = 'inverse', matchLength = 2, value = 'http://www.w3.org/2000/10/swap/log#implies';
+        break;
+
+      case '_':
+        // Try to find a blank node. Since it can contain (but not end with) a dot,
+        // we always need a non-dot character before deciding it is a blank node.
+        // Therefore, try inserting a space if we're at the end of the input.
+        if ((match = this._blank.exec(input)) ||
+            inputFinished && (match = this._blank.exec(input + ' ')))
+          type = 'blank', prefix = '_', value = match[1];
+        break;
+
+      case '"':
+      case "'":
+        // Try to find a non-empty double-quoted literal without escape sequences
+        if (match = this._unescapedString.exec(input))
+          type = 'literal', value = match[0];
+        // Try to find any other literal wrapped in a pair of single or double quotes
+        else if (match = this._singleQuotedString.exec(input)) {
+          unescaped = this._unescape(match[0]);
+          if (unescaped === null)
+            return reportSyntaxError(this);
+          type = 'literal', value = unescaped.replace(/^'|'$/g, '"');
+        }
+        // Try to find a literal wrapped in three pairs of single or double quotes
+        else if (match = this._tripleQuotedString.exec(input)) {
+          unescaped = match[1] || match[2];
+          // Count the newlines and advance line counter
+          this._line += unescaped.split(/\r\n|\r|\n/).length - 1;
+          unescaped = this._unescape(unescaped);
+          if (unescaped === null)
+            return reportSyntaxError(this);
+          type = 'literal', value = unescaped.replace(/^'|'$/g, '"');
+        }
+        break;
+
+      case '?':
+        // Try to find a variable
+        if (this._n3Mode && (match = this._variable.exec(input)))
+          type = 'var', value = match[0];
+        break;
+
+      case '@':
+        // Try to find a language code
+        if (this._previousMarker === 'literal' && (match = this._langcode.exec(input)))
+          type = 'langcode', value = match[1];
+        // Try to find a keyword
+        else if (match = this._keyword.exec(input))
+          type = match[0];
+        break;
+
+      case '.':
+        // Try to find a dot as punctuation
+        if (input.length === 1 ? inputFinished : (input[1] < '0' || input[1] > '9')) {
+          type = '.';
+          matchLength = 1;
+          break;
+        }
+        // Fall through to numerical case (could be a decimal dot)
+
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+      case '+':
+      case '-':
+        // Try to find a number. Since it can contain (but not end with) a dot,
+        // we always need a non-dot character before deciding it is a number.
+        // Therefore, try inserting a space if we're at the end of the input.
+        if (match = this._number.exec(input) ||
+            inputFinished && (match = this._number.exec(input + ' '))) {
+          type = 'literal';
+          value = '"' + match[0] + '"^^http://www.w3.org/2001/XMLSchema#' +
+                  (match[1] ? 'double' : (/^[+\-]?\d+$/.test(match[0]) ? 'integer' : 'decimal'));
+        }
+        break;
+
+      case 'B':
+      case 'b':
+      case 'p':
+      case 'P':
+      case 'G':
+      case 'g':
+        // Try to find a SPARQL-style keyword
+        if (match = this._sparqlKeyword.exec(input))
+          type = match[0].toUpperCase();
+        else
+          inconclusive = true;
+        break;
+
+      case 'f':
+      case 't':
+        // Try to match a boolean
+        if (match = this._boolean.exec(input))
+          type = 'literal', value = '"' + match[0] + '"^^http://www.w3.org/2001/XMLSchema#boolean';
+        else
+          inconclusive = true;
+        break;
+
+      case 'a':
+        // Try to find an abbreviated predicate
+        if (match = this._shortPredicates.exec(input))
+          type = 'abbreviation', value = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+        else
+          inconclusive = true;
+        break;
+
+      case '=':
+        // Try to find an implication arrow or equals sign
+        if (this._n3Mode && input.length > 1) {
+          type = 'abbreviation';
+          if (input[1] !== '>')
+            matchLength = 1, value = 'http://www.w3.org/2002/07/owl#sameAs';
+          else
+            matchLength = 2, value = 'http://www.w3.org/2000/10/swap/log#implies';
+        }
+        break;
+
+      case '!':
+        if (!this._n3Mode)
+          break;
+      case ',':
+      case ';':
+      case '[':
+      case ']':
+      case '(':
+      case ')':
+      case '{':
+      case '}':
+        // The next token is punctuation
+        matchLength = 1;
+        type = firstChar;
+        break;
+
+      default:
+        inconclusive = true;
+      }
+
+      // Some first characters do not allow an immediate decision, so inspect more
+      if (inconclusive) {
+        // Try to find a prefix
+        if ((this._previousMarker === '@prefix' || this._previousMarker === 'PREFIX') &&
+            (match = this._prefix.exec(input)))
+          type = 'prefix', value = match[1] || '';
+        // Try to find a prefixed name. Since it can contain (but not end with) a dot,
+        // we always need a non-dot character before deciding it is a prefixed name.
+        // Therefore, try inserting a space if we're at the end of the input.
+        else if ((match = this._prefixed.exec(input)) ||
+                 inputFinished && (match = this._prefixed.exec(input + ' ')))
+          type = 'prefixed', prefix = match[1] || '', value = this._unescape(match[2]);
+      }
+
+      // A type token is special: it can only be emitted after an IRI or prefixed name is read
+      if (this._previousMarker === '^^') {
+        switch (type) {
+        case 'prefixed': type = 'type';    break;
+        case 'IRI':      type = 'typeIRI'; break;
+        default:         type = '';
+        }
+      }
+
+      // What if nothing of the above was found?
+      if (!type) {
+        // We could be in streaming mode, and then we just wait for more input to arrive.
+        // Otherwise, a syntax error has occurred in the input.
+        // One exception: error on an unaccounted linebreak (= not inside a triple-quoted literal).
+        if (inputFinished || (!/^'''|^"""/.test(input) && /\n|\r/.test(input)))
+          return reportSyntaxError(this);
+        else
+          return this._input = input;
+      }
+
+      // Emit the parsed token
+      var token = { line: line, type: type, value: value, prefix: prefix };
+      callback(null, token);
+      this.previousToken = token;
+      this._previousMarker = type;
+      // Advance to next part to tokenize
+      input = input.substr(matchLength || match[0].length, input.length);
+    }
+
+    // Signals the syntax error through the callback
+    function reportSyntaxError(self) { callback(self._syntaxError(/^\S*/.exec(input)[0])); }
+  },
+
+  // ### `_unescape` replaces N3 escape codes by their corresponding characters
+  _unescape: function (item) {
+    try {
+      return item.replace(escapeSequence, function (sequence, unicode4, unicode8, escapedChar) {
+        var charCode;
+        if (unicode4) {
+          charCode = parseInt(unicode4, 16);
+          if (isNaN(charCode)) throw new Error(); // can never happen (regex), but helps performance
+          return fromCharCode(charCode);
+        }
+        else if (unicode8) {
+          charCode = parseInt(unicode8, 16);
+          if (isNaN(charCode)) throw new Error(); // can never happen (regex), but helps performance
+          if (charCode <= 0xFFFF) return fromCharCode(charCode);
+          return fromCharCode(0xD800 + ((charCode -= 0x10000) / 0x400), 0xDC00 + (charCode & 0x3FF));
+        }
+        else {
+          var replacement = escapeReplacements[escapedChar];
+          if (!replacement)
+            throw new Error();
+          return replacement;
+        }
+      });
+    }
+    catch (error) { return null; }
+  },
+
+  // ### `_syntaxError` creates a syntax error for the given issue
+  _syntaxError: function (issue) {
+    this._input = null;
+    var err = new Error('Unexpected "' + issue + '" on line ' + this._line + '.');
+    err.context = {
+      token: undefined,
+      line: this._line,
+      previousToken: this.previousToken,
+    };
+    return err;
+  },
+
+
+  // ## Public methods
+
+  // ### `tokenize` starts the transformation of an N3 document into an array of tokens.
+  // The input can be a string or a stream.
+  tokenize: function (input, callback) {
+    var self = this;
+    this._line = 1;
+
+    // If the input is a string, continuously emit tokens through the callback until the end
+    if (typeof input === 'string') {
+      this._input = input;
+      // If a callback was passed, asynchronously call it
+      if (typeof callback === 'function')
+        immediately(function () { self._tokenizeToEnd(callback, true); });
+      // If no callback was passed, tokenize synchronously and return
+      else {
+        var tokens = [], error;
+        this._tokenizeToEnd(function (e, t) { e ? (error = e) : tokens.push(t); }, true);
+        if (error) throw error;
+        return tokens;
+      }
+    }
+    // Otherwise, the input must be a stream
+    else {
+      this._input = '';
+      if (typeof input.setEncoding === 'function')
+        input.setEncoding('utf8');
+      // Adds the data chunk to the buffer and parses as far as possible
+      input.on('data', function (data) {
+        if (self._input !== null) {
+          self._input += data;
+          self._tokenizeToEnd(callback, false);
+        }
+      });
+      // Parses until the end
+      input.on('end', function () {
+        if (self._input !== null)
+          self._tokenizeToEnd(callback, true);
+      });
+      input.on('error', callback);
+    }
+  },
+};
+
+// ## Exports
+module.exports = N3Lexer;
+
+},{}],189:[function(require,module,exports){
+// **N3Parser** parses N3 documents.
+var N3Lexer = require('./N3Lexer');
+
+var RDF_PREFIX = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    RDF_NIL    = RDF_PREFIX + 'nil',
+    RDF_FIRST  = RDF_PREFIX + 'first',
+    RDF_REST   = RDF_PREFIX + 'rest';
+
+var QUANTIFIERS_GRAPH = 'urn:n3:quantifiers';
+
+var absoluteIRI = /^[a-z][a-z0-9+.-]*:/i,
+    schemeAuthority = /^(?:([a-z][a-z0-9+.-]*:))?(?:\/\/[^\/]*)?/i,
+    dotSegments = /(?:^|\/)\.\.?(?:$|[\/#?])/;
+
+// The next ID for new blank nodes
+var blankNodePrefix = 0, blankNodeCount = 0;
+
+// ## Constructor
+function N3Parser(options) {
+  if (!(this instanceof N3Parser))
+    return new N3Parser(options);
+  this._contextStack = [];
+  this._graph = null;
+
+  // Set the document IRI
+  options = options || {};
+  this._setBase(options.documentIRI);
+
+  // Set supported features depending on the format
+  var format = (typeof options.format === 'string') ?
+               options.format.match(/\w*$/)[0].toLowerCase() : '',
+      isTurtle = format === 'turtle', isTriG = format === 'trig',
+      isNTriples = /triple/.test(format), isNQuads = /quad/.test(format),
+      isN3 = this._n3Mode = /n3/.test(format),
+      isLineMode = isNTriples || isNQuads;
+  console.log("format",format);
+  if (!(this._supportsNamedGraphs = !(isTurtle || isN3)))
+    this._readPredicateOrNamedGraph = this._readPredicate;
+  this._supportsQuads = !(isTurtle || isTriG || isNTriples || isN3);
+  // Disable relative IRIs in N-Triples or N-Quads mode
+  if (isLineMode) {
+    this._base = '';
+    this._resolveIRI = function (token) {
+      this._error('Disallowed relative IRI', token);
+      return this._callback = noop, this._subject = null;
+    };
+  }
+  this._blankNodePrefix = typeof options.blankNodePrefix !== 'string' ? '' :
+                            '_:' + options.blankNodePrefix.replace(/^_:/, '');
+  this._lexer = options.lexer || new N3Lexer({ lineMode: isLineMode, n3: isN3 });
+  // Disable explicit quantifiers by default
+  this._explicitQuantifiers = !!options.explicitQuantifiers;
+}
+
+// ## Private class methods
+
+// ### `_resetBlankNodeIds` restarts blank node identification
+N3Parser._resetBlankNodeIds = function () {
+  blankNodePrefix = blankNodeCount = 0;
+};
+
+N3Parser.prototype = {
+  // ## Private methods
+
+  // ### `_setBase` sets the base IRI to resolve relative IRIs
+  _setBase: function (baseIRI) {
+    if (!baseIRI)
+      this._base = null;
+    else {
+      // Remove fragment if present
+      var fragmentPos = baseIRI.indexOf('#');
+      if (fragmentPos >= 0)
+        baseIRI = baseIRI.substr(0, fragmentPos);
+      // Set base IRI and its components
+      this._base = baseIRI;
+      this._basePath   = baseIRI.indexOf('/') < 0 ? baseIRI :
+                         baseIRI.replace(/[^\/?]*(?:\?.*)?$/, '');
+      baseIRI = baseIRI.match(schemeAuthority);
+      this._baseRoot   = baseIRI[0];
+      this._baseScheme = baseIRI[1];
+    }
+  },
+
+  // ### `_saveContext` stores the current parsing context
+  // when entering a new scope (list, blank node, formula)
+  _saveContext: function (type, graph, subject, predicate, object) {
+    var n3Mode = this._n3Mode;
+    this._contextStack.push({
+      subject: subject, predicate: predicate, object: object,
+      graph: graph, type: type,
+      inverse: n3Mode ? this._inversePredicate : false,
+      blankPrefix: n3Mode ? this._prefixes._ : '',
+      quantified: n3Mode ? this._quantified : null,
+    });
+    // The settings below only apply to N3 streams
+    if (n3Mode) {
+      // Every new scope resets the predicate direction
+      this._inversePredicate = false;
+      // In N3, blank nodes are scoped to a formula
+      // (using a dot as separator, as a blank node label cannot start with it)
+      this._prefixes._ = this._graph + '.';
+      // Quantifiers are scoped to a formula
+      this._quantified = Object.create(this._quantified);
+    }
+  },
+
+  // ### `_restoreContext` restores the parent context
+  // when leaving a scope (list, blank node, formula)
+  _restoreContext: function () {
+    var context = this._contextStack.pop(), n3Mode = this._n3Mode;
+    this._subject   = context.subject;
+    this._predicate = context.predicate;
+    this._object    = context.object;
+    this._graph     = context.graph;
+    // The settings below only apply to N3 streams
+    if (n3Mode) {
+      this._inversePredicate = context.inverse;
+      this._prefixes._ = context.blankPrefix;
+      this._quantified = context.quantified;
+    }
+  },
+
+  // ### `_readInTopContext` reads a token when in the top context
+  _readInTopContext: function (token) {
+    switch (token.type) {
+    // If an EOF token arrives in the top context, signal that we're done
+    case 'eof':
+      if (this._graph !== null)
+        return this._error('Unclosed graph', token);
+      delete this._prefixes._;
+      return this._callback(null, null, this._prefixes);
+    // It could be a prefix declaration
+    case 'PREFIX':
+      this._sparqlStyle = true;
+    case '@prefix':
+      return this._readPrefix;
+    // It could be a base declaration
+    case 'BASE':
+      this._sparqlStyle = true;
+    case '@base':
+      return this._readBaseIRI;
+    // It could be a graph
+    case '{':
+      if (this._supportsNamedGraphs) {
+        this._graph = '';
+        this._subject = null;
+        return this._readSubject;
+      }
+    case 'GRAPH':
+      if (this._supportsNamedGraphs)
+        return this._readNamedGraphLabel;
+    // Otherwise, the next token must be a subject
+    default:
+      console.log('default case N3Parser');
+      return this._readSubject(token);
+    }
+  },
+
+  // ### `_readEntity` reads an IRI, prefixed name, blank node, or variable
+  _readEntity: function (token, quantifier) {
+    var value;
+    switch (token.type) {
+    // Read a relative or absolute IRI
+    case 'IRI':
+    case 'typeIRI':
+      value = (this._base === null || absoluteIRI.test(token.value)) ?
+              token.value : this._resolveIRI(token);
+      break;
+    // Read a blank node or prefixed name
+    case 'type':
+    case 'blank':
+    case 'prefixed':
+      var prefix = this._prefixes[token.prefix];
+      if (prefix === undefined)
+        return this._error('Undefined prefix "' + token.prefix + ':"', token);
+      value = prefix + token.value;
+      break;
+    // Read a variable
+    case 'var':
+      return token.value;
+    // Everything else is not an entity
+    default:
+      return this._error('Expected entity but got ' + token.type, token);
+    }
+    // In N3 mode, replace the entity if it is quantified
+    if (!quantifier && this._n3Mode && (value in this._quantified))
+      value = this._quantified[value];
+    return value;
+  },
+
+  // ### `_readSubject` reads a triple's subject
+  _readSubject: function (token) {
+    this._predicate = null;
+    switch (token.type) {
+    case '[':
+      // Start a new triple with a new blank node as subject
+      this._saveContext('blank', this._graph,
+                        this._subject = '_:b' + blankNodeCount++, null, null);
+      return this._readBlankNodeHead;
+    case '(':
+      // Start a new list
+      this._saveContext('list', this._graph, RDF_NIL, null, null);
+      this._subject = null;
+      return this._readListItem;
+    case '{':
+      // Start a new formula
+      if (!this._n3Mode)
+        return this._error('Unexpected graph', token);
+      this._saveContext('formula', this._graph,
+                        this._graph = '_:b' + blankNodeCount++, null, null);
+      return this._readSubject;
+    case '}':
+       // No subject; the graph in which we are reading is closed instead
+      return this._readPunctuation(token);
+    case '@forSome':
+      if (!this._n3Mode)
+        return this._error('Unexpected "@forSome"', token);
+      this._subject = null;
+      this._predicate = 'http://www.w3.org/2000/10/swap/reify#forSome';
+      this._quantifiedPrefix = '_:b';
+      return this._readQuantifierList;
+    case '@forAll':
+      if (!this._n3Mode)
+        return this._error('Unexpected "@forAll"', token);
+      this._subject = null;
+      this._predicate = 'http://www.w3.org/2000/10/swap/reify#forAll';
+      this._quantifiedPrefix = '?b-';
+      return this._readQuantifierList;
+    default:
+      // Read the subject entity
+      if ((this._subject = this._readEntity(token)) === undefined)
+        return;
+      // In N3 mode, the subject might be a path
+      if (this._n3Mode)
+        return this._getPathReader(this._readPredicateOrNamedGraph);
+    }
+
+    // The next token must be a predicate,
+    // or, if the subject was actually a graph IRI, a named graph
+    return this._readPredicateOrNamedGraph;
+  },
+
+  // ### `_readPredicate` reads a triple's predicate
+  _readPredicate: function (token) {
+    var type = token.type;
+    switch (type) {
+    case 'inverse':
+      this._inversePredicate = true;
+    case 'abbreviation':
+      this._predicate = token.value;
+      break;
+    case '.':
+    case ']':
+    case '}':
+      // Expected predicate didn't come, must have been trailing semicolon
+      if (this._predicate === null)
+        return this._error('Unexpected ' + type, token);
+      this._subject = null;
+      return type === ']' ? this._readBlankNodeTail(token) : this._readPunctuation(token);
+    case ';':
+      // Additional semicolons can be safely ignored
+      return this._predicate !== null ? this._readPredicate :
+             this._error('Expected predicate but got ;', token);
+    case 'blank':
+      if (!this._n3Mode)
+        return this._error('Disallowed blank node as predicate', token);
+    default:
+      if ((this._predicate = this._readEntity(token)) === undefined)
+        return;
+    }
+    // The next token must be an object
+    return this._readObject;
+  },
+
+  // ### `_readObject` reads a triple's object
+  _readObject: function (token) {
+    switch (token.type) {
+    case 'literal':
+      this._object = token.value;
+      return this._readDataTypeOrLang;
+    case '[':
+      // Start a new triple with a new blank node as subject
+      this._saveContext('blank', this._graph, this._subject, this._predicate,
+                        this._subject = '_:b' + blankNodeCount++);
+      return this._readBlankNodeHead;
+    case '(':
+      // Start a new list
+      this._saveContext('list', this._graph, this._subject, this._predicate, RDF_NIL);
+      this._subject = null;
+      return this._readListItem;
+    case '{':
+      // Start a new formula
+      if (!this._n3Mode)
+        return this._error('Unexpected graph', token);
+      this._saveContext('formula', this._graph, this._subject, this._predicate,
+                        this._graph = '_:b' + blankNodeCount++);
+      return this._readSubject;
+    default:
+      // Read the object entity
+      if ((this._object = this._readEntity(token)) === undefined)
+        return;
+      // In N3 mode, the object might be a path
+      if (this._n3Mode)
+        return this._getPathReader(this._getContextEndReader());
+    }
+    return this._getContextEndReader();
+  },
+
+  // ### `_readPredicateOrNamedGraph` reads a triple's predicate, or a named graph
+  _readPredicateOrNamedGraph: function (token) {
+    return token.type === '{' ? this._readGraph(token) : this._readPredicate(token);
+  },
+
+  // ### `_readGraph` reads a graph
+  _readGraph: function (token) {
+    if (token.type !== '{')
+      return this._error('Expected graph but got ' + token.type, token);
+    // The "subject" we read is actually the GRAPH's label
+    this._graph = this._subject, this._subject = null;
+    return this._readSubject;
+  },
+
+  // ### `_readBlankNodeHead` reads the head of a blank node
+  _readBlankNodeHead: function (token) {
+    if (token.type === ']') {
+      this._subject = null;
+      return this._readBlankNodeTail(token);
+    }
+    else {
+      this._predicate = null;
+      return this._readPredicate(token);
+    }
+  },
+
+  // ### `_readBlankNodeTail` reads the end of a blank node
+  _readBlankNodeTail: function (token) {
+    if (token.type !== ']')
+      return this._readBlankNodePunctuation(token);
+
+    // Store blank node triple
+    if (this._subject !== null)
+      this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
+
+    // Restore the parent context containing this blank node
+    var empty = this._predicate === null;
+    this._restoreContext();
+    // If the blank node was the subject, continue reading the predicate
+    if (this._object === null)
+      // If the blank node was empty, it could be a named graph label
+      return empty ? this._readPredicateOrNamedGraph : this._readPredicateAfterBlank;
+    // If the blank node was the object, restore previous context and read punctuation
+    else
+      return this._getContextEndReader();
+  },
+
+  // ### `_readPredicateAfterBlank` reads a predicate after an anonymous blank node
+  _readPredicateAfterBlank: function (token) {
+    // If a dot follows a blank node in top context, there is no predicate
+    if (token.type === '.' && !this._contextStack.length) {
+      this._subject = null; // cancel the current triple
+      return this._readPunctuation(token);
+    }
+    return this._readPredicate(token);
+  },
+
+  // ### `_readListItem` reads items from a list
+  _readListItem: function (token) {
+    var item = null,                      // The item of the list
+        list = null,                      // The list itself
+        prevList = this._subject,         // The previous list that contains this list
+        stack = this._contextStack,       // The stack of parent contexts
+        parent = stack[stack.length - 1], // The parent containing the current list
+        next = this._readListItem,        // The next function to execute
+        itemComplete = true;              // Whether the item has been read fully
+
+    switch (token.type) {
+    case '[':
+      // Stack the current list triple and start a new triple with a blank node as subject
+      this._saveContext('blank', this._graph, list = '_:b' + blankNodeCount++,
+                        RDF_FIRST, this._subject = item = '_:b' + blankNodeCount++);
+      next = this._readBlankNodeHead;
+      break;
+    case '(':
+      // Stack the current list triple and start a new list
+      this._saveContext('list', this._graph, list = '_:b' + blankNodeCount++,
+                        RDF_FIRST, RDF_NIL);
+      this._subject = null;
+      break;
+    case ')':
+      // Closing the list; restore the parent context
+      this._restoreContext();
+      // If this list is contained within a parent list, return the membership triple here.
+      // This will be `<parent list element> rdf:first <this list>.`.
+      if (stack.length !== 0 && stack[stack.length - 1].type === 'list')
+        this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
+      // Was this list the parent's subject?
+      if (this._predicate === null) {
+        // The next token is the predicate
+        next = this._readPredicate;
+        // No list tail if this was an empty list
+        if (this._subject === RDF_NIL)
+          return next;
+      }
+      // The list was in the parent context's object
+      else {
+        next = this._getContextEndReader();
+        // No list tail if this was an empty list
+        if (this._object === RDF_NIL)
+          return next;
+      }
+      // Close the list by making the head nil
+      list = RDF_NIL;
+      break;
+    case 'literal':
+      item = token.value;
+      itemComplete = false; // Can still have a datatype or language
+      next = this._readListItemDataTypeOrLang;
+      break;
+    default:
+      if ((item = this._readEntity(token)) === undefined)
+        return;
+    }
+
+     // Create a new blank node if no item head was assigned yet
+    if (list === null)
+      this._subject = list = '_:b' + blankNodeCount++;
+
+    // Is this the first element of the list?
+    if (prevList === null) {
+      // This list is either the subject or the object of its parent
+      if (parent.predicate === null)
+        parent.subject = list;
+      else
+        parent.object = list;
+    }
+    else {
+      // Continue the previous list with the current list
+      this._triple(prevList, RDF_REST, list, this._graph, token.line);
+    }
+    // Add the item's value
+    if (item !== null) {
+      // In N3 mode, the item might be a path
+      if (this._n3Mode && (token.type === 'IRI' || token.type === 'prefixed')) {
+        // Create a new context to add the item's path
+        this._saveContext('item', this._graph, list, RDF_FIRST, item);
+        this._subject = item, this._predicate = null;
+        // _readPath will restore the context and output the item
+        return this._getPathReader(this._readListItem);
+      }
+      // Output the item if it is complete
+      if (itemComplete)
+        this._triple(list, RDF_FIRST, item, this._graph, token.line);
+      // Otherwise, save it for completion
+      else
+        this._object = item;
+    }
+    return next;
+  },
+
+  // ### `_readDataTypeOrLang` reads an _optional_ data type or language
+  _readDataTypeOrLang: function (token) {
+    return this._completeLiteral(token, false);
+  },
+
+  // ### `_readListItemDataTypeOrLang` reads an _optional_ data type or language in a list
+  _readListItemDataTypeOrLang: function (token) {
+    return this._completeLiteral(token, true);
+  },
+
+  // ### `_completeLiteral` completes the object with a data type or language
+  _completeLiteral: function (token, listItem) {
+    var suffix = false;
+    switch (token.type) {
+    // Add a "^^type" suffix for types (IRIs and blank nodes)
+    case 'type':
+    case 'typeIRI':
+      suffix = true;
+      this._object += '^^' + this._readEntity(token);
+      break;
+    // Add an "@lang" suffix for language tags
+    case 'langcode':
+      suffix = true;
+      this._object += '@' + token.value.toLowerCase();
+      break;
+    }
+    // If this literal was part of a list, write the item
+    // (we could also check the context stack, but passing in a flag is faster)
+    if (listItem)
+      this._triple(this._subject, RDF_FIRST, this._object, this._graph, token.line);
+    // Continue with the rest of the input
+    if (suffix)
+      return this._getContextEndReader();
+    else {
+      this._readCallback = this._getContextEndReader();
+      return this._readCallback(token);
+    }
+  },
+
+  // ### `_readFormulaTail` reads the end of a formula
+  _readFormulaTail: function (token) {
+    if (token.type !== '}')
+      return this._readPunctuation(token);
+
+    // Store the last triple of the formula
+    if (this._subject !== null)
+      this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
+
+    // Restore the parent context containing this formula
+    this._restoreContext();
+    // If the formula was the subject, continue reading the predicate.
+    // If the formula was the object, read punctuation.
+    return this._object === null ? this._readPredicate : this._getContextEndReader();
+  },
+
+  // ### `_readPunctuation` reads punctuation between triples or triple parts
+  _readPunctuation: function (token) {
+    var next, subject = this._subject, graph = this._graph,
+        inversePredicate = this._inversePredicate;
+    switch (token.type) {
+    // A closing brace ends a graph
+    case '}':
+      if (this._graph === null)
+        return this._error('Unexpected graph closing', token);
+      if (this._n3Mode)
+        return this._readFormulaTail(token);
+      this._graph = null;
+    // A dot just ends the statement, without sharing anything with the next
+    case '.':
+      this._subject = null;
+      next = this._contextStack.length ? this._readSubject : this._readInTopContext;
+      if (inversePredicate) this._inversePredicate = false;
+      break;
+    // Semicolon means the subject is shared; predicate and object are different
+    case ';':
+      next = this._readPredicate;
+      break;
+    // Comma means both the subject and predicate are shared; the object is different
+    case ',':
+      next = this._readObject;
+      break;
+    default:
+      // An entity means this is a quad (only allowed if not already inside a graph)
+      if (this._supportsQuads && this._graph === null && (graph = this._readEntity(token)) !== undefined) {
+        next = this._readQuadPunctuation;
+        break;
+      }
+      return this._error('Expected punctuation to follow "' + this._object + '"', token);
+    }
+    // A triple has been completed now, so return it
+    if (subject !== null) {
+      var predicate = this._predicate, object = this._object;
+      if (!inversePredicate)
+        this._triple(subject, predicate, object,  graph, token.line);
+      else
+        this._triple(object,  predicate, subject, graph, token.line);
+    }
+    return next;
+  },
+
+    // ### `_readBlankNodePunctuation` reads punctuation in a blank node
+  _readBlankNodePunctuation: function (token) {
+    var next;
+    switch (token.type) {
+    // Semicolon means the subject is shared; predicate and object are different
+    case ';':
+      next = this._readPredicate;
+      break;
+    // Comma means both the subject and predicate are shared; the object is different
+    case ',':
+      next = this._readObject;
+      break;
+    default:
+      return this._error('Expected punctuation to follow "' + this._object + '"', token);
+    }
+    // A triple has been completed now, so return it
+    this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
+    return next;
+  },
+
+  // ### `_readQuadPunctuation` reads punctuation after a quad
+  _readQuadPunctuation: function (token) {
+    if (token.type !== '.')
+      return this._error('Expected dot to follow quad', token);
+    return this._readInTopContext;
+  },
+
+  // ### `_readPrefix` reads the prefix of a prefix declaration
+  _readPrefix: function (token) {
+    if (token.type !== 'prefix')
+      return this._error('Expected prefix to follow @prefix', token);
+    this._prefix = token.value;
+    return this._readPrefixIRI;
+  },
+
+  // ### `_readPrefixIRI` reads the IRI of a prefix declaration
+  _readPrefixIRI: function (token) {
+    if (token.type !== 'IRI')
+      return this._error('Expected IRI to follow prefix "' + this._prefix + ':"', token);
+    var prefixIRI = this._readEntity(token);
+    this._prefixes[this._prefix] = prefixIRI;
+    this._prefixCallback(this._prefix, prefixIRI);
+    return this._readDeclarationPunctuation;
+  },
+
+  // ### `_readBaseIRI` reads the IRI of a base declaration
+  _readBaseIRI: function (token) {
+    if (token.type !== 'IRI')
+      return this._error('Expected IRI to follow base declaration', token);
+    this._setBase(this._base === null || absoluteIRI.test(token.value) ?
+                  token.value : this._resolveIRI(token));
+    return this._readDeclarationPunctuation;
+  },
+
+  // ### `_readNamedGraphLabel` reads the label of a named graph
+  _readNamedGraphLabel: function (token) {
+    switch (token.type) {
+    case 'IRI':
+    case 'blank':
+    case 'prefixed':
+      return this._readSubject(token), this._readGraph;
+    case '[':
+      return this._readNamedGraphBlankLabel;
+    default:
+      return this._error('Invalid graph label', token);
+    }
+  },
+
+  // ### `_readNamedGraphLabel` reads a blank node label of a named graph
+  _readNamedGraphBlankLabel: function (token) {
+    if (token.type !== ']')
+      return this._error('Invalid graph label', token);
+    this._subject = '_:b' + blankNodeCount++;
+    return this._readGraph;
+  },
+
+  // ### `_readDeclarationPunctuation` reads the punctuation of a declaration
+  _readDeclarationPunctuation: function (token) {
+    // SPARQL-style declarations don't have punctuation
+    if (this._sparqlStyle) {
+      this._sparqlStyle = false;
+      return this._readInTopContext(token);
+    }
+
+    if (token.type !== '.')
+      return this._error('Expected declaration to end with a dot', token);
+    return this._readInTopContext;
+  },
+
+  // Reads a list of quantified symbols from a @forSome or @forAll statement
+  _readQuantifierList: function (token) {
+    var entity;
+    switch (token.type) {
+    case 'IRI':
+    case 'prefixed':
+      if ((entity = this._readEntity(token, true)) !== undefined)
+        break;
+    default:
+      return this._error('Unexpected ' + token.type, token);
+    }
+    // Without explicit quantifiers, map entities to a quantified entity
+    if (!this._explicitQuantifiers)
+      this._quantified[entity] = this._quantifiedPrefix + blankNodeCount++;
+    // With explicit quantifiers, output the reified quantifier
+    else {
+      // If this is the first item, start a new quantifier list
+      if (this._subject === null)
+        this._triple(this._graph || '', this._predicate,
+                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH, token.line);
+      // Otherwise, continue the previous list
+      else
+        this._triple(this._subject, RDF_REST,
+                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH, token.line);
+      // Output the list item
+      this._triple(this._subject, RDF_FIRST, entity, QUANTIFIERS_GRAPH, token.line);
+    }
+    return this._readQuantifierPunctuation;
+  },
+
+  // Reads punctuation from a @forSome or @forAll statement
+  _readQuantifierPunctuation: function (token) {
+    // Read more quantifiers
+    if (token.type === ',')
+      return this._readQuantifierList;
+    // End of the quantifier list
+    else {
+      // With explicit quantifiers, close the quantifier list
+      if (this._explicitQuantifiers) {
+        this._triple(this._subject, RDF_REST, RDF_NIL, QUANTIFIERS_GRAPH, token.line);
+        this._subject = null;
+      }
+      // Read a dot
+      this._readCallback = this._getContextEndReader();
+      return this._readCallback(token);
+    }
+  },
+
+  // ### `_getPathReader` reads a potential path and then resumes with the given function
+  _getPathReader: function (afterPath) {
+    this._afterPath = afterPath;
+    return this._readPath;
+  },
+
+  // ### `_readPath` reads a potential path
+  _readPath: function (token) {
+    switch (token.type) {
+    // Forward path
+    case '!': return this._readForwardPath;
+    // Backward path
+    case '^': return this._readBackwardPath;
+    // Not a path; resume reading where we left off
+    default:
+      var stack = this._contextStack, parent = stack.length && stack[stack.length - 1];
+      // If we were reading a list item, we still need to output it
+      if (parent && parent.type === 'item') {
+        // The list item is the remaining subejct after reading the path
+        var item = this._subject;
+        // Switch back to the context of the list
+        this._restoreContext();
+        // Output the list item
+        this._triple(this._subject, RDF_FIRST, item, this._graph, token.line);
+      }
+      return this._afterPath(token);
+    }
+  },
+
+  // ### `_readForwardPath` reads a '!' path
+  _readForwardPath: function (token) {
+    var subject, predicate, object = '_:b' + blankNodeCount++;
+    // The next token is the predicate
+    if ((predicate = this._readEntity(token)) === undefined)
+      return;
+    // If we were reading a subject, replace the subject by the path's object
+    if (this._predicate === null)
+      subject = this._subject, this._subject = object;
+    // If we were reading an object, replace the subject by the path's object
+    else
+      subject = this._object,  this._object  = object;
+    // Emit the path's current triple and read its next section
+    this._triple(subject, predicate, object, this._graph, token.line);
+    return this._readPath;
+  },
+
+  // ### `_readBackwardPath` reads a '^' path
+  _readBackwardPath: function (token) {
+    var subject = '_:b' + blankNodeCount++, predicate, object;
+    // The next token is the predicate
+    if ((predicate = this._readEntity(token)) === undefined)
+      return;
+    // If we were reading a subject, replace the subject by the path's subject
+    if (this._predicate === null)
+      object = this._subject, this._subject = subject;
+    // If we were reading an object, replace the subject by the path's subject
+    else
+      object = this._object,  this._object  = subject;
+    // Emit the path's current triple and read its next section
+    this._triple(subject, predicate, object, this._graph, token.line);
+    return this._readPath;
+  },
+
+  // ### `_getContextEndReader` gets the next reader function at the end of a context
+  _getContextEndReader: function () {
+    var contextStack = this._contextStack;
+    if (!contextStack.length)
+      return this._readPunctuation;
+
+    switch (contextStack[contextStack.length - 1].type) {
+    case 'blank':
+      return this._readBlankNodeTail;
+    case 'list':
+      return this._readListItem;
+    case 'formula':
+      return this._readFormulaTail;
+    }
+  },
+
+  // ### `_triple` emits a triple through the callback
+  _triple: function (subject, predicate, object, graph, line) {
+    this._callback(null,
+      { subject: subject, predicate: predicate, object: object, graph: graph || '' ,line:line});
+  },
+
+  // ### `_error` emits an error message through the callback
+  _error: function (message, token) {
+    var err = new Error(message + ' on line ' + token.line + '.');
+    err.context = {
+      token: token,
+      line: token.line,
+      previousToken: this._lexer.previousToken,
+    };
+    this._callback(err);
+  },
+
+  // ### `_resolveIRI` resolves a relative IRI token against the base path,
+  // assuming that a base path has been set and that the IRI is indeed relative
+  _resolveIRI: function (token) {
+    var iri = token.value;
+    switch (iri[0]) {
+    // An empty relative IRI indicates the base IRI
+    case undefined: return this._base;
+    // Resolve relative fragment IRIs against the base IRI
+    case '#': return this._base + iri;
+    // Resolve relative query string IRIs by replacing the query string
+    case '?': return this._base.replace(/(?:\?.*)?$/, iri);
+    // Resolve root-relative IRIs at the root of the base IRI
+    case '/':
+      // Resolve scheme-relative IRIs to the scheme
+      return (iri[1] === '/' ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri);
+    // Resolve all other IRIs at the base IRI's path
+    default:
+      return this._removeDotSegments(this._basePath + iri);
+    }
+  },
+
+  // ### `_removeDotSegments` resolves './' and '../' path segments in an IRI as per RFC3986
+  _removeDotSegments: function (iri) {
+    // Don't modify the IRI if it does not contain any dot segments
+    if (!dotSegments.test(iri))
+      return iri;
+
+    // Start with an imaginary slash before the IRI in order to resolve trailing './' and '../'
+    var result = '', length = iri.length, i = -1, pathStart = -1, segmentStart = 0, next = '/';
+
+    while (i < length) {
+      switch (next) {
+      // The path starts with the first slash after the authority
+      case ':':
+        if (pathStart < 0) {
+          // Skip two slashes before the authority
+          if (iri[++i] === '/' && iri[++i] === '/')
+            // Skip to slash after the authority
+            while ((pathStart = i + 1) < length && iri[pathStart] !== '/')
+              i = pathStart;
+        }
+        break;
+      // Don't modify a query string or fragment
+      case '?':
+      case '#':
+        i = length;
+        break;
+      // Handle '/.' or '/..' path segments
+      case '/':
+        if (iri[i + 1] === '.') {
+          next = iri[++i + 1];
+          switch (next) {
+          // Remove a '/.' segment
+          case '/':
+            result += iri.substring(segmentStart, i - 1);
+            segmentStart = i + 1;
+            break;
+          // Remove a trailing '/.' segment
+          case undefined:
+          case '?':
+          case '#':
+            return result + iri.substring(segmentStart, i) + iri.substr(i + 1);
+          // Remove a '/..' segment
+          case '.':
+            next = iri[++i + 1];
+            if (next === undefined || next === '/' || next === '?' || next === '#') {
+              result += iri.substring(segmentStart, i - 2);
+              // Try to remove the parent path from result
+              if ((segmentStart = result.lastIndexOf('/')) >= pathStart)
+                result = result.substr(0, segmentStart);
+              // Remove a trailing '/..' segment
+              if (next !== '/')
+                return result + '/' + iri.substr(i + 1);
+              segmentStart = i + 1;
+            }
+          }
+        }
+      }
+      next = iri[++i];
+    }
+    return result + iri.substring(segmentStart);
+  },
+
+  // ## Public methods
+
+  // ### `parse` parses the N3 input and emits each parsed triple through the callback
+  parse: function (input, tripleCallback, prefixCallback) {
+    console.log('tripleCallback',tripleCallback);
+    console.log('prefixCallback',prefixCallback);
+    var self = this;
+    // The read callback is the next function to be executed when a token arrives.
+    // We start reading in the top context.
+    this._readCallback = this._readInTopContext;
+    this._sparqlStyle = false;
+    this._prefixes = Object.create(null);
+    this._prefixes._ = this._blankNodePrefix || '_:b' + blankNodePrefix++ + '_';
+    this._prefixCallback = prefixCallback || noop;
+    this._inversePredicate = false;
+    this._quantified = Object.create(null);
+
+    // Parse synchronously if no triple callback is given
+    if (!tripleCallback) {
+      var triples = [], error;
+      this._callback = function (e, t) { e ? (error = e) : t && triples.push(t); };
+      this._lexer.tokenize(input).every(function (token) {
+        console.log("token line",token);
+        return self._readCallback = self._readCallback(token);
+      });
+      if (error) throw error;
+      return triples;
+    }
+
+    // Parse asynchronously otherwise, executing the read callback when a token arrives
+    this._callback = tripleCallback;
+    this._lexer.tokenize(input, function (error, token) {
+      console.log("token line asynchronously",token);
+      if (error !== null)
+        self._callback(error), self._callback = noop;
+      else if (self._readCallback)
+        self._readCallback = self._readCallback(token);
+    });
+  },
+};
+
+// The empty function
+function noop() {}
+
+// ## Exports
+module.exports = N3Parser;
+
+},{"./N3Lexer":188}],190:[function(require,module,exports){
+// **N3Store** objects store N3 triples by graph in memory.
+
+var expandPrefixedName = require('./N3Util').expandPrefixedName;
+
+// ## Constructor
+function N3Store(triples, options) {
+  if (!(this instanceof N3Store))
+    return new N3Store(triples, options);
+
+  // The number of triples is initially zero
+  this._size = 0;
+  // `_graphs` contains subject, predicate, and object indexes per graph
+  this._graphs = Object.create(null);
+  // `_ids` maps entities such as `http://xmlns.com/foaf/0.1/name` to numbers,
+  // saving memory by using only numbers as keys in `_graphs`
+  this._id = 0;
+  this._ids = Object.create(null);
+  this._ids['><'] = 0; // dummy entry, so the first actual key is non-zero
+  this._entities = Object.create(null); // inverse of `_ids`
+  // `_blankNodeIndex` is the index of the last automatically named blank node
+  this._blankNodeIndex = 0;
+
+  // Shift parameters if `triples` is not given
+  if (!options && triples && !triples[0])
+    options = triples, triples = null;
+  options = options || {};
+
+  // Add triples and prefixes if passed
+  this._prefixes = Object.create(null);
+  if (options.prefixes)
+    this.addPrefixes(options.prefixes);
+  if (triples)
+    this.addTriples(triples);
+}
+
+N3Store.prototype = {
+  // ## Public properties
+
+  // ### `size` returns the number of triples in the store
+  get size() {
+    // Return the triple count if if was cached
+    var size = this._size;
+    if (size !== null)
+      return size;
+
+    // Calculate the number of triples by counting to the deepest level
+    size = 0;
+    var graphs = this._graphs, subjects, subject;
+    for (var graphKey in graphs)
+      for (var subjectKey in (subjects = graphs[graphKey].subjects))
+        for (var predicateKey in (subject = subjects[subjectKey]))
+          size += Object.keys(subject[predicateKey]).length;
+    return this._size = size;
+  },
+
+  // ## Private methods
+
+  // ### `_addToIndex` adds a triple to a three-layered index.
+  // Returns if the index has changed, if the entry did not already exist.
+  _addToIndex: function (index0, key0, key1, key2) {
+    // Create layers as necessary
+    var index1 = index0[key0] || (index0[key0] = {});
+    var index2 = index1[key1] || (index1[key1] = {});
+    // Setting the key to _any_ value signals the presence of the triple
+    var existed = key2 in index2;
+    if (!existed)
+      index2[key2] = null;
+    return !existed;
+  },
+
+  // ### `_removeFromIndex` removes a triple from a three-layered index
+  _removeFromIndex: function (index0, key0, key1, key2) {
+    // Remove the triple from the index
+    var index1 = index0[key0], index2 = index1[key1], key;
+    delete index2[key2];
+
+    // Remove intermediary index layers if they are empty
+    for (key in index2) return;
+    delete index1[key1];
+    for (key in index1) return;
+    delete index0[key0];
+  },
+
+  // ### `_findInIndex` finds a set of triples in a three-layered index.
+  // The index base is `index0` and the keys at each level are `key0`, `key1`, and `key2`.
+  // Any of these keys can be undefined, which is interpreted as a wildcard.
+  // `name0`, `name1`, and `name2` are the names of the keys at each level,
+  // used when reconstructing the resulting triple
+  // (for instance: _subject_, _predicate_, and _object_).
+  // Finally, `graph` will be the graph of the created triples.
+  // If `callback` is given, each result is passed through it
+  // and iteration halts when it returns truthy for any triple.
+  // If instead `array` is given, each result is added to the array.
+  _findInIndex: function (index0, key0, key1, key2, name0, name1, name2, graph, callback, array) {
+    var tmp, index1, index2, varCount = !key0 + !key1 + !key2,
+        // depending on the number of variables, keys or reverse index are faster
+        entityKeys = varCount > 1 ? Object.keys(this._ids) : this._entities;
+
+    // If a key is specified, use only that part of index 0.
+    if (key0) (tmp = index0, index0 = {})[key0] = tmp[key0];
+    for (var value0 in index0) {
+      var entity0 = entityKeys[value0];
+
+      if (index1 = index0[value0]) {
+        // If a key is specified, use only that part of index 1.
+        if (key1) (tmp = index1, index1 = {})[key1] = tmp[key1];
+        for (var value1 in index1) {
+          var entity1 = entityKeys[value1];
+
+          if (index2 = index1[value1]) {
+            // If a key is specified, use only that part of index 2, if it exists.
+            var values = key2 ? (key2 in index2 ? [key2] : []) : Object.keys(index2);
+            // Create triples for all items found in index 2.
+            for (var l = values.length - 1; l >= 0; l--) {
+              var result = { subject: '', predicate: '', object: '', graph: graph };
+              result[name0] = entity0;
+              result[name1] = entity1;
+              result[name2] = entityKeys[values[l]];
+              if (array)
+                array.push(result);
+              else if (callback(result))
+                return true;
+            }
+          }
+        }
+      }
+    }
+    return array;
+  },
+
+  // ### `_loop` executes the callback on all keys of index 0
+  _loop: function (index0, callback) {
+    for (var key0 in index0)
+      callback(key0);
+  },
+
+  // ### `_loopByKey0` executes the callback on all keys of a certain entry in index 0
+  _loopByKey0: function (index0, key0, callback) {
+    var index1, key1;
+    if (index1 = index0[key0]) {
+      for (key1 in index1)
+        callback(key1);
+    }
+  },
+
+  // ### `_loopByKey1` executes the callback on given keys of all entries in index 0
+  _loopByKey1: function (index0, key1, callback) {
+    var key0, index1;
+    for (key0 in index0) {
+      index1 = index0[key0];
+      if (index1[key1])
+        callback(key0);
+    }
+  },
+
+  // ### `_loopBy2Keys` executes the callback on given keys of certain entries in index 2
+  _loopBy2Keys: function (index0, key0, key1, callback) {
+    var index1, index2, key2;
+    if ((index1 = index0[key0]) && (index2 = index1[key1])) {
+      for (key2 in index2)
+        callback(key2);
+    }
+  },
+
+  // ### `_countInIndex` counts matching triples in a three-layered index.
+  // The index base is `index0` and the keys at each level are `key0`, `key1`, and `key2`.
+  // Any of these keys can be undefined, which is interpreted as a wildcard.
+  _countInIndex: function (index0, key0, key1, key2) {
+    var count = 0, tmp, index1, index2;
+
+    // If a key is specified, count only that part of index 0
+    if (key0) (tmp = index0, index0 = {})[key0] = tmp[key0];
+    for (var value0 in index0) {
+      if (index1 = index0[value0]) {
+        // If a key is specified, count only that part of index 1
+        if (key1) (tmp = index1, index1 = {})[key1] = tmp[key1];
+        for (var value1 in index1) {
+          if (index2 = index1[value1]) {
+            // If a key is specified, count the triple if it exists
+            if (key2) (key2 in index2) && count++;
+            // Otherwise, count all triples
+            else count += Object.keys(index2).length;
+          }
+        }
+      }
+    }
+    return count;
+  },
+
+  // ### `_getGraphs` returns an array with the given graph,
+  // or all graphs if the argument is null or undefined.
+  _getGraphs: function (graph) {
+    if (!isString(graph))
+      return this._graphs;
+    var graphs = {};
+    graphs[graph] = this._graphs[graph];
+    return graphs;
+  },
+
+  // ### `_uniqueEntities` returns a function that accepts an entity ID
+  // and passes the corresponding entity to callback if it hasn't occurred before.
+  _uniqueEntities: function (callback) {
+    var uniqueIds = Object.create(null), entities = this._entities;
+    return function (id) {
+      if (!(id in uniqueIds)) {
+        uniqueIds[id] = true;
+        callback(entities[id]);
+      }
+    };
+  },
+
+  // ## Public methods
+
+  // ### `addTriple` adds a new N3 triple to the store.
+  // Returns if the triple index has changed, if the triple did not already exist.
+  addTriple: function (subject, predicate, object, graph) {
+    // Shift arguments if a triple object is given instead of components
+    if (!predicate)
+      graph = subject.graph, object = subject.object,
+        predicate = subject.predicate, subject = subject.subject;
+
+    // Find the graph that will contain the triple
+    graph = graph || '';
+    var graphItem = this._graphs[graph];
+    // Create the graph if it doesn't exist yet
+    if (!graphItem) {
+      graphItem = this._graphs[graph] = { subjects: {}, predicates: {}, objects: {} };
+      // Freezing a graph helps subsequent `add` performance,
+      // and properties will never be modified anyway
+      Object.freeze(graphItem);
+    }
+
+    // Since entities can often be long IRIs, we avoid storing them in every index.
+    // Instead, we have a separate index that maps entities to numbers,
+    // which are then used as keys in the other indexes.
+    var ids = this._ids;
+    var entities = this._entities;
+    subject   = ids[subject]   || (ids[entities[++this._id] = subject]   = this._id);
+    predicate = ids[predicate] || (ids[entities[++this._id] = predicate] = this._id);
+    object    = ids[object]    || (ids[entities[++this._id] = object]    = this._id);
+
+    var changed = this._addToIndex(graphItem.subjects,   subject,   predicate, object);
+    this._addToIndex(graphItem.predicates, predicate, object,    subject);
+    this._addToIndex(graphItem.objects,    object,    subject,   predicate);
+
+    // The cached triple count is now invalid
+    this._size = null;
+    return changed;
+  },
+
+  // ### `addTriples` adds multiple N3 triples to the store
+  addTriples: function (triples) {
+    for (var i = triples.length - 1; i >= 0; i--)
+      this.addTriple(triples[i]);
+  },
+
+  // ### `addPrefix` adds support for querying with the given prefix
+  addPrefix: function (prefix, iri) {
+    this._prefixes[prefix] = iri;
+  },
+
+  // ### `addPrefixes` adds support for querying with the given prefixes
+  addPrefixes: function (prefixes) {
+    for (var prefix in prefixes)
+      this.addPrefix(prefix, prefixes[prefix]);
+  },
+
+  // ### `removeTriple` removes an N3 triple from the store if it exists
+  removeTriple: function (subject, predicate, object, graph) {
+    // Shift arguments if a triple object is given instead of components
+    if (!predicate)
+      graph = subject.graph, object = subject.object,
+        predicate = subject.predicate, subject = subject.subject;
+    graph = graph || '';
+
+    // Find internal identifiers for all components
+    // and verify the triple exists.
+    var graphItem, ids = this._ids, graphs = this._graphs, subjects, predicates;
+    if (!(subject    = ids[subject]) || !(predicate = ids[predicate]) ||
+        !(object     = ids[object])  || !(graphItem = graphs[graph])  ||
+        !(subjects   = graphItem.subjects[subject]) ||
+        !(predicates = subjects[predicate]) ||
+        !(object in predicates))
+      return false;
+
+    // Remove it from all indexes
+    this._removeFromIndex(graphItem.subjects,   subject,   predicate, object);
+    this._removeFromIndex(graphItem.predicates, predicate, object,    subject);
+    this._removeFromIndex(graphItem.objects,    object,    subject,   predicate);
+    if (this._size !== null) this._size--;
+
+    // Remove the graph if it is empty
+    for (subject in graphItem.subjects) return true;
+    delete graphs[graph];
+    return true;
+  },
+
+  // ### `removeTriples` removes multiple N3 triples from the store
+  removeTriples: function (triples) {
+    for (var i = triples.length - 1; i >= 0; i--)
+      this.removeTriple(triples[i]);
+  },
+
+  // ### `getTriples` returns an array of triples matching a pattern, expanding prefixes as necessary.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getTriples: function (subject, predicate, object, graph) {
+    var prefixes = this._prefixes;
+    return this.getTriplesByIRI(
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `getTriplesByIRI` returns an array of triples matching a pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getTriplesByIRI: function (subject, predicate, object, graph) {
+    var quads = [], graphs = this._getGraphs(graph), content,
+        ids = this._ids, subjectId, predicateId, objectId;
+
+    // Translate IRIs to internal index keys.
+    if (isString(subject)   && !(subjectId   = ids[subject])   ||
+        isString(predicate) && !(predicateId = ids[predicate]) ||
+        isString(object)    && !(objectId    = ids[object]))
+      return quads;
+
+    for (var graphId in graphs) {
+      // Only if the specified graph contains triples, there can be results
+      if (content = graphs[graphId]) {
+        // Choose the optimal index, based on what fields are present
+        if (subjectId) {
+          if (objectId)
+            // If subject and object are given, the object index will be the fastest
+            this._findInIndex(content.objects, objectId, subjectId, predicateId,
+                              'object', 'subject', 'predicate', graphId, null, quads);
+          else
+            // If only subject and possibly predicate are given, the subject index will be the fastest
+            this._findInIndex(content.subjects, subjectId, predicateId, null,
+                              'subject', 'predicate', 'object', graphId, null, quads);
+        }
+        else if (predicateId)
+          // If only predicate and possibly object are given, the predicate index will be the fastest
+          this._findInIndex(content.predicates, predicateId, objectId, null,
+                            'predicate', 'object', 'subject', graphId, null, quads);
+        else if (objectId)
+          // If only object is given, the object index will be the fastest
+          this._findInIndex(content.objects, objectId, null, null,
+                            'object', 'subject', 'predicate', graphId, null, quads);
+        else
+          // If nothing is given, iterate subjects and predicates first
+          this._findInIndex(content.subjects, null, null, null,
+                            'subject', 'predicate', 'object', graphId, null, quads);
+      }
+    }
+    return quads;
+  },
+
+  // ### `countTriples` returns the number of triples matching a pattern, expanding prefixes as necessary.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  countTriples: function (subject, predicate, object, graph) {
+    var prefixes = this._prefixes;
+    return this.countTriplesByIRI(
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `countTriplesByIRI` returns the number of triples matching a pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  countTriplesByIRI: function (subject, predicate, object, graph) {
+    var count = 0, graphs = this._getGraphs(graph), content,
+        ids = this._ids, subjectId, predicateId, objectId;
+
+    // Translate IRIs to internal index keys.
+    if (isString(subject)   && !(subjectId   = ids[subject])   ||
+        isString(predicate) && !(predicateId = ids[predicate]) ||
+        isString(object)    && !(objectId    = ids[object]))
+      return 0;
+
+    for (var graphId in graphs) {
+      // Only if the specified graph contains triples, there can be results
+      if (content = graphs[graphId]) {
+        // Choose the optimal index, based on what fields are present
+        if (subject) {
+          if (object)
+            // If subject and object are given, the object index will be the fastest
+            count += this._countInIndex(content.objects, objectId, subjectId, predicateId);
+          else
+            // If only subject and possibly predicate are given, the subject index will be the fastest
+            count += this._countInIndex(content.subjects, subjectId, predicateId, objectId);
+        }
+        else if (predicate) {
+          // If only predicate and possibly object are given, the predicate index will be the fastest
+          count += this._countInIndex(content.predicates, predicateId, objectId, subjectId);
+        }
+        else {
+          // If only object is possibly given, the object index will be the fastest
+          count += this._countInIndex(content.objects, objectId, subjectId, predicateId);
+        }
+      }
+    }
+    return count;
+  },
+
+  // ### `forEach` executes the callback on all triples.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forEach: function (callback, subject, predicate, object, graph) {
+    var prefixes = this._prefixes;
+    this.forEachByIRI(
+      callback,
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `forEachByIRI` executes the callback on all triples.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forEachByIRI: function (callback, subject, predicate, object, graph) {
+    this.someByIRI(function (quad) {
+      callback(quad);
+      return false;
+    }, subject, predicate, object, graph);
+  },
+
+  // ### `every` executes the callback on all triples,
+  // and returns `true` if it returns truthy for all them.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  every: function (callback, subject, predicate, object, graph) {
+    var prefixes = this._prefixes;
+    return this.everyByIRI(
+      callback,
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `everyByIRI` executes the callback on all triples,
+  // and returns `true` if it returns truthy for all them.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  everyByIRI: function (callback, subject, predicate, object, graph) {
+    var some = false;
+    var every = !this.someByIRI(function (quad) {
+      some = true;
+      return !callback(quad);
+    }, subject, predicate, object, graph);
+    return some && every;
+  },
+
+  // ### `some` executes the callback on all triples,
+  // and returns `true` if it returns truthy for any of them.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  some: function (callback, subject, predicate, object, graph) {
+    var prefixes = this._prefixes;
+    return this.someByIRI(
+      callback,
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `someByIRI` executes the callback on all triples,
+  // and returns `true` if it returns truthy for any of them.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  someByIRI: function (callback, subject, predicate, object, graph) {
+    var graphs = this._getGraphs(graph), content,
+        ids = this._ids, subjectId, predicateId, objectId;
+
+    // Translate IRIs to internal index keys.
+    if (isString(subject)   && !(subjectId   = ids[subject])   ||
+        isString(predicate) && !(predicateId = ids[predicate]) ||
+        isString(object)    && !(objectId    = ids[object]))
+      return false;
+
+    for (var graphId in graphs) {
+      // Only if the specified graph contains triples, there can be result
+      if (content = graphs[graphId]) {
+        // Choose the optimal index, based on what fields are present
+        if (subjectId) {
+          if (objectId) {
+          // If subject and object are given, the object index will be the fastest
+            if (this._findInIndex(content.objects, objectId, subjectId, predicateId,
+                                  'object', 'subject', 'predicate', graphId, callback, null))
+              return true;
+          }
+          else
+            // If only subject and possibly predicate are given, the subject index will be the fastest
+            if (this._findInIndex(content.subjects, subjectId, predicateId, null,
+                                  'subject', 'predicate', 'object', graphId, callback, null))
+              return true;
+        }
+        else if (predicateId) {
+          // If only predicate and possibly object are given, the predicate index will be the fastest
+          if (this._findInIndex(content.predicates, predicateId, objectId, null,
+                                'predicate', 'object', 'subject', graphId, callback, null)) {
+            return true;
+          }
+        }
+        else if (objectId) {
+          // If only object is given, the object index will be the fastest
+          if (this._findInIndex(content.objects, objectId, null, null,
+                                'object', 'subject', 'predicate', graphId, callback, null)) {
+            return true;
+          }
+        }
+        else
+        // If nothing is given, iterate subjects and predicates first
+        if (this._findInIndex(content.subjects, null, null, null,
+                              'subject', 'predicate', 'object', graphId, callback, null)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  },
+
+  // ### `getSubjects` returns all subjects that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getSubjects: function (predicate, object, graph) {
+    var prefixes = this._prefixes;
+    return this.getSubjectsByIRI(
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `getSubjectsByIRI` returns all subjects that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getSubjectsByIRI: function (predicate, object, graph) {
+    var results = [];
+    this.forSubjectsByIRI(function (s) { results.push(s); }, predicate, object, graph);
+    return results;
+  },
+
+  // ### `forSubjects` executes the callback on all subjects that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forSubjects: function (callback, predicate, object, graph) {
+    var prefixes = this._prefixes;
+    this.forSubjectsByIRI(
+      callback,
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `forSubjectsByIRI` executes the callback on all subjects that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forSubjectsByIRI: function (callback, predicate, object, graph) {
+    var ids = this._ids, graphs = this._getGraphs(graph), content, predicateId, objectId;
+    callback = this._uniqueEntities(callback);
+
+    // Translate IRIs to internal index keys.
+    if (isString(predicate) && !(predicateId = ids[predicate]) ||
+        isString(object)    && !(objectId    = ids[object]))
+      return;
+
+    for (graph in graphs) {
+      // Only if the specified graph contains triples, there can be results
+      if (content = graphs[graph]) {
+        // Choose optimal index based on which fields are wildcards
+        if (predicateId) {
+          if (objectId)
+            // If predicate and object are given, the POS index is best.
+            this._loopBy2Keys(content.predicates, predicateId, objectId, callback);
+          else
+            // If only predicate is given, the SPO index is best.
+            this._loopByKey1(content.subjects, predicateId, callback);
+        }
+        else if (objectId)
+          // If only object is given, the OSP index is best.
+          this._loopByKey0(content.objects, objectId, callback);
+        else
+          // If no params given, iterate all the subjects
+          this._loop(content.subjects, callback);
+      }
+    }
+  },
+
+  // ### `getPredicates` returns all predicates that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getPredicates: function (subject, object, graph) {
+    var prefixes = this._prefixes;
+    return this.getPredicatesByIRI(
+      expandPrefixedName(subject, prefixes),
+      expandPrefixedName(object,  prefixes),
+      expandPrefixedName(graph,   prefixes)
+    );
+  },
+
+  // ### `getPredicatesByIRI` returns all predicates that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getPredicatesByIRI: function (subject, object, graph) {
+    var results = [];
+    this.forPredicatesByIRI(function (p) { results.push(p); }, subject, object, graph);
+    return results;
+  },
+
+  // ### `forPredicates` executes the callback on all predicates that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forPredicates: function (callback, subject, object, graph) {
+    var prefixes = this._prefixes;
+    this.forPredicatesByIRI(
+      callback,
+      expandPrefixedName(subject, prefixes),
+      expandPrefixedName(object,  prefixes),
+      expandPrefixedName(graph,   prefixes)
+    );
+  },
+
+  // ### `forPredicatesByIRI` executes the callback on all predicates that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forPredicatesByIRI: function (callback, subject, object, graph) {
+    var ids = this._ids, graphs = this._getGraphs(graph), content, subjectId, objectId;
+    callback = this._uniqueEntities(callback);
+
+    // Translate IRIs to internal index keys.
+    if (isString(subject) && !(subjectId = ids[subject]) ||
+        isString(object)  && !(objectId  = ids[object]))
+      return;
+
+    for (graph in graphs) {
+      // Only if the specified graph contains triples, there can be results
+      if (content = graphs[graph]) {
+        // Choose optimal index based on which fields are wildcards
+        if (subjectId) {
+          if (objectId)
+            // If subject and object are given, the OSP index is best.
+            this._loopBy2Keys(content.objects, objectId, subjectId, callback);
+          else
+            // If only subject is given, the SPO index is best.
+            this._loopByKey0(content.subjects, subjectId, callback);
+        }
+        else if (objectId)
+          // If only object is given, the POS index is best.
+          this._loopByKey1(content.predicates, objectId, callback);
+        else
+          // If no params given, iterate all the predicates.
+          this._loop(content.predicates, callback);
+      }
+    }
+  },
+
+  // ### `getObjects` returns all objects that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getObjects: function (subject, predicate, graph) {
+    var prefixes = this._prefixes;
+    return this.getObjectsByIRI(
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `getObjectsByIRI` returns all objects that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getObjectsByIRI: function (subject, predicate, graph) {
+    var results = [];
+    this.forObjectsByIRI(function (o) { results.push(o); }, subject, predicate, graph);
+    return results;
+  },
+
+  // ### `forObjects` executes the callback on all objects that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forObjects: function (callback, subject, predicate, graph) {
+    var prefixes = this._prefixes;
+    this.forObjectsByIRI(
+      callback,
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(graph,     prefixes)
+    );
+  },
+
+  // ### `forObjectsByIRI` executes the callback on all objects that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forObjectsByIRI: function (callback, subject, predicate, graph) {
+    var ids = this._ids, graphs = this._getGraphs(graph), content, subjectId, predicateId;
+    callback = this._uniqueEntities(callback);
+
+    // Translate IRIs to internal index keys.
+    if (isString(subject)   && !(subjectId   = ids[subject]) ||
+        isString(predicate) && !(predicateId = ids[predicate]))
+      return;
+
+    for (graph in graphs) {
+      // Only if the specified graph contains triples, there can be results
+      if (content = graphs[graph]) {
+        // Choose optimal index based on which fields are wildcards
+        if (subjectId) {
+          if (predicateId)
+            // If subject and predicate are given, the SPO index is best.
+            this._loopBy2Keys(content.subjects, subjectId, predicateId, callback);
+          else
+            // If only subject is given, the OSP index is best.
+            this._loopByKey1(content.objects, subjectId, callback);
+        }
+        else if (predicateId)
+          // If only predicate is given, the POS index is best.
+          this._loopByKey0(content.predicates, predicateId, callback);
+        else
+          // If no params given, iterate all the objects.
+          this._loop(content.objects, callback);
+      }
+    }
+  },
+
+  // ### `getGraphs` returns all graphs that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getGraphs: function (subject, predicate, object) {
+    var prefixes = this._prefixes;
+    return this.getGraphsByIRI(
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes)
+    );
+  },
+
+  // ### `getGraphsByIRI` returns all graphs that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  getGraphsByIRI: function (subject, predicate, object) {
+    var results = [];
+    this.forGraphsByIRI(function (g) { results.push(g); }, subject, predicate, object);
+    return results;
+  },
+
+  // ### `forGraphs` executes the callback on all graphs that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forGraphs: function (callback, subject, predicate, object) {
+    var prefixes = this._prefixes;
+    this.forGraphsByIRI(
+      callback,
+      expandPrefixedName(subject,   prefixes),
+      expandPrefixedName(predicate, prefixes),
+      expandPrefixedName(object,    prefixes)
+    );
+  },
+
+  // ### `forGraphsByIRI` executes the callback on all graphs that match the pattern.
+  // Setting any field to `undefined` or `null` indicates a wildcard.
+  forGraphsByIRI: function (callback, subject, predicate, object) {
+    for (var graph in this._graphs) {
+      this.someByIRI(function (quad) {
+        callback(quad.graph);
+        return true; // Halt iteration of some()
+      }, subject, predicate, object, graph);
+    }
+  },
+
+  // ### `createBlankNode` creates a new blank node, returning its name
+  createBlankNode: function (suggestedName) {
+    var name, index;
+    // Generate a name based on the suggested name
+    if (suggestedName) {
+      name = suggestedName = '_:' + suggestedName, index = 1;
+      while (this._ids[name])
+        name = suggestedName + index++;
+    }
+    // Generate a generic blank node name
+    else {
+      do { name = '_:b' + this._blankNodeIndex++; }
+      while (this._ids[name]);
+    }
+    // Add the blank node to the entities, avoiding the generation of duplicates
+    this._ids[name] = ++this._id;
+    this._entities[this._id] = name;
+    return name;
+  },
+};
+
+// Determines whether the argument is a string
+function isString(s) {
+  return typeof s === 'string' || s instanceof String;
+}
+
+// ## Exports
+module.exports = N3Store;
+
+},{"./N3Util":193}],191:[function(require,module,exports){
+// **N3StreamParser** parses an N3 stream into a triple stream.
+var Transform = require('stream').Transform,
+    util = require('util'),
+    N3Parser = require('./N3Parser.js');
+
+// ## Constructor
+function N3StreamParser(options) {
+  if (!(this instanceof N3StreamParser))
+    return new N3StreamParser(options);
+
+  // Initialize Transform base class
+  Transform.call(this, { decodeStrings: true });
+  this._readableState.objectMode = true;
+
+  // Set up parser
+  var self = this, parser = new N3Parser(options), onData, onEnd;
+  // Pass dummy stream to obtain `data` and `end` callbacks
+  parser.parse({
+    on: function (event, cb) {
+      switch (event) {
+      case 'data': onData = cb; break;
+      case 'end':   onEnd = cb; break;
+      }
+    },
+  },
+  // Handle triples by pushing them down the pipeline
+  function (error, t) { error && self.emit('error', error) || t && self.push(t); },
+  // Emit prefixes through the `prefix` event
+  function (prefix, uri) { self.emit('prefix', prefix, uri); });
+
+  // Implement Transform methods through parser callbacks
+  this._transform = function (chunk, encoding, done) { onData(chunk); done(); };
+  this._flush = function (done) { onEnd(); done(); };
+}
+util.inherits(N3StreamParser, Transform);
+
+// ## Exports
+module.exports = N3StreamParser;
+
+},{"./N3Parser.js":189,"stream":465,"util":477}],192:[function(require,module,exports){
+// **N3StreamWriter** serializes a triple stream into an N3 stream.
+var Transform = require('stream').Transform,
+    util = require('util'),
+    N3Writer = require('./N3Writer.js');
+
+// ## Constructor
+function N3StreamWriter(options) {
+  if (!(this instanceof N3StreamWriter))
+    return new N3StreamWriter(options);
+
+  // Initialize Transform base class
+  Transform.call(this, { encoding: 'utf8' });
+  this._writableState.objectMode = true;
+
+  // Set up writer with a dummy stream object
+  var self = this;
+  var writer = new N3Writer({
+    write: function (chunk, encoding, callback) { self.push(chunk); callback && callback(); },
+    end: function (callback) { self.push(null); callback && callback(); },
+  }, options);
+
+  // Implement Transform methods on top of writer
+  this._transform = function (triple, encoding, done) { writer.addTriple(triple, done); };
+  this._flush = function (done) { writer.end(done); };
+}
+util.inherits(N3StreamWriter, Transform);
+
+// ## Exports
+module.exports = N3StreamWriter;
+
+},{"./N3Writer.js":194,"stream":465,"util":477}],193:[function(require,module,exports){
+// **N3Util** provides N3 utility functions.
+
+var Xsd = 'http://www.w3.org/2001/XMLSchema#';
+var XsdString  = Xsd + 'string';
+var XsdInteger = Xsd + 'integer';
+var XsdDouble = Xsd + 'double';
+var XsdBoolean = Xsd + 'boolean';
+var RdfLangString = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#langString';
+
+var N3Util = {
+  // Tests whether the given entity (triple object) represents an IRI in the N3 library
+  isIRI: function (entity) {
+    if (typeof entity !== 'string')
+      return false;
+    else if (entity.length === 0)
+      return true;
+    else {
+      var firstChar = entity[0];
+      return firstChar !== '"' && firstChar !== '_';
+    }
+  },
+
+  // Tests whether the given entity (triple object) represents a literal in the N3 library
+  isLiteral: function (entity) {
+    return typeof entity === 'string' && entity[0] === '"';
+  },
+
+  // Tests whether the given entity (triple object) represents a blank node in the N3 library
+  isBlank: function (entity) {
+    return typeof entity === 'string' && entity.substr(0, 2) === '_:';
+  },
+
+  // Tests whether the given entity represents the default graph
+  isDefaultGraph: function (entity) {
+    return !entity;
+  },
+
+  // Tests whether the given triple is in the default graph
+  inDefaultGraph: function (triple) {
+    return !triple.graph;
+  },
+
+  // Gets the string value of a literal in the N3 library
+  getLiteralValue: function (literal) {
+    var match = /^"([^]*)"/.exec(literal);
+    if (!match)
+      throw new Error(literal + ' is not a literal');
+    return match[1];
+  },
+
+  // Gets the type of a literal in the N3 library
+  getLiteralType: function (literal) {
+    var match = /^"[^]*"(?:\^\^([^"]+)|(@)[^@"]+)?$/.exec(literal);
+    if (!match)
+      throw new Error(literal + ' is not a literal');
+    return match[1] || (match[2] ? RdfLangString : XsdString);
+  },
+
+  // Gets the language of a literal in the N3 library
+  getLiteralLanguage: function (literal) {
+    var match = /^"[^]*"(?:@([^@"]+)|\^\^[^"]+)?$/.exec(literal);
+    if (!match)
+      throw new Error(literal + ' is not a literal');
+    return match[1] ? match[1].toLowerCase() : '';
+  },
+
+  // Tests whether the given entity (triple object) represents a prefixed name
+  isPrefixedName: function (entity) {
+    return typeof entity === 'string' && /^[^:\/"']*:[^:\/"']+$/.test(entity);
+  },
+
+  // Expands the prefixed name to a full IRI (also when it occurs as a literal's type)
+  expandPrefixedName: function (prefixedName, prefixes) {
+    var match = /(?:^|"\^\^)([^:\/#"'\^_]*):[^\/]*$/.exec(prefixedName), prefix, base, index;
+    if (match)
+      prefix = match[1], base = prefixes[prefix], index = match.index;
+    if (base === undefined)
+      return prefixedName;
+
+    // The match index is non-zero when expanding a literal's type
+    return index === 0 ? base + prefixedName.substr(prefix.length + 1)
+                       : prefixedName.substr(0, index + 3) +
+                         base + prefixedName.substr(index + prefix.length + 4);
+  },
+
+  // Creates an IRI in N3.js representation
+  createIRI: function (iri) {
+    return iri && iri[0] === '"' ? N3Util.getLiteralValue(iri) : iri;
+  },
+
+  // Creates a literal in N3.js representation
+  createLiteral: function (value, modifier) {
+    if (!modifier) {
+      switch (typeof value) {
+      case 'boolean':
+        modifier = XsdBoolean;
+        break;
+      case 'number':
+        if (isFinite(value))
+          modifier = value % 1 === 0 ? XsdInteger : XsdDouble;
+        else {
+          modifier = XsdDouble;
+          if (!isNaN(value))
+            value = value > 0 ? 'INF' : '-INF';
+        }
+        break;
+      default:
+        return '"' + value + '"';
+      }
+    }
+    return '"' + value +
+           (/^[a-z]+(-[a-z0-9]+)*$/i.test(modifier) ? '"@'  + modifier.toLowerCase()
+                                                    : '"^^' + modifier);
+  },
+
+  // Creates a function that prepends the given IRI to a local name
+  prefix: function (iri) {
+    return N3Util.prefixes({ '': iri })('');
+  },
+
+  // Creates a function that allows registering and expanding prefixes
+  prefixes: function (defaultPrefixes) {
+    // Add all of the default prefixes
+    var prefixes = Object.create(null);
+    for (var prefix in defaultPrefixes)
+      processPrefix(prefix, defaultPrefixes[prefix]);
+
+    // Registers a new prefix (if an IRI was specified)
+    // or retrieves a function that expands an existing prefix (if no IRI was specified)
+    function processPrefix(prefix, iri) {
+      // Create a new prefix if an IRI is specified or the prefix doesn't exist
+      if (iri || !(prefix in prefixes)) {
+        var cache = Object.create(null);
+        iri = iri || '';
+        // Create a function that expands the prefix
+        prefixes[prefix] = function (localName) {
+          return cache[localName] || (cache[localName] = iri + localName);
+        };
+      }
+      return prefixes[prefix];
+    }
+    return processPrefix;
+  },
+};
+
+// ## Exports
+module.exports = N3Util;
+
+},{}],194:[function(require,module,exports){
+// **N3Writer** writes N3 documents.
+
+// Matches a literal as represented in memory by the N3 library
+var N3LiteralMatcher = /^"([^]*)"(?:\^\^(.+)|@([\-a-z]+))?$/i;
+
+// rdf:type predicate (for 'a' abbreviation)
+var RDF_PREFIX = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    RDF_TYPE   = RDF_PREFIX + 'type';
+
+// Characters in literals that require escaping
+var escape    = /["\\\t\n\r\b\f\u0000-\u0019\ud800-\udbff]/,
+    escapeAll = /["\\\t\n\r\b\f\u0000-\u0019]|[\ud800-\udbff][\udc00-\udfff]/g,
+    escapedCharacters = {
+      '\\': '\\\\', '"': '\\"', '\t': '\\t',
+      '\n': '\\n', '\r': '\\r', '\b': '\\b', '\f': '\\f',
+    };
+
+// ## Constructor
+function N3Writer(outputStream, options) {
+  if (!(this instanceof N3Writer))
+    return new N3Writer(outputStream, options);
+
+  // Shift arguments if the first argument is not a stream
+  if (outputStream && typeof outputStream.write !== 'function')
+    options = outputStream, outputStream = null;
+  options = options || {};
+
+  // If no output stream given, send the output as string through the end callback
+  if (!outputStream) {
+    var output = '';
+    this._outputStream = {
+      write: function (chunk, encoding, done) { output += chunk; done && done(); },
+      end:   function (done) { done && done(null, output); },
+    };
+    this._endStream = true;
+  }
+  else {
+    this._outputStream = outputStream;
+    this._endStream = options.end === undefined ? true : !!options.end;
+  }
+
+  // Initialize writer, depending on the format
+  this._subject = null;
+  if (!(/triple|quad/i).test(options.format)) {
+    this._graph = '';
+    this._prefixIRIs = Object.create(null);
+    options.prefixes && this.addPrefixes(options.prefixes);
+  }
+  else {
+    this._writeTriple = this._writeTripleLine;
+  }
+}
+
+N3Writer.prototype = {
+  // ## Private methods
+
+  // ### `_write` writes the argument to the output stream
+  _write: function (string, callback) {
+    this._outputStream.write(string, 'utf8', callback);
+  },
+
+    // ### `_writeTriple` writes the triple to the output stream
+  _writeTriple: function (subject, predicate, object, graph, done) {
+    try {
+      // Write the graph's label if it has changed
+      if (this._graph !== graph) {
+        // Close the previous graph and start the new one
+        this._write((this._subject === null ? '' : (this._graph ? '\n}\n' : '.\n')) +
+                    (graph ? this._encodeIriOrBlankNode(graph) + ' {\n' : ''));
+        this._subject = null;
+        // Don't treat identical blank nodes as repeating graphs
+        this._graph = graph[0] !== '[' ? graph : ']';
+      }
+      // Don't repeat the subject if it's the same
+      if (this._subject === subject) {
+        // Don't repeat the predicate if it's the same
+        if (this._predicate === predicate)
+          this._write(', ' + this._encodeObject(object), done);
+        // Same subject, different predicate
+        else
+          this._write(';\n    ' +
+                      this._encodePredicate(this._predicate = predicate) + ' ' +
+                      this._encodeObject(object), done);
+      }
+      // Different subject; write the whole triple
+      else
+        this._write((this._subject === null ? '' : '.\n') +
+                    this._encodeSubject(this._subject = subject) + ' ' +
+                    this._encodePredicate(this._predicate = predicate) + ' ' +
+                    this._encodeObject(object), done);
+    }
+    catch (error) { done && done(error); }
+  },
+
+  // ### `_writeTripleLine` writes the triple or quad to the output stream as a single line
+  _writeTripleLine: function (subject, predicate, object, graph, done) {
+    // Write the triple without prefixes
+    delete this._prefixMatch;
+    try { this._write(this.tripleToString(subject, predicate, object, graph), done); }
+    catch (error) { done && done(error); }
+  },
+
+  // ### `tripleToString` serializes a triple or quad as a string
+  tripleToString: function (subject, predicate, object, graph) {
+    return  this._encodeIriOrBlankNode(subject)   + ' ' +
+            this._encodeIriOrBlankNode(predicate) + ' ' +
+            this._encodeObject(object) +
+            (graph ? ' ' + this._encodeIriOrBlankNode(graph) + '.\n' : '.\n');
+  },
+
+  // ### `triplesToString` serializes an array of triples or quads as a string
+  triplesToString: function (triples) {
+    return triples.map(function (t) {
+      return this.tripleToString(t.subject, t.predicate, t.object, t.graph);
+    }, this).join('');
+  },
+
+  // ### `_encodeIriOrBlankNode` represents an IRI or blank node
+  _encodeIriOrBlankNode: function (entity) {
+    // A blank node or list is represented as-is
+    var firstChar = entity[0];
+    if (firstChar === '[' || firstChar === '(' || firstChar === '_' && entity[1] === ':')
+      return entity;
+    // Escape special characters
+    if (escape.test(entity))
+      entity = entity.replace(escapeAll, characterReplacer);
+    // Try to represent the IRI as prefixed name
+    var prefixMatch = this._prefixRegex.exec(entity);
+    return !prefixMatch ? '<' + entity + '>' :
+           (!prefixMatch[1] ? entity : this._prefixIRIs[prefixMatch[1]] + prefixMatch[2]);
+  },
+
+  // ### `_encodeLiteral` represents a literal
+  _encodeLiteral: function (value, type, language) {
+    // Escape special characters
+    if (escape.test(value))
+      value = value.replace(escapeAll, characterReplacer);
+    // Write the literal, possibly with type or language
+    if (language)
+      return '"' + value + '"@' + language;
+    else if (type)
+      return '"' + value + '"^^' + this._encodeIriOrBlankNode(type);
+    else
+      return '"' + value + '"';
+  },
+
+  // ### `_encodeSubject` represents a subject
+  _encodeSubject: function (subject) {
+    if (subject[0] === '"')
+      throw new Error('A literal as subject is not allowed: ' + subject);
+    // Don't treat identical blank nodes as repeating subjects
+    if (subject[0] === '[')
+      this._subject = ']';
+    return this._encodeIriOrBlankNode(subject);
+  },
+
+  // ### `_encodePredicate` represents a predicate
+  _encodePredicate: function (predicate) {
+    if (predicate[0] === '"')
+      throw new Error('A literal as predicate is not allowed: ' + predicate);
+    return predicate === RDF_TYPE ? 'a' : this._encodeIriOrBlankNode(predicate);
+  },
+
+  // ### `_encodeObject` represents an object
+  _encodeObject: function (object) {
+    // Represent an IRI or blank node
+    if (object[0] !== '"')
+      return this._encodeIriOrBlankNode(object);
+    // Represent a literal
+    var match = N3LiteralMatcher.exec(object);
+    if (!match) throw new Error('Invalid literal: ' + object);
+    return this._encodeLiteral(match[1], match[2], match[3]);
+  },
+
+  // ### `_blockedWrite` replaces `_write` after the writer has been closed
+  _blockedWrite: function () {
+    throw new Error('Cannot write because the writer has been closed.');
+  },
+
+  // ### `addTriple` adds the triple to the output stream
+  addTriple: function (subject, predicate, object, graph, done) {
+    // The triple was given as a triple object, so shift parameters
+    if (object === undefined)
+      this._writeTriple(subject.subject, subject.predicate, subject.object,
+                        subject.graph || '', predicate);
+    // The optional `graph` parameter was not provided
+    else if (typeof graph !== 'string')
+      this._writeTriple(subject, predicate, object, '', graph);
+    // The `graph` parameter was provided
+    else
+      this._writeTriple(subject, predicate, object, graph, done);
+  },
+
+  // ### `addTriples` adds the triples to the output stream
+  addTriples: function (triples) {
+    for (var i = 0; i < triples.length; i++)
+      this.addTriple(triples[i]);
+  },
+
+  // ### `addPrefix` adds the prefix to the output stream
+  addPrefix: function (prefix, iri, done) {
+    var prefixes = {};
+    prefixes[prefix] = iri;
+    this.addPrefixes(prefixes, done);
+  },
+
+  // ### `addPrefixes` adds the prefixes to the output stream
+  addPrefixes: function (prefixes, done) {
+    // Add all useful prefixes
+    var prefixIRIs = this._prefixIRIs, hasPrefixes = false;
+    for (var prefix in prefixes) {
+      // Verify whether the prefix can be used and does not exist yet
+      var iri = prefixes[prefix];
+      if (/[#\/]$/.test(iri) && prefixIRIs[iri] !== (prefix += ':')) {
+        hasPrefixes = true;
+        prefixIRIs[iri] = prefix;
+        // Finish a possible pending triple
+        if (this._subject !== null) {
+          this._write(this._graph ? '\n}\n' : '.\n');
+          this._subject = null, this._graph = '';
+        }
+        // Write prefix
+        this._write('@prefix ' + prefix + ' <' + iri + '>.\n');
+      }
+    }
+    // Recreate the prefix matcher
+    if (hasPrefixes) {
+      var IRIlist = '', prefixList = '';
+      for (var prefixIRI in prefixIRIs) {
+        IRIlist += IRIlist ? '|' + prefixIRI : prefixIRI;
+        prefixList += (prefixList ? '|' : '') + prefixIRIs[prefixIRI];
+      }
+      IRIlist = IRIlist.replace(/[\]\/\(\)\*\+\?\.\\\$]/g, '\\$&');
+      this._prefixRegex = new RegExp('^(?:' + prefixList + ')[^\/]*$|' +
+                                     '^(' + IRIlist + ')([a-zA-Z][\\-_a-zA-Z0-9]*)$');
+    }
+    // End a prefix block with a newline
+    this._write(hasPrefixes ? '\n' : '', done);
+  },
+
+  // ### `blank` creates a blank node with the given content
+  blank: function (predicate, object) {
+    var children = predicate, child, length;
+    // Empty blank node
+    if (predicate === undefined)
+      children = [];
+    // Blank node passed as blank("predicate", "object")
+    else if (typeof predicate === 'string')
+      children = [{ predicate: predicate, object: object }];
+    // Blank node passed as blank({ predicate: predicate, object: object })
+    else if (!('length' in predicate))
+      children = [predicate];
+
+    switch (length = children.length) {
+    // Generate an empty blank node
+    case 0:
+      return '[]';
+    // Generate a non-nested one-triple blank node
+    case 1:
+      child = children[0];
+      if (child.object[0] !== '[')
+        return '[ ' + this._encodePredicate(child.predicate) + ' ' +
+                      this._encodeObject(child.object) + ' ]';
+    // Generate a multi-triple or nested blank node
+    default:
+      var contents = '[';
+      // Write all triples in order
+      for (var i = 0; i < length; i++) {
+        child = children[i];
+        // Write only the object is the predicate is the same as the previous
+        if (child.predicate === predicate)
+          contents += ', ' + this._encodeObject(child.object);
+        // Otherwise, write the predicate and the object
+        else {
+          contents += (i ? ';\n  ' : '\n  ') +
+                      this._encodePredicate(child.predicate) + ' ' +
+                      this._encodeObject(child.object);
+          predicate = child.predicate;
+        }
+      }
+      return contents + '\n]';
+    }
+  },
+
+  // ### `list` creates a list node with the given content
+  list: function (elements) {
+    var length = elements && elements.length || 0, contents = new Array(length);
+    for (var i = 0; i < length; i++)
+      contents[i] = this._encodeObject(elements[i]);
+    return '(' + contents.join(' ') + ')';
+  },
+
+  // ### `_prefixRegex` matches a prefixed name or IRI that begins with one of the added prefixes
+  _prefixRegex: /$0^/,
+
+  // ### `end` signals the end of the output stream
+  end: function (done) {
+    // Finish a possible pending triple
+    if (this._subject !== null) {
+      this._write(this._graph ? '\n}\n' : '.\n');
+      this._subject = null;
+    }
+    // Disallow further writing
+    this._write = this._blockedWrite;
+
+    // Try to end the underlying stream, ensuring done is called exactly one time
+    var singleDone = done && function (error, result) { singleDone = null, done(error, result); };
+    if (this._endStream) {
+      try { return this._outputStream.end(singleDone); }
+      catch (error) { /* error closing stream */ }
+    }
+    singleDone && singleDone();
+  },
+};
+
+// Replaces a character by its escaped version
+function characterReplacer(character) {
+  // Replace a single character by its escaped version
+  var result = escapedCharacters[character];
+  if (result === undefined) {
+    // Replace a single character with its 4-bit unicode escape sequence
+    if (character.length === 1) {
+      result = character.charCodeAt(0).toString(16);
+      result = '\\u0000'.substr(0, 6 - result.length) + result;
+    }
+    // Replace a surrogate pair with its 8-bit unicode escape sequence
+    else {
+      result = ((character.charCodeAt(0) - 0xD800) * 0x400 +
+                 character.charCodeAt(1) + 0x2400).toString(16);
+      result = '\\U00000000'.substr(0, 10 - result.length) + result;
+    }
+  }
+  return result;
+}
+
+// ## Exports
+module.exports = N3Writer;
+
+},{}],195:[function(require,module,exports){
+var crypto = require('crypto')
+  , qs = require('querystring')
+  ;
+
+function sha1 (key, body) {
+  return crypto.createHmac('sha1', key).update(body).digest('base64')
+}
+
+function rsa (key, body) {
+  return crypto.createSign("RSA-SHA1").update(body).sign(key, 'base64');
+}
+
+function rfc3986 (str) {
+  return encodeURIComponent(str)
+    .replace(/!/g,'%21')
+    .replace(/\*/g,'%2A')
+    .replace(/\(/g,'%28')
+    .replace(/\)/g,'%29')
+    .replace(/'/g,'%27')
+    ;
+}
+
+// Maps object to bi-dimensional array
+// Converts { foo: 'A', bar: [ 'b', 'B' ]} to
+// [ ['foo', 'A'], ['bar', 'b'], ['bar', 'B'] ]
+function map (obj) {
+  var key, val, arr = []
+  for (key in obj) {
+    val = obj[key]
+    if (Array.isArray(val))
+      for (var i = 0; i < val.length; i++)
+        arr.push([key, val[i]])
+    else if (typeof val === "object")
+      for (var prop in val)
+        arr.push([key + '[' + prop + ']', val[prop]]);
+    else
+      arr.push([key, val])
+  }
+  return arr
+}
+
+// Compare function for sort
+function compare (a, b) {
+  return a > b ? 1 : a < b ? -1 : 0
+}
+
+function generateBase (httpMethod, base_uri, params) {
+  // adapted from https://dev.twitter.com/docs/auth/oauth and 
+  // https://dev.twitter.com/docs/auth/creating-signature
+
+  // Parameter normalization
+  // http://tools.ietf.org/html/rfc5849#section-3.4.1.3.2
+  var normalized = map(params)
+  // 1.  First, the name and value of each parameter are encoded
+  .map(function (p) {
+    return [ rfc3986(p[0]), rfc3986(p[1] || '') ]
+  })
+  // 2.  The parameters are sorted by name, using ascending byte value
+  //     ordering.  If two or more parameters share the same name, they
+  //     are sorted by their value.
+  .sort(function (a, b) {
+    return compare(a[0], b[0]) || compare(a[1], b[1])
+  })
+  // 3.  The name of each parameter is concatenated to its corresponding
+  //     value using an "=" character (ASCII code 61) as a separator, even
+  //     if the value is empty.
+  .map(function (p) { return p.join('=') })
+   // 4.  The sorted name/value pairs are concatenated together into a
+   //     single string by using an "&" character (ASCII code 38) as
+   //     separator.
+  .join('&')
+
+  var base = [
+    rfc3986(httpMethod ? httpMethod.toUpperCase() : 'GET'),
+    rfc3986(base_uri),
+    rfc3986(normalized)
+  ].join('&')
+
+  return base
+}
+
+function hmacsign (httpMethod, base_uri, params, consumer_secret, token_secret) {
+  var base = generateBase(httpMethod, base_uri, params)
+  var key = [
+    consumer_secret || '',
+    token_secret || ''
+  ].map(rfc3986).join('&')
+
+  return sha1(key, base)
+}
+
+function rsasign (httpMethod, base_uri, params, private_key, token_secret) {
+  var base = generateBase(httpMethod, base_uri, params)
+  var key = private_key || ''
+
+  return rsa(key, base)
+}
+
+function plaintext (consumer_secret, token_secret) {
+  var key = [
+    consumer_secret || '',
+    token_secret || ''
+  ].map(rfc3986).join('&')
+
+  return key
+}
+
+function sign (signMethod, httpMethod, base_uri, params, consumer_secret, token_secret) {
+  var method
+  var skipArgs = 1
+
+  switch (signMethod) {
+    case 'RSA-SHA1':
+      method = rsasign
+      break
+    case 'HMAC-SHA1':
+      method = hmacsign
+      break
+    case 'PLAINTEXT':
+      method = plaintext
+      skipArgs = 4
+      break
+    default:
+     throw new Error("Signature method not supported: " + signMethod)
+  }
+
+  return method.apply(null, [].slice.call(arguments, skipArgs))
+}
+
+exports.hmacsign = hmacsign
+exports.rsasign = rsasign
+exports.plaintext = plaintext
+exports.sign = sign
+exports.rfc3986 = rfc3986
+exports.generateBase = generateBase
+
+
+},{"crypto":354,"querystring":439}],196:[function(require,module,exports){
+(function (process){
+// Generated by CoffeeScript 1.12.2
+(function() {
+  var getNanoSeconds, hrtime, loadTime, moduleLoadTime, nodeLoadTime, upTime;
+
+  if ((typeof performance !== "undefined" && performance !== null) && performance.now) {
+    module.exports = function() {
+      return performance.now();
+    };
+  } else if ((typeof process !== "undefined" && process !== null) && process.hrtime) {
+    module.exports = function() {
+      return (getNanoSeconds() - nodeLoadTime) / 1e6;
+    };
+    hrtime = process.hrtime;
+    getNanoSeconds = function() {
+      var hr;
+      hr = hrtime();
+      return hr[0] * 1e9 + hr[1];
+    };
+    moduleLoadTime = getNanoSeconds();
+    upTime = process.uptime() * 1e9;
+    nodeLoadTime = moduleLoadTime - upTime;
+  } else if (Date.now) {
+    module.exports = function() {
+      return Date.now() - loadTime;
+    };
+    loadTime = Date.now();
+  } else {
+    module.exports = function() {
+      return new Date().getTime() - loadTime;
+    };
+    loadTime = new Date().getTime();
+  }
+
+}).call(this);
+
+
+
+}).call(this,require('_process'))
+},{"_process":429}],197:[function(require,module,exports){
+'use strict';
+
+module.exports = require('./lib/core.js')
+require('./lib/done.js')
+require('./lib/es6-extensions.js')
+require('./lib/node-extensions.js')
+},{"./lib/core.js":198,"./lib/done.js":199,"./lib/es6-extensions.js":200,"./lib/node-extensions.js":201}],198:[function(require,module,exports){
+'use strict';
+
+var asap = require('asap')
+
+module.exports = Promise;
+function Promise(fn) {
+  if (typeof this !== 'object') throw new TypeError('Promises must be constructed via new')
+  if (typeof fn !== 'function') throw new TypeError('not a function')
+  var state = null
+  var value = null
+  var deferreds = []
+  var self = this
+
+  this.then = function(onFulfilled, onRejected) {
+    return new self.constructor(function(resolve, reject) {
+      handle(new Handler(onFulfilled, onRejected, resolve, reject))
+    })
+  }
+
+  function handle(deferred) {
+    if (state === null) {
+      deferreds.push(deferred)
+      return
+    }
+    asap(function() {
+      var cb = state ? deferred.onFulfilled : deferred.onRejected
+      if (cb === null) {
+        (state ? deferred.resolve : deferred.reject)(value)
+        return
+      }
+      var ret
+      try {
+        ret = cb(value)
+      }
+      catch (e) {
+        deferred.reject(e)
+        return
+      }
+      deferred.resolve(ret)
+    })
+  }
+
+  function resolve(newValue) {
+    try { //Promise Resolution Procedure: https://github.com/promises-aplus/promises-spec#the-promise-resolution-procedure
+      if (newValue === self) throw new TypeError('A promise cannot be resolved with itself.')
+      if (newValue && (typeof newValue === 'object' || typeof newValue === 'function')) {
+        var then = newValue.then
+        if (typeof then === 'function') {
+          doResolve(then.bind(newValue), resolve, reject)
+          return
+        }
+      }
+      state = true
+      value = newValue
+      finale()
+    } catch (e) { reject(e) }
+  }
+
+  function reject(newValue) {
+    state = false
+    value = newValue
+    finale()
+  }
+
+  function finale() {
+    for (var i = 0, len = deferreds.length; i < len; i++)
+      handle(deferreds[i])
+    deferreds = null
+  }
+
+  doResolve(fn, resolve, reject)
+}
+
+
+function Handler(onFulfilled, onRejected, resolve, reject){
+  this.onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : null
+  this.onRejected = typeof onRejected === 'function' ? onRejected : null
+  this.resolve = resolve
+  this.reject = reject
+}
+
+/**
+ * Take a potentially misbehaving resolver function and make sure
+ * onFulfilled and onRejected are only called once.
+ *
+ * Makes no guarantees about asynchrony.
+ */
+function doResolve(fn, onFulfilled, onRejected) {
+  var done = false;
+  try {
+    fn(function (value) {
+      if (done) return
+      done = true
+      onFulfilled(value)
+    }, function (reason) {
+      if (done) return
+      done = true
+      onRejected(reason)
+    })
+  } catch (ex) {
+    if (done) return
+    done = true
+    onRejected(ex)
+  }
+}
+
+},{"asap":43}],199:[function(require,module,exports){
+'use strict';
+
+var Promise = require('./core.js')
+var asap = require('asap')
+
+module.exports = Promise
+Promise.prototype.done = function (onFulfilled, onRejected) {
+  var self = arguments.length ? this.then.apply(this, arguments) : this
+  self.then(null, function (err) {
+    asap(function () {
+      throw err
+    })
+  })
+}
+},{"./core.js":198,"asap":43}],200:[function(require,module,exports){
+'use strict';
+
+//This file contains the ES6 extensions to the core Promises/A+ API
+
+var Promise = require('./core.js')
+var asap = require('asap')
+
+module.exports = Promise
+
+/* Static Functions */
+
+function ValuePromise(value) {
+  this.then = function (onFulfilled) {
+    if (typeof onFulfilled !== 'function') return this
+    return new Promise(function (resolve, reject) {
+      asap(function () {
+        try {
+          resolve(onFulfilled(value))
+        } catch (ex) {
+          reject(ex);
+        }
+      })
+    })
+  }
+}
+ValuePromise.prototype = Promise.prototype
+
+var TRUE = new ValuePromise(true)
+var FALSE = new ValuePromise(false)
+var NULL = new ValuePromise(null)
+var UNDEFINED = new ValuePromise(undefined)
+var ZERO = new ValuePromise(0)
+var EMPTYSTRING = new ValuePromise('')
+
+Promise.resolve = function (value) {
+  if (value instanceof Promise) return value
+
+  if (value === null) return NULL
+  if (value === undefined) return UNDEFINED
+  if (value === true) return TRUE
+  if (value === false) return FALSE
+  if (value === 0) return ZERO
+  if (value === '') return EMPTYSTRING
+
+  if (typeof value === 'object' || typeof value === 'function') {
+    try {
+      var then = value.then
+      if (typeof then === 'function') {
+        return new Promise(then.bind(value))
+      }
+    } catch (ex) {
+      return new Promise(function (resolve, reject) {
+        reject(ex)
+      })
+    }
+  }
+
+  return new ValuePromise(value)
+}
+
+Promise.all = function (arr) {
+  var args = Array.prototype.slice.call(arr)
+
+  return new Promise(function (resolve, reject) {
+    if (args.length === 0) return resolve([])
+    var remaining = args.length
+    function res(i, val) {
+      try {
+        if (val && (typeof val === 'object' || typeof val === 'function')) {
+          var then = val.then
+          if (typeof then === 'function') {
+            then.call(val, function (val) { res(i, val) }, reject)
+            return
+          }
+        }
+        args[i] = val
+        if (--remaining === 0) {
+          resolve(args);
+        }
+      } catch (ex) {
+        reject(ex)
+      }
+    }
+    for (var i = 0; i < args.length; i++) {
+      res(i, args[i])
+    }
+  })
+}
+
+Promise.reject = function (value) {
+  return new Promise(function (resolve, reject) { 
+    reject(value);
+  });
+}
+
+Promise.race = function (values) {
+  return new Promise(function (resolve, reject) { 
+    values.forEach(function(value){
+      Promise.resolve(value).then(resolve, reject);
+    })
+  });
+}
+
+/* Prototype Methods */
+
+Promise.prototype['catch'] = function (onRejected) {
+  return this.then(null, onRejected);
+}
+
+},{"./core.js":198,"asap":43}],201:[function(require,module,exports){
+'use strict';
+
+//This file contains then/promise specific extensions that are only useful for node.js interop
+
+var Promise = require('./core.js')
+var asap = require('asap')
+
+module.exports = Promise
+
+/* Static Functions */
+
+Promise.denodeify = function (fn, argumentCount) {
+  argumentCount = argumentCount || Infinity
+  return function () {
+    var self = this
+    var args = Array.prototype.slice.call(arguments)
+    return new Promise(function (resolve, reject) {
+      while (args.length && args.length > argumentCount) {
+        args.pop()
+      }
+      args.push(function (err, res) {
+        if (err) reject(err)
+        else resolve(res)
+      })
+      var res = fn.apply(self, args)
+      if (res && (typeof res === 'object' || typeof res === 'function') && typeof res.then === 'function') {
+        resolve(res)
+      }
+    })
+  }
+}
+Promise.nodeify = function (fn) {
+  return function () {
+    var args = Array.prototype.slice.call(arguments)
+    var callback = typeof args[args.length - 1] === 'function' ? args.pop() : null
+    var ctx = this
+    try {
+      return fn.apply(this, arguments).nodeify(callback, ctx)
+    } catch (ex) {
+      if (callback === null || typeof callback == 'undefined') {
+        return new Promise(function (resolve, reject) { reject(ex) })
+      } else {
+        asap(function () {
+          callback.call(ctx, ex)
+        })
+      }
+    }
+  }
+}
+
+Promise.prototype.nodeify = function (callback, ctx) {
+  if (typeof callback != 'function') return this
+
+  this.then(function (value) {
+    asap(function () {
+      callback.call(ctx, null, value)
+    })
+  }, function (err) {
+    asap(function () {
+      callback.call(ctx, err)
+    })
+  })
+}
+
+},{"./core.js":198,"asap":43}],202:[function(require,module,exports){
 'use strict';
 
 var replace = String.prototype.replace;
@@ -42509,7 +40748,7 @@ module.exports = {
     RFC3986: 'RFC3986'
 };
 
-},{}],219:[function(require,module,exports){
+},{}],203:[function(require,module,exports){
 'use strict';
 
 var stringify = require('./stringify');
@@ -42522,7 +40761,7 @@ module.exports = {
     stringify: stringify
 };
 
-},{"./formats":218,"./parse":220,"./stringify":221}],220:[function(require,module,exports){
+},{"./formats":202,"./parse":204,"./stringify":205}],204:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -42698,7 +40937,7 @@ module.exports = function (str, opts) {
     return utils.compact(obj);
 };
 
-},{"./utils":222}],221:[function(require,module,exports){
+},{"./utils":206}],205:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -42910,7 +41149,7 @@ module.exports = function (object, opts) {
     return joined.length > 0 ? prefix + joined : '';
 };
 
-},{"./formats":218,"./utils":222}],222:[function(require,module,exports){
+},{"./formats":202,"./utils":206}],206:[function(require,module,exports){
 'use strict';
 
 var has = Object.prototype.hasOwnProperty;
@@ -43125,7 +41364,1601 @@ module.exports = {
     merge: merge
 };
 
-},{}],223:[function(require,module,exports){
+},{}],207:[function(require,module,exports){
+module.exports = require("bluebird/js/main/captured_trace")();
+
+},{"bluebird/js/main/captured_trace":60}],208:[function(require,module,exports){
+// See: https://github.com/petkaantonov/bluebird#for-library-authors
+module.exports = require("bluebird/js/main/promise")();
+
+},{"bluebird/js/main/promise":76}],209:[function(require,module,exports){
+'use strict';
+
+
+function RequestError(cause) {
+
+    this.name = 'RequestError';
+    this.message = String(cause);
+    this.cause = cause;
+
+    if (Error.captureStackTrace) {
+        Error.captureStackTrace(this);
+    }
+
+}
+RequestError.prototype = Object.create(Error.prototype);
+RequestError.prototype.constructor = RequestError;
+
+
+function StatusCodeError(statusCode, message) {
+
+    this.name = 'StatusCodeError';
+    this.statusCode = statusCode;
+    this.message = statusCode + ' - ' + message;
+
+    if (Error.captureStackTrace) {
+        Error.captureStackTrace(this);
+    }
+
+}
+StatusCodeError.prototype = Object.create(Error.prototype);
+StatusCodeError.prototype.constructor = StatusCodeError;
+
+
+module.exports = {
+    RequestError: RequestError,
+    StatusCodeError: StatusCodeError
+};
+
+},{}],210:[function(require,module,exports){
+'use strict';
+
+var Bluebird = require('./bluebird-fresh.js'),
+    CapturedTrace = require('./bluebird-captured-trace-fresh.js'),
+    assign = require('lodash/object/assign'),
+    forEach = require('lodash/collection/forEach'),
+    isFunction = require('lodash/lang/isFunction'),
+    isPlainObject = require('lodash/lang/isPlainObject'),
+    isString = require('lodash/lang/isString'),
+    isUndefined = require('lodash/lang/isUndefined'),
+    keys = require('lodash/object/keys'),
+    chalk = require('chalk'),
+    errors = require('./errors.js');
+
+
+// Load Request freshly - so that users can require an unaltered request instance!
+var request = (function () {
+
+    function clearCache() {
+        forEach(keys(require.cache), function (key) {
+            delete require.cache[key];
+        });
+    }
+
+    var temp = assign({}, require.cache);
+    clearCache();
+
+    var freshRequest = require('request');
+
+    clearCache();
+    assign(require.cache, temp);
+
+    return freshRequest;
+
+})();
+
+
+function RP$callback(err, response, body) {
+
+    /* jshint validthis:true */
+    var self = this;
+
+    var origCallbackThrewException = false, thrownException;
+
+    if (isFunction(self._rp_callbackOrig)) {
+        try {
+            self._rp_callbackOrig.apply(self, arguments);
+        } catch (e) {
+            origCallbackThrewException = true;
+            thrownException = e;
+        }
+    }
+
+    if (err) {
+
+        self._rp_reject(assign(new errors.RequestError(err), {
+            error: err,
+            options: self._rp_options,
+            response: response
+        }));
+
+    } else if (self._rp_options.simple && !(/^2/.test('' + response.statusCode))) {
+
+        self._rp_reject(assign(new errors.StatusCodeError(response.statusCode, body), {
+            error: body,
+            options: self._rp_options,
+            response: response
+        }));
+
+    } else {
+        if (isFunction(self._rp_options.transform)) {
+            try {
+                self._rp_resolve(self._rp_options.transform(body, response));
+            } catch (e) {
+                self._rp_reject(e);
+            }
+        } else if (self._rp_options.resolveWithFullResponse) {
+            self._rp_resolve(response);
+        } else {
+            self._rp_resolve(body);
+        }
+    }
+
+    if (origCallbackThrewException) {
+        throw thrownException;
+    }
+
+    // Mimic original behavior of errors emitted by request with no error listener registered
+    if (err && isFunction(self._rp_callbackOrig) === false && self._rp_promise_in_use !== true && self.listeners('error').length === 1) {
+        throw err;
+    }
+
+}
+
+var originalInit = request.Request.prototype.init;
+
+request.Request.prototype.init = function RP$initInterceptor(options) {
+
+    var self = this;
+
+    // Init may be called again - currently in case of redirects
+    if (isPlainObject(options) && self._callback === undefined && self._rp_promise === undefined) {
+
+        self._rp_promise = new Bluebird(function (resolve, reject) {
+            self._rp_resolve = resolve;
+            self._rp_reject = reject;
+        });
+        self._rp_promise._rp_in_use = false;
+
+        self._rp_callbackOrig = self.callback;
+        self.callback = RP$callback;
+
+        if (isString(options.method)) {
+            options.method = options.method.toUpperCase();
+        }
+
+        self._rp_options = options;
+        self._rp_options.simple = options.simple === false ? false : true;
+        self._rp_options.resolveWithFullResponse = options.resolveWithFullResponse === true ? true : false;
+
+    }
+
+    return originalInit.apply(self, arguments);
+
+};
+
+function markPromiseInUse(requestInstance) {
+    requestInstance._rp_promise_in_use = true;
+    requestInstance._rp_promise._rp_in_use = true;
+}
+
+function expose(methodToExpose, exposeAs) {
+
+    exposeAs = exposeAs || methodToExpose;
+
+    /* istanbul ignore if */
+    if (!isUndefined(request.Request.prototype[exposeAs])) {
+        console.error(chalk.bold.bgRed('[Request-Promise] Unable to expose method "' + exposeAs + '". It is already implemented by Request. Please visit https://github.com/request/request-promise/wiki/Troubleshooting'));
+        return;
+    }
+
+    request.Request.prototype[exposeAs] = function RP$exposed() {
+        markPromiseInUse(this);
+        return this._rp_promise[methodToExpose].apply(this._rp_promise, arguments);
+    };
+
+}
+
+expose('then');
+expose('catch');
+expose('finally');
+
+request.Request.prototype.promise = function RP$promise() {
+    markPromiseInUse(this);
+    return this._rp_promise;
+};
+
+
+var printRejectionReason = CapturedTrace.formatAndLogError || CapturedTrace.possiblyUnhandledRejection;
+
+Bluebird.onPossiblyUnhandledRejection(function (reason, promise) {
+    // For whatever reason we don't see _rp_in_use here at all after then is called. --> We compare to false instead of true.
+    if (promise._rp_in_use !== false) {
+        printRejectionReason(reason, 'Possibly unhandled ');
+    }
+    // else: The user did not call .then(...)
+    // --> We need to assume that this request is processed with a callback or a pipe etc.
+});
+
+
+module.exports = request;
+
+},{"./bluebird-captured-trace-fresh.js":207,"./bluebird-fresh.js":208,"./errors.js":209,"chalk":93,"lodash/collection/forEach":147,"lodash/lang/isFunction":174,"lodash/lang/isPlainObject":177,"lodash/lang/isString":178,"lodash/lang/isUndefined":179,"lodash/object/assign":180,"lodash/object/keys":181,"request":211}],211:[function(require,module,exports){
+// Copyright 2010-2012 Mikeal Rogers
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+
+'use strict'
+
+var extend = require('extend')
+var cookies = require('./lib/cookies')
+var helpers = require('./lib/helpers')
+
+var paramsHaveRequestBody = helpers.paramsHaveRequestBody
+
+// organize params for patch, post, put, head, del
+function initParams (uri, options, callback) {
+  if (typeof options === 'function') {
+    callback = options
+  }
+
+  var params = {}
+  if (typeof options === 'object') {
+    extend(params, options, {uri: uri})
+  } else if (typeof uri === 'string') {
+    extend(params, {uri: uri})
+  } else {
+    extend(params, uri)
+  }
+
+  params.callback = callback || params.callback
+  return params
+}
+
+function request (uri, options, callback) {
+  if (typeof uri === 'undefined') {
+    throw new Error('undefined is not a valid uri or options object.')
+  }
+
+  var params = initParams(uri, options, callback)
+
+  if (params.method === 'HEAD' && paramsHaveRequestBody(params)) {
+    throw new Error('HTTP HEAD requests MUST NOT include a request body.')
+  }
+
+  return new request.Request(params)
+}
+
+function verbFunc (verb) {
+  var method = verb.toUpperCase()
+  return function (uri, options, callback) {
+    var params = initParams(uri, options, callback)
+    params.method = method
+    return request(params, params.callback)
+  }
+}
+
+// define like this to please codeintel/intellisense IDEs
+request.get = verbFunc('get')
+request.head = verbFunc('head')
+request.options = verbFunc('options')
+request.post = verbFunc('post')
+request.put = verbFunc('put')
+request.patch = verbFunc('patch')
+request.del = verbFunc('delete')
+request['delete'] = verbFunc('delete')
+
+request.jar = function (store) {
+  return cookies.jar(store)
+}
+
+request.cookie = function (str) {
+  return cookies.parse(str)
+}
+
+function wrapRequestMethod (method, options, requester, verb) {
+  return function (uri, opts, callback) {
+    var params = initParams(uri, opts, callback)
+
+    var target = {}
+    extend(true, target, options, params)
+
+    target.pool = params.pool || options.pool
+
+    if (verb) {
+      target.method = verb.toUpperCase()
+    }
+
+    if (typeof requester === 'function') {
+      method = requester
+    }
+
+    return method(target, target.callback)
+  }
+}
+
+request.defaults = function (options, requester) {
+  var self = this
+
+  options = options || {}
+
+  if (typeof options === 'function') {
+    requester = options
+    options = {}
+  }
+
+  var defaults = wrapRequestMethod(self, options, requester)
+
+  var verbs = ['get', 'head', 'post', 'put', 'patch', 'del', 'delete']
+  verbs.forEach(function (verb) {
+    defaults[verb] = wrapRequestMethod(self[verb], options, requester, verb)
+  })
+
+  defaults.cookie = wrapRequestMethod(self.cookie, options, requester)
+  defaults.jar = self.jar
+  defaults.defaults = self.defaults
+  return defaults
+}
+
+request.forever = function (agentOptions, optionsArg) {
+  var options = {}
+  if (optionsArg) {
+    extend(options, optionsArg)
+  }
+  if (agentOptions) {
+    options.agentOptions = agentOptions
+  }
+
+  options.forever = true
+  return request.defaults(options)
+}
+
+// Exports
+
+module.exports = request
+request.Request = require('./request')
+request.initParams = initParams
+
+// Backwards compatibility for request.debug
+Object.defineProperty(request, 'debug', {
+  enumerable: true,
+  get: function () {
+    return request.Request.debug
+  },
+  set: function (debug) {
+    request.Request.debug = debug
+  }
+})
+
+},{"./lib/cookies":213,"./lib/helpers":216,"./request":222,"extend":104}],212:[function(require,module,exports){
+'use strict'
+
+var caseless = require('caseless')
+var uuid = require('uuid')
+var helpers = require('./helpers')
+
+var md5 = helpers.md5
+var toBase64 = helpers.toBase64
+
+function Auth (request) {
+  // define all public properties here
+  this.request = request
+  this.hasAuth = false
+  this.sentAuth = false
+  this.bearerToken = null
+  this.user = null
+  this.pass = null
+}
+
+Auth.prototype.basic = function (user, pass, sendImmediately) {
+  var self = this
+  if (typeof user !== 'string' || (pass !== undefined && typeof pass !== 'string')) {
+    self.request.emit('error', new Error('auth() received invalid user or password'))
+  }
+  self.user = user
+  self.pass = pass
+  self.hasAuth = true
+  var header = user + ':' + (pass || '')
+  if (sendImmediately || typeof sendImmediately === 'undefined') {
+    var authHeader = 'Basic ' + toBase64(header)
+    self.sentAuth = true
+    return authHeader
+  }
+}
+
+Auth.prototype.bearer = function (bearer, sendImmediately) {
+  var self = this
+  self.bearerToken = bearer
+  self.hasAuth = true
+  if (sendImmediately || typeof sendImmediately === 'undefined') {
+    if (typeof bearer === 'function') {
+      bearer = bearer()
+    }
+    var authHeader = 'Bearer ' + (bearer || '')
+    self.sentAuth = true
+    return authHeader
+  }
+}
+
+Auth.prototype.digest = function (method, path, authHeader) {
+  // TODO: More complete implementation of RFC 2617.
+  //   - handle challenge.domain
+  //   - support qop="auth-int" only
+  //   - handle Authentication-Info (not necessarily?)
+  //   - check challenge.stale (not necessarily?)
+  //   - increase nc (not necessarily?)
+  // For reference:
+  // http://tools.ietf.org/html/rfc2617#section-3
+  // https://github.com/bagder/curl/blob/master/lib/http_digest.c
+
+  var self = this
+
+  var challenge = {}
+  var re = /([a-z0-9_-]+)=(?:"([^"]+)"|([a-z0-9_-]+))/gi
+  for (;;) {
+    var match = re.exec(authHeader)
+    if (!match) {
+      break
+    }
+    challenge[match[1]] = match[2] || match[3]
+  }
+
+  /**
+   * RFC 2617: handle both MD5 and MD5-sess algorithms.
+   *
+   * If the algorithm directive's value is "MD5" or unspecified, then HA1 is
+   *   HA1=MD5(username:realm:password)
+   * If the algorithm directive's value is "MD5-sess", then HA1 is
+   *   HA1=MD5(MD5(username:realm:password):nonce:cnonce)
+   */
+  var ha1Compute = function (algorithm, user, realm, pass, nonce, cnonce) {
+    var ha1 = md5(user + ':' + realm + ':' + pass)
+    if (algorithm && algorithm.toLowerCase() === 'md5-sess') {
+      return md5(ha1 + ':' + nonce + ':' + cnonce)
+    } else {
+      return ha1
+    }
+  }
+
+  var qop = /(^|,)\s*auth\s*($|,)/.test(challenge.qop) && 'auth'
+  var nc = qop && '00000001'
+  var cnonce = qop && uuid().replace(/-/g, '')
+  var ha1 = ha1Compute(challenge.algorithm, self.user, challenge.realm, self.pass, challenge.nonce, cnonce)
+  var ha2 = md5(method + ':' + path)
+  var digestResponse = qop
+    ? md5(ha1 + ':' + challenge.nonce + ':' + nc + ':' + cnonce + ':' + qop + ':' + ha2)
+    : md5(ha1 + ':' + challenge.nonce + ':' + ha2)
+  var authValues = {
+    username: self.user,
+    realm: challenge.realm,
+    nonce: challenge.nonce,
+    uri: path,
+    qop: qop,
+    response: digestResponse,
+    nc: nc,
+    cnonce: cnonce,
+    algorithm: challenge.algorithm,
+    opaque: challenge.opaque
+  }
+
+  authHeader = []
+  for (var k in authValues) {
+    if (authValues[k]) {
+      if (k === 'qop' || k === 'nc' || k === 'algorithm') {
+        authHeader.push(k + '=' + authValues[k])
+      } else {
+        authHeader.push(k + '="' + authValues[k] + '"')
+      }
+    }
+  }
+  authHeader = 'Digest ' + authHeader.join(', ')
+  self.sentAuth = true
+  return authHeader
+}
+
+Auth.prototype.onRequest = function (user, pass, sendImmediately, bearer) {
+  var self = this
+  var request = self.request
+
+  var authHeader
+  if (bearer === undefined && user === undefined) {
+    self.request.emit('error', new Error('no auth mechanism defined'))
+  } else if (bearer !== undefined) {
+    authHeader = self.bearer(bearer, sendImmediately)
+  } else {
+    authHeader = self.basic(user, pass, sendImmediately)
+  }
+  if (authHeader) {
+    request.setHeader('authorization', authHeader)
+  }
+}
+
+Auth.prototype.onResponse = function (response) {
+  var self = this
+  var request = self.request
+
+  if (!self.hasAuth || self.sentAuth) { return null }
+
+  var c = caseless(response.headers)
+
+  var authHeader = c.get('www-authenticate')
+  var authVerb = authHeader && authHeader.split(' ')[0].toLowerCase()
+  request.debug('reauth', authVerb)
+
+  switch (authVerb) {
+    case 'basic':
+      return self.basic(self.user, self.pass, true)
+
+    case 'bearer':
+      return self.bearer(self.bearerToken, true)
+
+    case 'digest':
+      return self.digest(request.method, request.path, authHeader)
+  }
+}
+
+exports.Auth = Auth
+
+},{"./helpers":216,"caseless":92,"uuid":287}],213:[function(require,module,exports){
+'use strict'
+
+var tough = require('tough-cookie')
+
+var Cookie = tough.Cookie
+var CookieJar = tough.CookieJar
+
+exports.parse = function (str) {
+  if (str && str.uri) {
+    str = str.uri
+  }
+  if (typeof str !== 'string') {
+    throw new Error('The cookie function only accepts STRING as param')
+  }
+  return Cookie.parse(str, {loose: true})
+}
+
+// Adapt the sometimes-Async api of tough.CookieJar to our requirements
+function RequestJar (store) {
+  var self = this
+  self._jar = new CookieJar(store, {looseMode: true})
+}
+RequestJar.prototype.setCookie = function (cookieOrStr, uri, options) {
+  var self = this
+  return self._jar.setCookieSync(cookieOrStr, uri, options || {})
+}
+RequestJar.prototype.getCookieString = function (uri) {
+  var self = this
+  return self._jar.getCookieStringSync(uri)
+}
+RequestJar.prototype.getCookies = function (uri) {
+  var self = this
+  return self._jar.getCookiesSync(uri)
+}
+
+exports.jar = function (store) {
+  return new RequestJar(store)
+}
+
+},{"tough-cookie":278}],214:[function(require,module,exports){
+(function (process){
+'use strict'
+
+function formatHostname (hostname) {
+  // canonicalize the hostname, so that 'oogle.com' won't match 'google.com'
+  return hostname.replace(/^\.*/, '.').toLowerCase()
+}
+
+function parseNoProxyZone (zone) {
+  zone = zone.trim().toLowerCase()
+
+  var zoneParts = zone.split(':', 2)
+  var zoneHost = formatHostname(zoneParts[0])
+  var zonePort = zoneParts[1]
+  var hasPort = zone.indexOf(':') > -1
+
+  return {hostname: zoneHost, port: zonePort, hasPort: hasPort}
+}
+
+function uriInNoProxy (uri, noProxy) {
+  var port = uri.port || (uri.protocol === 'https:' ? '443' : '80')
+  var hostname = formatHostname(uri.hostname)
+  var noProxyList = noProxy.split(',')
+
+  // iterate through the noProxyList until it finds a match.
+  return noProxyList.map(parseNoProxyZone).some(function (noProxyZone) {
+    var isMatchedAt = hostname.indexOf(noProxyZone.hostname)
+    var hostnameMatched = (
+      isMatchedAt > -1 &&
+        (isMatchedAt === hostname.length - noProxyZone.hostname.length)
+    )
+
+    if (noProxyZone.hasPort) {
+      return (port === noProxyZone.port) && hostnameMatched
+    }
+
+    return hostnameMatched
+  })
+}
+
+function getProxyFromURI (uri) {
+  // Decide the proper request proxy to use based on the request URI object and the
+  // environmental variables (NO_PROXY, HTTP_PROXY, etc.)
+  // respect NO_PROXY environment variables (see: http://lynx.isc.org/current/breakout/lynx_help/keystrokes/environments.html)
+
+  var noProxy = process.env.NO_PROXY || process.env.no_proxy || ''
+
+  // if the noProxy is a wildcard then return null
+
+  if (noProxy === '*') {
+    return null
+  }
+
+  // if the noProxy is not empty and the uri is found return null
+
+  if (noProxy !== '' && uriInNoProxy(uri, noProxy)) {
+    return null
+  }
+
+  // Check for HTTP or HTTPS Proxy in environment Else default to null
+
+  if (uri.protocol === 'http:') {
+    return process.env.HTTP_PROXY ||
+      process.env.http_proxy || null
+  }
+
+  if (uri.protocol === 'https:') {
+    return process.env.HTTPS_PROXY ||
+      process.env.https_proxy ||
+      process.env.HTTP_PROXY ||
+      process.env.http_proxy || null
+  }
+
+  // if none of that works, return null
+  // (What uri protocol are you using then?)
+
+  return null
+}
+
+module.exports = getProxyFromURI
+
+}).call(this,require('_process'))
+},{"_process":429}],215:[function(require,module,exports){
+'use strict'
+
+var fs = require('fs')
+var qs = require('querystring')
+var validate = require('har-validator')
+var extend = require('extend')
+
+function Har (request) {
+  this.request = request
+}
+
+Har.prototype.reducer = function (obj, pair) {
+  // new property ?
+  if (obj[pair.name] === undefined) {
+    obj[pair.name] = pair.value
+    return obj
+  }
+
+  // existing? convert to array
+  var arr = [
+    obj[pair.name],
+    pair.value
+  ]
+
+  obj[pair.name] = arr
+
+  return obj
+}
+
+Har.prototype.prep = function (data) {
+  // construct utility properties
+  data.queryObj = {}
+  data.headersObj = {}
+  data.postData.jsonObj = false
+  data.postData.paramsObj = false
+
+  // construct query objects
+  if (data.queryString && data.queryString.length) {
+    data.queryObj = data.queryString.reduce(this.reducer, {})
+  }
+
+  // construct headers objects
+  if (data.headers && data.headers.length) {
+    // loweCase header keys
+    data.headersObj = data.headers.reduceRight(function (headers, header) {
+      headers[header.name] = header.value
+      return headers
+    }, {})
+  }
+
+  // construct Cookie header
+  if (data.cookies && data.cookies.length) {
+    var cookies = data.cookies.map(function (cookie) {
+      return cookie.name + '=' + cookie.value
+    })
+
+    if (cookies.length) {
+      data.headersObj.cookie = cookies.join('; ')
+    }
+  }
+
+  // prep body
+  function some (arr) {
+    return arr.some(function (type) {
+      return data.postData.mimeType.indexOf(type) === 0
+    })
+  }
+
+  if (some([
+    'multipart/mixed',
+    'multipart/related',
+    'multipart/form-data',
+    'multipart/alternative'])) {
+    // reset values
+    data.postData.mimeType = 'multipart/form-data'
+  } else if (some([
+    'application/x-www-form-urlencoded'])) {
+    if (!data.postData.params) {
+      data.postData.text = ''
+    } else {
+      data.postData.paramsObj = data.postData.params.reduce(this.reducer, {})
+
+      // always overwrite
+      data.postData.text = qs.stringify(data.postData.paramsObj)
+    }
+  } else if (some([
+    'text/json',
+    'text/x-json',
+    'application/json',
+    'application/x-json'])) {
+    data.postData.mimeType = 'application/json'
+
+    if (data.postData.text) {
+      try {
+        data.postData.jsonObj = JSON.parse(data.postData.text)
+      } catch (e) {
+        this.request.debug(e)
+
+        // force back to text/plain
+        data.postData.mimeType = 'text/plain'
+      }
+    }
+  }
+
+  return data
+}
+
+Har.prototype.options = function (options) {
+  // skip if no har property defined
+  if (!options.har) {
+    return options
+  }
+
+  var har = {}
+  extend(har, options.har)
+
+  // only process the first entry
+  if (har.log && har.log.entries) {
+    har = har.log.entries[0]
+  }
+
+  // add optional properties to make validation successful
+  har.url = har.url || options.url || options.uri || options.baseUrl || '/'
+  har.httpVersion = har.httpVersion || 'HTTP/1.1'
+  har.queryString = har.queryString || []
+  har.headers = har.headers || []
+  har.cookies = har.cookies || []
+  har.postData = har.postData || {}
+  har.postData.mimeType = har.postData.mimeType || 'application/octet-stream'
+
+  har.bodySize = 0
+  har.headersSize = 0
+  har.postData.size = 0
+
+  if (!validate.request(har)) {
+    return options
+  }
+
+  // clean up and get some utility properties
+  var req = this.prep(har)
+
+  // construct new options
+  if (req.url) {
+    options.url = req.url
+  }
+
+  if (req.method) {
+    options.method = req.method
+  }
+
+  if (Object.keys(req.queryObj).length) {
+    options.qs = req.queryObj
+  }
+
+  if (Object.keys(req.headersObj).length) {
+    options.headers = req.headersObj
+  }
+
+  function test (type) {
+    return req.postData.mimeType.indexOf(type) === 0
+  }
+  if (test('application/x-www-form-urlencoded')) {
+    options.form = req.postData.paramsObj
+  } else if (test('application/json')) {
+    if (req.postData.jsonObj) {
+      options.body = req.postData.jsonObj
+      options.json = true
+    }
+  } else if (test('multipart/form-data')) {
+    options.formData = {}
+
+    req.postData.params.forEach(function (param) {
+      var attachment = {}
+
+      if (!param.fileName && !param.fileName && !param.contentType) {
+        options.formData[param.name] = param.value
+        return
+      }
+
+      // attempt to read from disk!
+      if (param.fileName && !param.value) {
+        attachment.value = fs.createReadStream(param.fileName)
+      } else if (param.value) {
+        attachment.value = param.value
+      }
+
+      if (param.fileName) {
+        attachment.options = {
+          filename: param.fileName,
+          contentType: param.contentType ? param.contentType : null
+        }
+      }
+
+      options.formData[param.name] = attachment
+    })
+  } else {
+    if (req.postData.text) {
+      options.body = req.postData.text
+    }
+  }
+
+  return options
+}
+
+exports.Har = Har
+
+},{"extend":104,"fs":295,"har-validator":130,"querystring":439}],216:[function(require,module,exports){
+(function (process){
+'use strict'
+
+var jsonSafeStringify = require('json-stringify-safe')
+var crypto = require('crypto')
+var Buffer = require('safe-buffer').Buffer
+
+var defer = typeof setImmediate === 'undefined'
+  ? process.nextTick
+  : setImmediate
+
+function paramsHaveRequestBody (params) {
+  return (
+    params.body ||
+    params.requestBodyStream ||
+    (params.json && typeof params.json !== 'boolean') ||
+    params.multipart
+  )
+}
+
+function safeStringify (obj, replacer) {
+  var ret
+  try {
+    ret = JSON.stringify(obj, replacer)
+  } catch (e) {
+    ret = jsonSafeStringify(obj, replacer)
+  }
+  return ret
+}
+
+function md5 (str) {
+  return crypto.createHash('md5').update(str).digest('hex')
+}
+
+function isReadStream (rs) {
+  return rs.readable && rs.path && rs.mode
+}
+
+function toBase64 (str) {
+  return Buffer.from(str || '', 'utf8').toString('base64')
+}
+
+function copy (obj) {
+  var o = {}
+  Object.keys(obj).forEach(function (i) {
+    o[i] = obj[i]
+  })
+  return o
+}
+
+function version () {
+  var numbers = process.version.replace('v', '').split('.')
+  return {
+    major: parseInt(numbers[0], 10),
+    minor: parseInt(numbers[1], 10),
+    patch: parseInt(numbers[2], 10)
+  }
+}
+
+exports.paramsHaveRequestBody = paramsHaveRequestBody
+exports.safeStringify = safeStringify
+exports.md5 = md5
+exports.isReadStream = isReadStream
+exports.toBase64 = toBase64
+exports.copy = copy
+exports.version = version
+exports.defer = defer
+
+}).call(this,require('_process'))
+},{"_process":429,"crypto":354,"json-stringify-safe":143,"safe-buffer":223}],217:[function(require,module,exports){
+'use strict'
+
+var uuid = require('uuid')
+var CombinedStream = require('combined-stream')
+var isstream = require('isstream')
+var Buffer = require('safe-buffer').Buffer
+
+function Multipart (request) {
+  this.request = request
+  this.boundary = uuid()
+  this.chunked = false
+  this.body = null
+}
+
+Multipart.prototype.isChunked = function (options) {
+  var self = this
+  var chunked = false
+  var parts = options.data || options
+
+  if (!parts.forEach) {
+    self.request.emit('error', new Error('Argument error, options.multipart.'))
+  }
+
+  if (options.chunked !== undefined) {
+    chunked = options.chunked
+  }
+
+  if (self.request.getHeader('transfer-encoding') === 'chunked') {
+    chunked = true
+  }
+
+  if (!chunked) {
+    parts.forEach(function (part) {
+      if (typeof part.body === 'undefined') {
+        self.request.emit('error', new Error('Body attribute missing in multipart.'))
+      }
+      if (isstream(part.body)) {
+        chunked = true
+      }
+    })
+  }
+
+  return chunked
+}
+
+Multipart.prototype.setHeaders = function (chunked) {
+  var self = this
+
+  if (chunked && !self.request.hasHeader('transfer-encoding')) {
+    self.request.setHeader('transfer-encoding', 'chunked')
+  }
+
+  var header = self.request.getHeader('content-type')
+
+  if (!header || header.indexOf('multipart') === -1) {
+    self.request.setHeader('content-type', 'multipart/related; boundary=' + self.boundary)
+  } else {
+    if (header.indexOf('boundary') !== -1) {
+      self.boundary = header.replace(/.*boundary=([^\s;]+).*/, '$1')
+    } else {
+      self.request.setHeader('content-type', header + '; boundary=' + self.boundary)
+    }
+  }
+}
+
+Multipart.prototype.build = function (parts, chunked) {
+  var self = this
+  var body = chunked ? new CombinedStream() : []
+
+  function add (part) {
+    if (typeof part === 'number') {
+      part = part.toString()
+    }
+    return chunked ? body.append(part) : body.push(Buffer.from(part))
+  }
+
+  if (self.request.preambleCRLF) {
+    add('\r\n')
+  }
+
+  parts.forEach(function (part) {
+    var preamble = '--' + self.boundary + '\r\n'
+    Object.keys(part).forEach(function (key) {
+      if (key === 'body') { return }
+      preamble += key + ': ' + part[key] + '\r\n'
+    })
+    preamble += '\r\n'
+    add(preamble)
+    add(part.body)
+    add('\r\n')
+  })
+  add('--' + self.boundary + '--')
+
+  if (self.request.postambleCRLF) {
+    add('\r\n')
+  }
+
+  return body
+}
+
+Multipart.prototype.onRequest = function (options) {
+  var self = this
+
+  var chunked = self.isChunked(options)
+  var parts = options.data || options
+
+  self.setHeaders(chunked)
+  self.chunked = chunked
+  self.body = self.build(parts, chunked)
+}
+
+exports.Multipart = Multipart
+
+},{"combined-stream":95,"isstream":139,"safe-buffer":223,"uuid":287}],218:[function(require,module,exports){
+'use strict'
+
+var url = require('url')
+var qs = require('qs')
+var caseless = require('caseless')
+var uuid = require('uuid')
+var oauth = require('oauth-sign')
+var crypto = require('crypto')
+var Buffer = require('safe-buffer').Buffer
+
+function OAuth (request) {
+  this.request = request
+  this.params = null
+}
+
+OAuth.prototype.buildParams = function (_oauth, uri, method, query, form, qsLib) {
+  var oa = {}
+  for (var i in _oauth) {
+    oa['oauth_' + i] = _oauth[i]
+  }
+  if (!oa.oauth_version) {
+    oa.oauth_version = '1.0'
+  }
+  if (!oa.oauth_timestamp) {
+    oa.oauth_timestamp = Math.floor(Date.now() / 1000).toString()
+  }
+  if (!oa.oauth_nonce) {
+    oa.oauth_nonce = uuid().replace(/-/g, '')
+  }
+  if (!oa.oauth_signature_method) {
+    oa.oauth_signature_method = 'HMAC-SHA1'
+  }
+
+  var consumer_secret_or_private_key = oa.oauth_consumer_secret || oa.oauth_private_key // eslint-disable-line camelcase
+  delete oa.oauth_consumer_secret
+  delete oa.oauth_private_key
+
+  var token_secret = oa.oauth_token_secret // eslint-disable-line camelcase
+  delete oa.oauth_token_secret
+
+  var realm = oa.oauth_realm
+  delete oa.oauth_realm
+  delete oa.oauth_transport_method
+
+  var baseurl = uri.protocol + '//' + uri.host + uri.pathname
+  var params = qsLib.parse([].concat(query, form, qsLib.stringify(oa)).join('&'))
+
+  oa.oauth_signature = oauth.sign(
+    oa.oauth_signature_method,
+    method,
+    baseurl,
+    params,
+    consumer_secret_or_private_key, // eslint-disable-line camelcase
+    token_secret // eslint-disable-line camelcase
+  )
+
+  if (realm) {
+    oa.realm = realm
+  }
+
+  return oa
+}
+
+OAuth.prototype.buildBodyHash = function (_oauth, body) {
+  if (['HMAC-SHA1', 'RSA-SHA1'].indexOf(_oauth.signature_method || 'HMAC-SHA1') < 0) {
+    this.request.emit('error', new Error('oauth: ' + _oauth.signature_method +
+      ' signature_method not supported with body_hash signing.'))
+  }
+
+  var shasum = crypto.createHash('sha1')
+  shasum.update(body || '')
+  var sha1 = shasum.digest('hex')
+
+  return Buffer.from(sha1, 'hex').toString('base64')
+}
+
+OAuth.prototype.concatParams = function (oa, sep, wrap) {
+  wrap = wrap || ''
+
+  var params = Object.keys(oa).filter(function (i) {
+    return i !== 'realm' && i !== 'oauth_signature'
+  }).sort()
+
+  if (oa.realm) {
+    params.splice(0, 0, 'realm')
+  }
+  params.push('oauth_signature')
+
+  return params.map(function (i) {
+    return i + '=' + wrap + oauth.rfc3986(oa[i]) + wrap
+  }).join(sep)
+}
+
+OAuth.prototype.onRequest = function (_oauth) {
+  var self = this
+  self.params = _oauth
+
+  var uri = self.request.uri || {}
+  var method = self.request.method || ''
+  var headers = caseless(self.request.headers)
+  var body = self.request.body || ''
+  var qsLib = self.request.qsLib || qs
+
+  var form
+  var query
+  var contentType = headers.get('content-type') || ''
+  var formContentType = 'application/x-www-form-urlencoded'
+  var transport = _oauth.transport_method || 'header'
+
+  if (contentType.slice(0, formContentType.length) === formContentType) {
+    contentType = formContentType
+    form = body
+  }
+  if (uri.query) {
+    query = uri.query
+  }
+  if (transport === 'body' && (method !== 'POST' || contentType !== formContentType)) {
+    self.request.emit('error', new Error('oauth: transport_method of body requires POST ' +
+      'and content-type ' + formContentType))
+  }
+
+  if (!form && typeof _oauth.body_hash === 'boolean') {
+    _oauth.body_hash = self.buildBodyHash(_oauth, self.request.body.toString())
+  }
+
+  var oa = self.buildParams(_oauth, uri, method, query, form, qsLib)
+
+  switch (transport) {
+    case 'header':
+      self.request.setHeader('Authorization', 'OAuth ' + self.concatParams(oa, ',', '"'))
+      break
+
+    case 'query':
+      var href = self.request.uri.href += (query ? '&' : '?') + self.concatParams(oa, '&')
+      self.request.uri = url.parse(href)
+      self.request.path = self.request.uri.path
+      break
+
+    case 'body':
+      self.request.body = (form ? form + '&' : '') + self.concatParams(oa, '&')
+      break
+
+    default:
+      self.request.emit('error', new Error('oauth: transport_method invalid'))
+  }
+}
+
+exports.OAuth = OAuth
+
+},{"caseless":92,"crypto":354,"oauth-sign":195,"qs":203,"safe-buffer":223,"url":472,"uuid":287}],219:[function(require,module,exports){
+'use strict'
+
+var qs = require('qs')
+var querystring = require('querystring')
+
+function Querystring (request) {
+  this.request = request
+  this.lib = null
+  this.useQuerystring = null
+  this.parseOptions = null
+  this.stringifyOptions = null
+}
+
+Querystring.prototype.init = function (options) {
+  if (this.lib) { return }
+
+  this.useQuerystring = options.useQuerystring
+  this.lib = (this.useQuerystring ? querystring : qs)
+
+  this.parseOptions = options.qsParseOptions || {}
+  this.stringifyOptions = options.qsStringifyOptions || {}
+}
+
+Querystring.prototype.stringify = function (obj) {
+  return (this.useQuerystring)
+    ? this.rfc3986(this.lib.stringify(obj,
+      this.stringifyOptions.sep || null,
+      this.stringifyOptions.eq || null,
+      this.stringifyOptions))
+    : this.lib.stringify(obj, this.stringifyOptions)
+}
+
+Querystring.prototype.parse = function (str) {
+  return (this.useQuerystring)
+    ? this.lib.parse(str,
+      this.parseOptions.sep || null,
+      this.parseOptions.eq || null,
+      this.parseOptions)
+    : this.lib.parse(str, this.parseOptions)
+}
+
+Querystring.prototype.rfc3986 = function (str) {
+  return str.replace(/[!'()*]/g, function (c) {
+    return '%' + c.charCodeAt(0).toString(16).toUpperCase()
+  })
+}
+
+Querystring.prototype.unescape = querystring.unescape
+
+exports.Querystring = Querystring
+
+},{"qs":203,"querystring":439}],220:[function(require,module,exports){
+'use strict'
+
+var url = require('url')
+var isUrl = /^https?:/
+
+function Redirect (request) {
+  this.request = request
+  this.followRedirect = true
+  this.followRedirects = true
+  this.followAllRedirects = false
+  this.followOriginalHttpMethod = false
+  this.allowRedirect = function () { return true }
+  this.maxRedirects = 10
+  this.redirects = []
+  this.redirectsFollowed = 0
+  this.removeRefererHeader = false
+}
+
+Redirect.prototype.onRequest = function (options) {
+  var self = this
+
+  if (options.maxRedirects !== undefined) {
+    self.maxRedirects = options.maxRedirects
+  }
+  if (typeof options.followRedirect === 'function') {
+    self.allowRedirect = options.followRedirect
+  }
+  if (options.followRedirect !== undefined) {
+    self.followRedirects = !!options.followRedirect
+  }
+  if (options.followAllRedirects !== undefined) {
+    self.followAllRedirects = options.followAllRedirects
+  }
+  if (self.followRedirects || self.followAllRedirects) {
+    self.redirects = self.redirects || []
+  }
+  if (options.removeRefererHeader !== undefined) {
+    self.removeRefererHeader = options.removeRefererHeader
+  }
+  if (options.followOriginalHttpMethod !== undefined) {
+    self.followOriginalHttpMethod = options.followOriginalHttpMethod
+  }
+}
+
+Redirect.prototype.redirectTo = function (response) {
+  var self = this
+  var request = self.request
+
+  var redirectTo = null
+  if (response.statusCode >= 300 && response.statusCode < 400 && response.caseless.has('location')) {
+    var location = response.caseless.get('location')
+    request.debug('redirect', location)
+
+    if (self.followAllRedirects) {
+      redirectTo = location
+    } else if (self.followRedirects) {
+      switch (request.method) {
+        case 'PATCH':
+        case 'PUT':
+        case 'POST':
+        case 'DELETE':
+          // Do not follow redirects
+          break
+        default:
+          redirectTo = location
+          break
+      }
+    }
+  } else if (response.statusCode === 401) {
+    var authHeader = request._auth.onResponse(response)
+    if (authHeader) {
+      request.setHeader('authorization', authHeader)
+      redirectTo = request.uri
+    }
+  }
+  return redirectTo
+}
+
+Redirect.prototype.onResponse = function (response) {
+  var self = this
+  var request = self.request
+
+  var redirectTo = self.redirectTo(response)
+  if (!redirectTo || !self.allowRedirect.call(request, response)) {
+    return false
+  }
+
+  request.debug('redirect to', redirectTo)
+
+  // ignore any potential response body.  it cannot possibly be useful
+  // to us at this point.
+  // response.resume should be defined, but check anyway before calling. Workaround for browserify.
+  if (response.resume) {
+    response.resume()
+  }
+
+  if (self.redirectsFollowed >= self.maxRedirects) {
+    request.emit('error', new Error('Exceeded maxRedirects. Probably stuck in a redirect loop ' + request.uri.href))
+    return false
+  }
+  self.redirectsFollowed += 1
+
+  if (!isUrl.test(redirectTo)) {
+    redirectTo = url.resolve(request.uri.href, redirectTo)
+  }
+
+  var uriPrev = request.uri
+  request.uri = url.parse(redirectTo)
+
+  // handle the case where we change protocol from https to http or vice versa
+  if (request.uri.protocol !== uriPrev.protocol) {
+    delete request.agent
+  }
+
+  self.redirects.push({ statusCode: response.statusCode, redirectUri: redirectTo })
+
+  if (self.followAllRedirects && request.method !== 'HEAD' &&
+    response.statusCode !== 401 && response.statusCode !== 307) {
+    request.method = self.followOriginalHttpMethod ? request.method : 'GET'
+  }
+  // request.method = 'GET' // Force all redirects to use GET || commented out fixes #215
+  delete request.src
+  delete request.req
+  delete request._started
+  if (response.statusCode !== 401 && response.statusCode !== 307) {
+    // Remove parameters from the previous response, unless this is the second request
+    // for a server that requires digest authentication.
+    delete request.body
+    delete request._form
+    if (request.headers) {
+      request.removeHeader('host')
+      request.removeHeader('content-type')
+      request.removeHeader('content-length')
+      if (request.uri.hostname !== request.originalHost.split(':')[0]) {
+        // Remove authorization if changing hostnames (but not if just
+        // changing ports or protocols).  This matches the behavior of curl:
+        // https://github.com/bagder/curl/blob/6beb0eee/lib/http.c#L710
+        request.removeHeader('authorization')
+      }
+    }
+  }
+
+  if (!self.removeRefererHeader) {
+    request.setHeader('referer', uriPrev.href)
+  }
+
+  request.emit('redirect')
+
+  request.init()
+
+  return true
+}
+
+exports.Redirect = Redirect
+
+},{"url":472}],221:[function(require,module,exports){
+'use strict'
+
+var url = require('url')
+var tunnel = require('tunnel-agent')
+
+var defaultProxyHeaderWhiteList = [
+  'accept',
+  'accept-charset',
+  'accept-encoding',
+  'accept-language',
+  'accept-ranges',
+  'cache-control',
+  'content-encoding',
+  'content-language',
+  'content-location',
+  'content-md5',
+  'content-range',
+  'content-type',
+  'connection',
+  'date',
+  'expect',
+  'max-forwards',
+  'pragma',
+  'referer',
+  'te',
+  'user-agent',
+  'via'
+]
+
+var defaultProxyHeaderExclusiveList = [
+  'proxy-authorization'
+]
+
+function constructProxyHost (uriObject) {
+  var port = uriObject.port
+  var protocol = uriObject.protocol
+  var proxyHost = uriObject.hostname + ':'
+
+  if (port) {
+    proxyHost += port
+  } else if (protocol === 'https:') {
+    proxyHost += '443'
+  } else {
+    proxyHost += '80'
+  }
+
+  return proxyHost
+}
+
+function constructProxyHeaderWhiteList (headers, proxyHeaderWhiteList) {
+  var whiteList = proxyHeaderWhiteList
+    .reduce(function (set, header) {
+      set[header.toLowerCase()] = true
+      return set
+    }, {})
+
+  return Object.keys(headers)
+    .filter(function (header) {
+      return whiteList[header.toLowerCase()]
+    })
+    .reduce(function (set, header) {
+      set[header] = headers[header]
+      return set
+    }, {})
+}
+
+function constructTunnelOptions (request, proxyHeaders) {
+  var proxy = request.proxy
+
+  var tunnelOptions = {
+    proxy: {
+      host: proxy.hostname,
+      port: +proxy.port,
+      proxyAuth: proxy.auth,
+      headers: proxyHeaders
+    },
+    headers: request.headers,
+    ca: request.ca,
+    cert: request.cert,
+    key: request.key,
+    passphrase: request.passphrase,
+    pfx: request.pfx,
+    ciphers: request.ciphers,
+    rejectUnauthorized: request.rejectUnauthorized,
+    secureOptions: request.secureOptions,
+    secureProtocol: request.secureProtocol
+  }
+
+  return tunnelOptions
+}
+
+function constructTunnelFnName (uri, proxy) {
+  var uriProtocol = (uri.protocol === 'https:' ? 'https' : 'http')
+  var proxyProtocol = (proxy.protocol === 'https:' ? 'Https' : 'Http')
+  return [uriProtocol, proxyProtocol].join('Over')
+}
+
+function getTunnelFn (request) {
+  var uri = request.uri
+  var proxy = request.proxy
+  var tunnelFnName = constructTunnelFnName(uri, proxy)
+  return tunnel[tunnelFnName]
+}
+
+function Tunnel (request) {
+  this.request = request
+  this.proxyHeaderWhiteList = defaultProxyHeaderWhiteList
+  this.proxyHeaderExclusiveList = []
+  if (typeof request.tunnel !== 'undefined') {
+    this.tunnelOverride = request.tunnel
+  }
+}
+
+Tunnel.prototype.isEnabled = function () {
+  var self = this
+  var request = self.request
+    // Tunnel HTTPS by default. Allow the user to override this setting.
+
+  // If self.tunnelOverride is set (the user specified a value), use it.
+  if (typeof self.tunnelOverride !== 'undefined') {
+    return self.tunnelOverride
+  }
+
+  // If the destination is HTTPS, tunnel.
+  if (request.uri.protocol === 'https:') {
+    return true
+  }
+
+  // Otherwise, do not use tunnel.
+  return false
+}
+
+Tunnel.prototype.setup = function (options) {
+  var self = this
+  var request = self.request
+
+  options = options || {}
+
+  if (typeof request.proxy === 'string') {
+    request.proxy = url.parse(request.proxy)
+  }
+
+  if (!request.proxy || !request.tunnel) {
+    return false
+  }
+
+  // Setup Proxy Header Exclusive List and White List
+  if (options.proxyHeaderWhiteList) {
+    self.proxyHeaderWhiteList = options.proxyHeaderWhiteList
+  }
+  if (options.proxyHeaderExclusiveList) {
+    self.proxyHeaderExclusiveList = options.proxyHeaderExclusiveList
+  }
+
+  var proxyHeaderExclusiveList = self.proxyHeaderExclusiveList.concat(defaultProxyHeaderExclusiveList)
+  var proxyHeaderWhiteList = self.proxyHeaderWhiteList.concat(proxyHeaderExclusiveList)
+
+  // Setup Proxy Headers and Proxy Headers Host
+  // Only send the Proxy White Listed Header names
+  var proxyHeaders = constructProxyHeaderWhiteList(request.headers, proxyHeaderWhiteList)
+  proxyHeaders.host = constructProxyHost(request.uri)
+
+  proxyHeaderExclusiveList.forEach(request.removeHeader, request)
+
+  // Set Agent from Tunnel Data
+  var tunnelFn = getTunnelFn(request)
+  var tunnelOptions = constructTunnelOptions(request, proxyHeaders)
+  request.agent = tunnelFn(tunnelOptions)
+
+  return true
+}
+
+Tunnel.defaultProxyHeaderWhiteList = defaultProxyHeaderWhiteList
+Tunnel.defaultProxyHeaderExclusiveList = defaultProxyHeaderExclusiveList
+exports.Tunnel = Tunnel
+
+},{"tunnel-agent":285,"url":472}],222:[function(require,module,exports){
 (function (process){
 'use strict'
 
@@ -44681,7 +44514,7 @@ Request.prototype.toJSON = requestToJSON
 module.exports = Request
 
 }).call(this,require('_process'))
-},{"./lib/auth":205,"./lib/cookies":206,"./lib/getProxyFromURI":207,"./lib/har":208,"./lib/helpers":209,"./lib/multipart":210,"./lib/oauth":211,"./lib/querystring":212,"./lib/redirect":213,"./lib/tunnel":214,"_process":429,"aws-sign2":52,"aws4":53,"caseless":93,"extend":105,"forever-agent":109,"form-data":110,"hawk":133,"http":466,"http-signature":134,"https":397,"is-typedarray":139,"isstream":140,"mime-types":217,"performance-now":194,"safe-buffer":224,"stream":465,"stringstream":276,"url":472,"util":477,"zlib":343}],224:[function(require,module,exports){
+},{"./lib/auth":212,"./lib/cookies":213,"./lib/getProxyFromURI":214,"./lib/har":215,"./lib/helpers":216,"./lib/multipart":217,"./lib/oauth":218,"./lib/querystring":219,"./lib/redirect":220,"./lib/tunnel":221,"_process":429,"aws-sign2":51,"aws4":52,"caseless":92,"extend":104,"forever-agent":108,"form-data":109,"hawk":132,"http":466,"http-signature":133,"https":397,"is-typedarray":138,"isstream":139,"mime-types":186,"performance-now":196,"safe-buffer":223,"stream":465,"stringstream":275,"url":472,"util":477,"zlib":343}],223:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -44745,7 +44578,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":345}],225:[function(require,module,exports){
+},{"buffer":345}],224:[function(require,module,exports){
 (function (process){
 /* parser generated by jison 0.4.16 */
 /*
@@ -46482,7 +46315,7 @@ if (typeof module !== 'undefined' && require.main === module) {
 }
 }
 }).call(this,require('_process'))
-},{"./ShExUtil":228,"_process":429,"fs":295,"path":422}],226:[function(require,module,exports){
+},{"./ShExUtil":227,"_process":429,"fs":295,"path":422}],225:[function(require,module,exports){
 (function (process,__dirname){
 // **ShExLoader** return promise to load ShExC, ShExJ and N3 (Turtle) files.
 
@@ -46838,8 +46671,8 @@ return { load: LoadPromise, loadExtensions: LoadExtensions, GET: GET, loadShExIm
 if (typeof require !== "undefined" && typeof exports !== "undefined")
   module.exports = LoadPromise;
 
-}).call(this,require('_process'),"/node_modules/shex/lib")
-},{"../lib/ShExParser":227,"../lib/ShExUtil":228,"_process":429,"fs":295,"jsonld":146,"n3":235,"path":422,"promise":243,"request-promise":203}],227:[function(require,module,exports){
+}).call(this,require('_process'),"/node_modules/ShEx-validator/node_modules/shex/lib")
+},{"../lib/ShExParser":226,"../lib/ShExUtil":227,"_process":429,"fs":295,"jsonld":145,"n3":234,"path":422,"promise":242,"request-promise":210}],226:[function(require,module,exports){
 var ShExParser = (function () {
 
 // stolen as much as possible from SPARQL.js
@@ -46903,7 +46736,7 @@ return {
 if (typeof require !== 'undefined' && typeof exports !== 'undefined')
   module.exports = ShExParser;
 
-},{"./ShExJison":225,"./ShExUtil":228}],228:[function(require,module,exports){
+},{"./ShExJison":224,"./ShExUtil":227}],227:[function(require,module,exports){
 // **ShExUtil** provides ShEx utility functions
 
 var ShExUtil = (function () {
@@ -48533,7 +48366,7 @@ return AddShExUtil(AddShExUtil);
 if (typeof require !== 'undefined' && typeof exports !== 'undefined')
   module.exports = ShExUtil; // node environment
 
-},{"n3":235,"util":477}],229:[function(require,module,exports){
+},{"n3":234,"util":477}],228:[function(require,module,exports){
 (function (process){
 /* ShExValidator - javascript module to validate a graph with respect to Shape Expressions
  *
@@ -49755,7 +49588,7 @@ if (typeof require !== "undefined" && typeof exports !== "undefined")
   module.exports = ShExValidator;
 
 }).call(this,require('_process'))
-},{"../lib/regex/nfax-val-1err":231,"../lib/regex/threaded-val-nerr":232,"_process":429,"n3":235}],230:[function(require,module,exports){
+},{"../lib/regex/nfax-val-1err":230,"../lib/regex/threaded-val-nerr":231,"_process":429,"n3":234}],229:[function(require,module,exports){
 // **ShExWriter** writes ShEx documents.
 
 var ShExWriter = (function () {
@@ -50348,7 +50181,7 @@ return ShExWriter;
 if (typeof require !== 'undefined' && typeof exports !== 'undefined')
   module.exports = ShExWriter; // node environment
 
-},{"util":477}],231:[function(require,module,exports){
+},{"util":477}],230:[function(require,module,exports){
 var NFAXVal1Err = (function () {
   var N3Util = require("n3").Util;
 
@@ -50880,7 +50713,7 @@ return exports = {
 if (typeof require !== "undefined" && typeof exports !== "undefined")
   module.exports = NFAXVal1Err;
 
-},{"n3":235}],232:[function(require,module,exports){
+},{"n3":234}],231:[function(require,module,exports){
 var ThreadedValNErr = (function () {
 var N3Util = require("n3").Util;
 var UNBOUNDED = -1;
@@ -51250,7 +51083,7 @@ return {
 if (typeof require !== "undefined" && typeof exports !== "undefined")
   module.exports = ThreadedValNErr;
 
-},{"n3":235}],233:[function(require,module,exports){
+},{"n3":234}],232:[function(require,module,exports){
 "use strict";
 
 // rawAsap provides everything we need except exception management.
@@ -51318,7 +51151,7 @@ RawTask.prototype.call = function () {
     }
 };
 
-},{"./raw":234}],234:[function(require,module,exports){
+},{"./raw":233}],233:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -51545,9 +51378,9 @@ rawAsap.makeRequestCallFromTimer = makeRequestCallFromTimer;
 // https://github.com/tildeio/rsvp.js/blob/cddf7232546a9cf858524b75cde6f9edf72620a7/lib/rsvp/asap.js
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],235:[function(require,module,exports){
-arguments[4][185][0].apply(exports,arguments)
-},{"./lib/N3Lexer":236,"./lib/N3Parser":237,"./lib/N3Store":238,"./lib/N3StreamParser":239,"./lib/N3StreamWriter":240,"./lib/N3Util":241,"./lib/N3Writer":242,"dup":185}],236:[function(require,module,exports){
+},{}],234:[function(require,module,exports){
+arguments[4][187][0].apply(exports,arguments)
+},{"./lib/N3Lexer":235,"./lib/N3Parser":236,"./lib/N3Store":237,"./lib/N3StreamParser":238,"./lib/N3StreamWriter":239,"./lib/N3Util":240,"./lib/N3Writer":241,"dup":187}],235:[function(require,module,exports){
 // **N3Lexer** tokenizes N3 documents.
 var fromCharCode = String.fromCharCode;
 var immediately = typeof setImmediate === 'function' ? setImmediate :
@@ -51957,7 +51790,7 @@ N3Lexer.prototype = {
 // ## Exports
 module.exports = N3Lexer;
 
-},{}],237:[function(require,module,exports){
+},{}],236:[function(require,module,exports){
 // **N3Parser** parses N3 documents.
 var N3Lexer = require('./N3Lexer');
 
@@ -52863,9 +52696,9 @@ function noop() {}
 // ## Exports
 module.exports = N3Parser;
 
-},{"./N3Lexer":236}],238:[function(require,module,exports){
-arguments[4][188][0].apply(exports,arguments)
-},{"./N3Util":241,"dup":188}],239:[function(require,module,exports){
+},{"./N3Lexer":235}],237:[function(require,module,exports){
+arguments[4][190][0].apply(exports,arguments)
+},{"./N3Util":240,"dup":190}],238:[function(require,module,exports){
 // **N3StreamParser** parses an N3 stream into a triple stream.
 var Transform = require('stream').Transform,
     util = require('util'),
@@ -52899,11 +52732,11 @@ util.inherits(N3StreamParser, Transform);
 // ## Exports
 module.exports = N3StreamParser;
 
-},{"./N3Parser.js":237,"stream":465,"util":477}],240:[function(require,module,exports){
-arguments[4][190][0].apply(exports,arguments)
-},{"./N3Writer.js":242,"dup":190,"stream":465,"util":477}],241:[function(require,module,exports){
-arguments[4][191][0].apply(exports,arguments)
-},{"dup":191}],242:[function(require,module,exports){
+},{"./N3Parser.js":236,"stream":465,"util":477}],239:[function(require,module,exports){
+arguments[4][192][0].apply(exports,arguments)
+},{"./N3Writer.js":241,"dup":192,"stream":465,"util":477}],240:[function(require,module,exports){
+arguments[4][193][0].apply(exports,arguments)
+},{"dup":193}],241:[function(require,module,exports){
 // **N3Writer** writes N3 documents.
 
 // Matches a literal as represented in memory by the N3 library
@@ -53233,12 +53066,12 @@ function characterReplacer(character) {
 // ## Exports
 module.exports = N3Writer;
 
-},{}],243:[function(require,module,exports){
+},{}],242:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./lib')
 
-},{"./lib":248}],244:[function(require,module,exports){
+},{"./lib":247}],243:[function(require,module,exports){
 'use strict';
 
 var asap = require('asap/raw');
@@ -53453,7 +53286,7 @@ function doResolve(fn, promise) {
   }
 }
 
-},{"asap/raw":234}],245:[function(require,module,exports){
+},{"asap/raw":233}],244:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -53468,7 +53301,7 @@ Promise.prototype.done = function (onFulfilled, onRejected) {
   });
 };
 
-},{"./core.js":244}],246:[function(require,module,exports){
+},{"./core.js":243}],245:[function(require,module,exports){
 'use strict';
 
 //This file contains the ES6 extensions to the core Promises/A+ API
@@ -53577,7 +53410,7 @@ Promise.prototype['catch'] = function (onRejected) {
   return this.then(null, onRejected);
 };
 
-},{"./core.js":244}],247:[function(require,module,exports){
+},{"./core.js":243}],246:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -53595,7 +53428,7 @@ Promise.prototype['finally'] = function (f) {
   });
 };
 
-},{"./core.js":244}],248:[function(require,module,exports){
+},{"./core.js":243}],247:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./core.js');
@@ -53605,7 +53438,7 @@ require('./es6-extensions.js');
 require('./node-extensions.js');
 require('./synchronous.js');
 
-},{"./core.js":244,"./done.js":245,"./es6-extensions.js":246,"./finally.js":247,"./node-extensions.js":249,"./synchronous.js":250}],249:[function(require,module,exports){
+},{"./core.js":243,"./done.js":244,"./es6-extensions.js":245,"./finally.js":246,"./node-extensions.js":248,"./synchronous.js":249}],248:[function(require,module,exports){
 'use strict';
 
 // This file contains then/promise specific extensions that are only useful
@@ -53737,7 +53570,7 @@ Promise.prototype.nodeify = function (callback, ctx) {
   });
 };
 
-},{"./core.js":244,"asap":233}],250:[function(require,module,exports){
+},{"./core.js":243,"asap":232}],249:[function(require,module,exports){
 'use strict';
 
 var Promise = require('./core.js');
@@ -53801,7 +53634,7 @@ Promise.disableSynchronous = function() {
   Promise.prototype.getState = undefined;
 };
 
-},{"./core.js":244}],251:[function(require,module,exports){
+},{"./core.js":243}],250:[function(require,module,exports){
 var ShEx = {
   Parser:       require('./lib/ShExParser'),
   Util:         require('./lib/ShExUtil'),
@@ -53817,7 +53650,7 @@ if (typeof require !== 'undefined' && typeof exports !== 'undefined')
   module.exports = ShEx;
 
 
-},{"./lib/ShExLoader":226,"./lib/ShExParser":227,"./lib/ShExUtil":228,"./lib/ShExValidator":229,"./lib/ShExWriter":230,"./lib/regex/nfax-val-1err":231,"./lib/regex/threaded-val-nerr":232,"n3":235}],252:[function(require,module,exports){
+},{"./lib/ShExLoader":225,"./lib/ShExParser":226,"./lib/ShExUtil":227,"./lib/ShExValidator":228,"./lib/ShExWriter":229,"./lib/regex/nfax-val-1err":230,"./lib/regex/threaded-val-nerr":231,"n3":234}],251:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -53987,7 +53820,7 @@ module.exports = {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":345}],253:[function(require,module,exports){
+},{"buffer":345}],252:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2016 Joyent, Inc.
 
@@ -54368,7 +54201,7 @@ Certificate._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":252,"./errors":256,"./fingerprint":257,"./formats/openssh-cert":260,"./formats/x509":268,"./formats/x509-pem":267,"./identity":269,"./key":271,"./private-key":272,"./signature":273,"./utils":275,"assert-plus":51,"buffer":345,"crypto":354,"util":477}],254:[function(require,module,exports){
+},{"./algs":251,"./errors":255,"./fingerprint":256,"./formats/openssh-cert":259,"./formats/x509":267,"./formats/x509-pem":266,"./identity":268,"./key":270,"./private-key":271,"./signature":272,"./utils":274,"assert-plus":50,"buffer":345,"crypto":354,"util":477}],253:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -54785,7 +54618,7 @@ function generateECDSA(curve) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":252,"./key":271,"./private-key":272,"./utils":275,"assert-plus":51,"buffer":345,"crypto":354,"ecc-jsbn":100,"ecc-jsbn/lib/ec":101,"jsbn":141,"tweetnacl":287}],255:[function(require,module,exports){
+},{"./algs":251,"./key":270,"./private-key":271,"./utils":274,"assert-plus":50,"buffer":345,"crypto":354,"ecc-jsbn":99,"ecc-jsbn/lib/ec":100,"jsbn":140,"tweetnacl":286}],254:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -54886,7 +54719,7 @@ Signer.prototype.sign = function () {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./signature":273,"assert-plus":51,"buffer":345,"stream":465,"tweetnacl":287,"util":477}],256:[function(require,module,exports){
+},{"./signature":272,"assert-plus":50,"buffer":345,"stream":465,"tweetnacl":286,"util":477}],255:[function(require,module,exports){
 // Copyright 2015 Joyent, Inc.
 
 var assert = require('assert-plus');
@@ -54972,7 +54805,7 @@ module.exports = {
 	CertificateParseError: CertificateParseError
 };
 
-},{"assert-plus":51,"util":477}],257:[function(require,module,exports){
+},{"assert-plus":50,"util":477}],256:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -55137,7 +54970,7 @@ Fingerprint._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":252,"./certificate":253,"./errors":256,"./key":271,"./utils":275,"assert-plus":51,"buffer":345,"crypto":354}],258:[function(require,module,exports){
+},{"./algs":251,"./certificate":252,"./errors":255,"./key":270,"./utils":274,"assert-plus":50,"buffer":345,"crypto":354}],257:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -55247,7 +55080,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../key":271,"../private-key":272,"../utils":275,"./dnssec":259,"./pem":261,"./rfc4253":264,"./ssh":266,"assert-plus":51,"buffer":345}],259:[function(require,module,exports){
+},{"../key":270,"../private-key":271,"../utils":274,"./dnssec":258,"./pem":260,"./rfc4253":263,"./ssh":265,"assert-plus":50,"buffer":345}],258:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -55537,7 +55370,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../dhe":254,"../key":271,"../private-key":272,"../ssh-buffer":274,"../utils":275,"assert-plus":51,"buffer":345}],260:[function(require,module,exports){
+},{"../dhe":253,"../key":270,"../private-key":271,"../ssh-buffer":273,"../utils":274,"assert-plus":50,"buffer":345}],259:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -55863,7 +55696,7 @@ function getCertType(key) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":252,"../certificate":253,"../identity":269,"../key":271,"../private-key":272,"../signature":273,"../ssh-buffer":274,"../utils":275,"./rfc4253":264,"assert-plus":51,"buffer":345,"crypto":354}],261:[function(require,module,exports){
+},{"../algs":251,"../certificate":252,"../identity":268,"../key":270,"../private-key":271,"../signature":272,"../ssh-buffer":273,"../utils":274,"./rfc4253":263,"assert-plus":50,"buffer":345,"crypto":354}],260:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -56058,7 +55891,7 @@ function write(key, options, type) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":252,"../errors":256,"../key":271,"../private-key":272,"../utils":275,"./pkcs1":262,"./pkcs8":263,"./rfc4253":264,"./ssh-private":265,"asn1":50,"assert-plus":51,"buffer":345,"crypto":354}],262:[function(require,module,exports){
+},{"../algs":251,"../errors":255,"../key":270,"../private-key":271,"../utils":274,"./pkcs1":261,"./pkcs8":262,"./rfc4253":263,"./ssh-private":264,"asn1":49,"assert-plus":50,"buffer":345,"crypto":354}],261:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -56438,7 +56271,7 @@ function writePkcs1EdDSAPublic(der, key) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":252,"../key":271,"../private-key":272,"../utils":275,"./pem":261,"./pkcs8":263,"asn1":50,"assert-plus":51,"buffer":345}],263:[function(require,module,exports){
+},{"../algs":251,"../key":270,"../private-key":271,"../utils":274,"./pem":260,"./pkcs8":262,"asn1":49,"assert-plus":50,"buffer":345}],262:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -57058,7 +56891,7 @@ function writePkcs8EdDSAPrivate(key, der) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":252,"../key":271,"../private-key":272,"../utils":275,"./pem":261,"asn1":50,"assert-plus":51,"buffer":345}],264:[function(require,module,exports){
+},{"../algs":251,"../key":270,"../private-key":271,"../utils":274,"./pem":260,"asn1":49,"assert-plus":50,"buffer":345}],263:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -57227,7 +57060,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":252,"../key":271,"../private-key":272,"../ssh-buffer":274,"../utils":275,"assert-plus":51,"buffer":345}],265:[function(require,module,exports){
+},{"../algs":251,"../key":270,"../private-key":271,"../ssh-buffer":273,"../utils":274,"assert-plus":50,"buffer":345}],264:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -57492,7 +57325,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":252,"../errors":256,"../key":271,"../private-key":272,"../ssh-buffer":274,"../utils":275,"./pem":261,"./rfc4253":264,"asn1":50,"assert-plus":51,"bcrypt-pbkdf":55,"buffer":345,"crypto":354}],266:[function(require,module,exports){
+},{"../algs":251,"../errors":255,"../key":270,"../private-key":271,"../ssh-buffer":273,"../utils":274,"./pem":260,"./rfc4253":263,"asn1":49,"assert-plus":50,"bcrypt-pbkdf":54,"buffer":345,"crypto":354}],265:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -57610,7 +57443,7 @@ function write(key, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../key":271,"../private-key":272,"../utils":275,"./rfc4253":264,"./ssh-private":265,"assert-plus":51,"buffer":345}],267:[function(require,module,exports){
+},{"../key":270,"../private-key":271,"../utils":274,"./rfc4253":263,"./ssh-private":264,"assert-plus":50,"buffer":345}],266:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2016 Joyent, Inc.
 
@@ -57691,7 +57524,7 @@ function write(cert, options) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":252,"../certificate":253,"../identity":269,"../key":271,"../private-key":272,"../signature":273,"../utils":275,"./pem":261,"./x509":268,"asn1":50,"assert-plus":51,"buffer":345}],268:[function(require,module,exports){
+},{"../algs":251,"../certificate":252,"../identity":268,"../key":270,"../private-key":271,"../signature":272,"../utils":274,"./pem":260,"./x509":267,"asn1":49,"assert-plus":50,"buffer":345}],267:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -58424,7 +58257,7 @@ function writeBitField(setBits, bitIndex) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"../algs":252,"../certificate":253,"../identity":269,"../key":271,"../private-key":272,"../signature":273,"../utils":275,"./pem":261,"./pkcs8":263,"asn1":50,"assert-plus":51,"buffer":345}],269:[function(require,module,exports){
+},{"../algs":251,"../certificate":252,"../identity":268,"../key":270,"../private-key":271,"../signature":272,"../utils":274,"./pem":260,"./pkcs8":262,"asn1":49,"assert-plus":50,"buffer":345}],268:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -58716,7 +58549,7 @@ Identity._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":252,"./errors":256,"./fingerprint":257,"./signature":273,"./utils":275,"asn1":50,"assert-plus":51,"buffer":345,"crypto":354,"util":477}],270:[function(require,module,exports){
+},{"./algs":251,"./errors":255,"./fingerprint":256,"./signature":272,"./utils":274,"asn1":49,"assert-plus":50,"buffer":345,"crypto":354,"util":477}],269:[function(require,module,exports){
 // Copyright 2015 Joyent, Inc.
 
 var Key = require('./key');
@@ -58757,7 +58590,7 @@ module.exports = {
 	CertificateParseError: errs.CertificateParseError
 };
 
-},{"./certificate":253,"./errors":256,"./fingerprint":257,"./identity":269,"./key":271,"./private-key":272,"./signature":273}],271:[function(require,module,exports){
+},{"./certificate":252,"./errors":255,"./fingerprint":256,"./identity":268,"./key":270,"./private-key":271,"./signature":272}],270:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -59035,8 +58868,8 @@ Key._oldVersionDetect = function (obj) {
 	return ([1, 0]);
 };
 
-}).call(this,{"isBuffer":require("../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400,"./algs":252,"./dhe":254,"./ed-compat":255,"./errors":256,"./fingerprint":257,"./formats/auto":258,"./formats/dnssec":259,"./formats/pem":261,"./formats/pkcs1":262,"./formats/pkcs8":263,"./formats/rfc4253":264,"./formats/ssh":266,"./formats/ssh-private":265,"./private-key":272,"./signature":273,"./utils":275,"assert-plus":51,"crypto":354}],272:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
+},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":400,"./algs":251,"./dhe":253,"./ed-compat":254,"./errors":255,"./fingerprint":256,"./formats/auto":257,"./formats/dnssec":258,"./formats/pem":260,"./formats/pkcs1":261,"./formats/pkcs8":262,"./formats/rfc4253":263,"./formats/ssh":265,"./formats/ssh-private":264,"./private-key":271,"./signature":272,"./utils":274,"assert-plus":50,"crypto":354}],271:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2017 Joyent, Inc.
 
@@ -59292,7 +59125,7 @@ PrivateKey._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":252,"./dhe":254,"./ed-compat":255,"./errors":256,"./fingerprint":257,"./formats/auto":258,"./formats/dnssec":259,"./formats/pem":261,"./formats/pkcs1":262,"./formats/pkcs8":263,"./formats/rfc4253":264,"./formats/ssh-private":265,"./key":271,"./signature":273,"./utils":275,"assert-plus":51,"buffer":345,"crypto":354,"tweetnacl":287,"util":477}],273:[function(require,module,exports){
+},{"./algs":251,"./dhe":253,"./ed-compat":254,"./errors":255,"./fingerprint":256,"./formats/auto":257,"./formats/dnssec":258,"./formats/pem":260,"./formats/pkcs1":261,"./formats/pkcs8":262,"./formats/rfc4253":263,"./formats/ssh-private":264,"./key":270,"./signature":272,"./utils":274,"assert-plus":50,"buffer":345,"crypto":354,"tweetnacl":286,"util":477}],272:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -59609,7 +59442,7 @@ Signature._oldVersionDetect = function (obj) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":252,"./errors":256,"./ssh-buffer":274,"./utils":275,"asn1":50,"assert-plus":51,"buffer":345,"crypto":354}],274:[function(require,module,exports){
+},{"./algs":251,"./errors":255,"./ssh-buffer":273,"./utils":274,"asn1":49,"assert-plus":50,"buffer":345,"crypto":354}],273:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -59761,7 +59594,7 @@ SSHBuffer.prototype.write = function (buf) {
 };
 
 }).call(this,require("buffer").Buffer)
-},{"assert-plus":51,"buffer":345}],275:[function(require,module,exports){
+},{"assert-plus":50,"buffer":345}],274:[function(require,module,exports){
 (function (Buffer){
 // Copyright 2015 Joyent, Inc.
 
@@ -60153,7 +59986,7 @@ function opensshCipherInfo(cipher) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"./algs":252,"./key":271,"./private-key":272,"asn1":50,"assert-plus":51,"buffer":345,"crypto":354,"ecc-jsbn/lib/ec":101,"jsbn":141,"tweetnacl":287}],276:[function(require,module,exports){
+},{"./algs":251,"./key":270,"./private-key":271,"asn1":49,"assert-plus":50,"buffer":345,"crypto":354,"ecc-jsbn/lib/ec":100,"jsbn":140,"tweetnacl":286}],275:[function(require,module,exports){
 (function (Buffer){
 var util = require('util')
 var Stream = require('stream')
@@ -60259,7 +60092,7 @@ function alignedWrite(buffer) {
 }
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":345,"stream":465,"string_decoder":470,"util":477}],277:[function(require,module,exports){
+},{"buffer":345,"stream":465,"string_decoder":470,"util":477}],276:[function(require,module,exports){
 'use strict';
 var ansiRegex = require('ansi-regex')();
 
@@ -60267,7 +60100,7 @@ module.exports = function (str) {
 	return typeof str === 'string' ? str.replace(ansiRegex, '') : str;
 };
 
-},{"ansi-regex":42}],278:[function(require,module,exports){
+},{"ansi-regex":41}],277:[function(require,module,exports){
 (function (process){
 'use strict';
 var argv = process.argv;
@@ -60321,7 +60154,7 @@ module.exports = (function () {
 })();
 
 }).call(this,require('_process'))
-},{"_process":429}],279:[function(require,module,exports){
+},{"_process":429}],278:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -61749,7 +61582,7 @@ module.exports = {
   canonicalDomain: canonicalDomain
 };
 
-},{"../package.json":285,"./memstore":280,"./pathMatch":281,"./permuteDomain":282,"./pubsuffix":283,"./store":284,"net":295,"punycode":436,"url":472}],280:[function(require,module,exports){
+},{"../package.json":284,"./memstore":279,"./pathMatch":280,"./permuteDomain":281,"./pubsuffix":282,"./store":283,"net":295,"punycode":436,"url":472}],279:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -61921,7 +61754,7 @@ MemoryCookieStore.prototype.getAllCookies = function(cb) {
   cb(null, cookies);
 };
 
-},{"./pathMatch":281,"./permuteDomain":282,"./store":284,"util":477}],281:[function(require,module,exports){
+},{"./pathMatch":280,"./permuteDomain":281,"./store":283,"util":477}],280:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -61984,7 +61817,7 @@ function pathMatch (reqPath, cookiePath) {
 
 exports.pathMatch = pathMatch;
 
-},{}],282:[function(require,module,exports){
+},{}],281:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -62042,7 +61875,7 @@ function permuteDomain (domain) {
 
 exports.permuteDomain = permuteDomain;
 
-},{"./pubsuffix":283}],283:[function(require,module,exports){
+},{"./pubsuffix":282}],282:[function(require,module,exports){
 /****************************************************
  * AUTOMATICALLY GENERATED by generate-pubsuffix.js *
  *                  DO NOT EDIT!                    *
@@ -62142,7 +61975,7 @@ var index = module.exports.index = Object.freeze(
 
 // END of automatically generated file
 
-},{"punycode":436}],284:[function(require,module,exports){
+},{"punycode":436}],283:[function(require,module,exports){
 /*!
  * Copyright (c) 2015, Salesforce.com, Inc.
  * All rights reserved.
@@ -62215,7 +62048,7 @@ Store.prototype.getAllCookies = function(cb) {
   throw new Error('getAllCookies is not implemented (therefore jar cannot be serialized)');
 };
 
-},{}],285:[function(require,module,exports){
+},{}],284:[function(require,module,exports){
 module.exports={
   "_from": "tough-cookie@~2.3.3",
   "_id": "tough-cookie@2.3.4",
@@ -62239,7 +62072,7 @@ module.exports={
   "_resolved": "https://registry.npmjs.org/tough-cookie/-/tough-cookie-2.3.4.tgz",
   "_shasum": "ec60cee38ac675063ffc97a5c18970578ee83655",
   "_spec": "tough-cookie@~2.3.3",
-  "_where": "/home/nikita/Documents/validata-project/Validata/node_modules/request",
+  "_where": "/home/nikita/Documents/validata-project/ShEx-validator/node_modules/request",
   "author": {
     "name": "Jeremy Stashewsky",
     "email": "jstashewsky@salesforce.com"
@@ -62309,7 +62142,7 @@ module.exports={
   "version": "2.3.4"
 }
 
-},{}],286:[function(require,module,exports){
+},{}],285:[function(require,module,exports){
 (function (process){
 'use strict'
 
@@ -62557,7 +62390,7 @@ if (process.env.NODE_DEBUG && /\btunnel\b/.test(process.env.NODE_DEBUG)) {
 exports.debug = debug // for test
 
 }).call(this,require('_process'))
-},{"_process":429,"assert":310,"events":381,"http":466,"https":397,"net":295,"safe-buffer":224,"tls":295,"util":477}],287:[function(require,module,exports){
+},{"_process":429,"assert":310,"events":381,"http":466,"https":397,"net":295,"safe-buffer":223,"tls":295,"util":477}],286:[function(require,module,exports){
 (function(nacl) {
 'use strict';
 
@@ -64947,7 +64780,7 @@ nacl.setPRNG = function(fn) {
 
 })(typeof module !== 'undefined' && module.exports ? module.exports : (self.nacl = self.nacl || {}));
 
-},{"crypto":314}],288:[function(require,module,exports){
+},{"crypto":314}],287:[function(require,module,exports){
 var v1 = require('./v1');
 var v4 = require('./v4');
 
@@ -64957,7 +64790,7 @@ uuid.v4 = v4;
 
 module.exports = uuid;
 
-},{"./v1":291,"./v4":292}],289:[function(require,module,exports){
+},{"./v1":290,"./v4":291}],288:[function(require,module,exports){
 /**
  * Convert array of 16 byte values to UUID string format of the form:
  * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
@@ -64982,7 +64815,7 @@ function bytesToUuid(buf, offset) {
 
 module.exports = bytesToUuid;
 
-},{}],290:[function(require,module,exports){
+},{}],289:[function(require,module,exports){
 // Unique ID creation requires a high quality random # generator.  In the
 // browser this is a little complicated due to unknown quality of Math.random()
 // and inconsistent support for the `crypto` API.  We do the best we can via
@@ -65016,7 +64849,7 @@ if (getRandomValues) {
   };
 }
 
-},{}],291:[function(require,module,exports){
+},{}],290:[function(require,module,exports){
 var rng = require('./lib/rng');
 var bytesToUuid = require('./lib/bytesToUuid');
 
@@ -65127,7 +64960,7 @@ function v1(options, buf, offset) {
 
 module.exports = v1;
 
-},{"./lib/bytesToUuid":289,"./lib/rng":290}],292:[function(require,module,exports){
+},{"./lib/bytesToUuid":288,"./lib/rng":289}],291:[function(require,module,exports){
 var rng = require('./lib/rng');
 var bytesToUuid = require('./lib/bytesToUuid');
 
@@ -65158,7 +64991,7 @@ function v4(options, buf, offset) {
 
 module.exports = v4;
 
-},{"./lib/bytesToUuid":289,"./lib/rng":290}],293:[function(require,module,exports){
+},{"./lib/bytesToUuid":288,"./lib/rng":289}],292:[function(require,module,exports){
 /*
  * verror.js: richer JavaScript errors
  */
@@ -65611,7 +65444,202 @@ WError.prototype.cause = function we_cause(c)
 	return (this.jse_cause);
 };
 
-},{"assert-plus":51,"core-util-is":98,"extsprintf":106,"util":477}],294:[function(require,module,exports){
+},{"assert-plus":50,"core-util-is":97,"extsprintf":105,"util":477}],293:[function(require,module,exports){
+var Promise = require('promise');
+var shexjs = require("shex");
+var n3 = require("n3");
+
+var DefaultBase = "";
+
+function Validator(schemaText, dataText, callbacks, options) {
+    this.callbacks = callbacks;
+    this.options = options;
+    
+    this.updateSchema(location.origin + '/schema.shex', schemaText);
+    this.updateData(dataText);
+}
+
+Validator.prototype = {
+    updateSchema: function (base, schemaText) {
+        this.schema = parseSchema(base ,schemaText);
+        this.schema.done(this.callbacks.schemaParsed, this.callbacks.schemaParseError);
+    },
+    updateData: function (dataText) {
+        this.data = parseData(dataText);
+        this.data.done(this.callbacks.dataParsed, this.callbacks.dataParseError);
+    },
+    findShapes: function () {
+        var _this = this;
+        return Promise.all([this.schema, this.data]).then(function (a) {
+            console.log('showing shapes');
+            console.log(this.schema);
+            console.log(this.data);
+        });
+    },
+    validate: function(startingNodes) {
+        var _this = this;
+        console.log('validate function',_this);
+        return Promise.all([this.schema, this.data, this.options]).then(function (a) {
+            console.log(a);
+            var node = Object.keys(a[2].resourceShapeMap)[0];
+            var result = shexjs.Validator.construct(a[0].schema).validate(a[1].db, node, a[2].resourceShapeMap[node]);
+            console.log('callbacks in validator',_this.callbacks);
+            console.log('db to validate',a[1].db)
+            // console.log('validation results:',result);
+            // return validator.validate(
+            //     a[0].schema,                       // Schema
+            //     a[0].resolver,
+            //     startingNodes,      // Starting Node
+            //     a[1].db,                       // db
+            //     a[1].resolver,
+            //     _this.options.closedShapes,
+            //     _this.callbacks.validationResult);
+            return cleanResult(result, a[1].triples, _this.callbacks.validationResult)
+        });
+    }
+};
+
+module.exports.Validator = Validator;
+
+function parseData(dataText){
+    console.log('split data');
+    console.log(dataText.split("\n"));
+    console.log('this',this);
+    return new Promise(function (resolve, reject) {
+        var lineIndex = new Object();
+        var db = n3.Store();
+        n3.Parser({documentIRI: DefaultBase}).parse(dataText, function (error, triple, prefixes) {
+            // console.log('db', db);
+            // console.log('DB');
+            console.log('triple callback')
+            if (error) {
+                // throw Error("error parsing " + data + ": " + error);
+                reject(parseN3Error(error));
+            } else if (triple) {
+                console.log("N3triple",triple);
+                lineIndex[JSON.stringify({'subject':triple.subject,'predicate':triple.predicate,'object':triple.object,'graph':triple.graph})] = triple.line;
+                // lineIndex[triple.line] = {'object':triple.object,'subject':triple.subject,'predicate':triple.predicate,'graph':triple.graph};
+                db.addTriple(triple);
+
+            } else {
+                var triples = db.getTriples();
+                for (var i = triples.length - 1; i >= 0; i--) {
+                    var triple_key = JSON.stringify({'subject':triples[i].subject,'predicate':triples[i].predicate,'object':triples[i].object,'graph':""});
+                    triples[i].line = lineIndex[triple_key];
+                }
+                resolve({db: db, triples:triples});
+            }
+        });
+        
+    });
+}
+
+function parseSchema(base, schemaText) {
+    return new Promise(function (resolve, reject) {
+        var schema;
+        try {
+            schema = shexjs.Parser.construct(base).parse(schemaText);
+        }
+        catch (e) {
+            reject(e);
+        }
+        resolve({schema: schema, shapes: schema.shapes});
+
+    });
+};
+
+function cleanResult(result, parsedTriples, callback){
+    console.log('validation result', result);
+    var errors = [];
+    var solutions = [];
+    if (result.type == 'Failure'){
+        errors = cleanErrors(parsedTriples, result);
+    } else {
+        solutions = result.solution;
+    }
+    var clean_result = {
+            errors: errors,
+            matches: solutions,
+            startingResource: result.node,
+            passed: errors.length === 0,
+            full_result:result
+        };
+    return callback(clean_result);
+}
+
+function parseN3Error(error) {
+    var line = error.message.match(/line [0-9]*/g);
+
+    line = (line && line.length > 0 && line[0].length > 5)?Number(line[0].substr(5)):null;
+
+    return {
+        message: error.message,
+        line: line,
+        column: 0
+    }
+}
+// returns the matched triples and the corresponding lines
+function cleanMatches(validationResult){
+    var results = []
+    if (validationResult.type == 'ShapeTest') {
+        cleanMatches(validationResult.solution);
+    }
+    else if (validationResult.type == 'EachOfSolutions') {
+
+    }
+    else if (validationResult.type == 'OneOfSolutions') {
+
+    }
+    else if (validationResult.type == 'TripleConstraintSolutions') {
+
+    }
+    else if (validationResult.type == 'TestedTriple') {
+
+    }
+    else if (validationResult instanceof Array){
+        for (var i = validationResult.length - 1; i >= 0; i--) {
+            cleanMatches(validationResult[i]);
+        }
+    }
+    return results
+}
+
+function cleanErrors(parsedTriples, validationResult){
+    var results = []
+    var errors = validationResult.errors;
+
+    for (var i = errors.length - 1; i >= 0; i--) {
+        if (errors[i].triple) {
+                console.log(errors[i].triple.subject,parsedTriples[2].subject,errors[i].triple.subject == parsedTriples[2].subject);
+                console.log(errors[i].triple.predicate,parsedTriples[2].predicate,errors[i].triple.predicate == parsedTriples[2].predicate);
+                console.log(errors[i].triple.object,parsedTriples[2].object,errors[i].triple.object == parsedTriples[2].object);
+            try {
+
+                
+
+                errors[i].line = parsedTriples.find(function (triple) { return triple.subject === errors[i].triple.subject &&
+                                                                            triple.predicate === errors[i].triple.predicate &&
+                                                                            triple.object === errors[i].triple.object; }).line;
+                errors[i].message = String(errors[i].type) + ' on line ' + String(errors[i].line);
+            }
+            catch(error){
+                console.error(error);
+            }
+
+        }
+        else if (validationResult.type == 'MissingProperty') {
+            console.log('missing property error');
+
+        }
+        else {
+            console.log('VALIDATION ERROR:',errors.type);
+        }
+        results.push(errors[i]);
+    }
+
+    return results
+}
+},{"n3":187,"promise":197,"shex":250}],294:[function(require,module,exports){
 /* 
     Build ShExValidator.js client side bundle using browserify with the following commands:
     cd /home/shex/ShExValidata
@@ -65621,7 +65649,7 @@ WError.prototype.cause = function we_cause(c)
 
 ShExValidator = require('ShEx-validator');
 
-},{"ShEx-validator":1}],295:[function(require,module,exports){
+},{"ShEx-validator":293}],295:[function(require,module,exports){
 
 },{}],296:[function(require,module,exports){
 var asn1 = exports;
@@ -94660,8 +94688,8 @@ function fn5 (a, b, c, d, e, m, k, s) {
 module.exports = RIPEMD160
 
 },{"buffer":345,"hash-base":383,"inherits":399}],456:[function(require,module,exports){
-arguments[4][224][0].apply(exports,arguments)
-},{"buffer":345,"dup":224}],457:[function(require,module,exports){
+arguments[4][223][0].apply(exports,arguments)
+},{"buffer":345,"dup":223}],457:[function(require,module,exports){
 var Buffer = require('safe-buffer').Buffer
 
 // prototype class for hash functions

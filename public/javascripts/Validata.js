@@ -291,7 +291,7 @@ Validata = {
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
                             var requirementLevel = 'REQ_LEVEL TODO';
                             // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
-                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(' '+rawError.type +' on line '+ rawError.line) ) + '</span>';
+                            var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.message) ) + '</span>';
 
                             errorsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +

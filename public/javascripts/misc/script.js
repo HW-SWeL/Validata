@@ -214,7 +214,27 @@ var context = {
   "image": {"@id": "http://schema.org/image", "@type": "@id"}
 };
 
+jsonld.compact(doc, context, function(err, compacted) {
+  console.log(JSON.stringify(compacted, null, 2));
+  compacted_doc = compacted;
+  /* Output:
+  {
+    "@context": {...},
+    "name": "Manu Sporny",
+    "homepage": "http://manu.sporny.org/",
+    "image": "http://manu.sporny.org/images/manu.png"
+  }
+  */
+});
+
 jsonld.toRDF(doc, {format: 'application/n-quads'}, (err, nquads) => {
+  if (nquads) {
+    console.log(nquads)
+  }
+});
+
+
+jsonld.toRDF(compacted_doc, {format: 'application/n-quads'}, (err, nquads) => {
   if (nquads) {
     console.log(nquads)
   }
