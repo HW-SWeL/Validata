@@ -65610,13 +65610,15 @@ function cleanErrors(parsedTriples, validationResult){
 
     for (var i = errors.length - 1; i >= 0; i--) {
         if (errors[i].triple) {
+                // if (errors[i].triple.object.type) {
+                //     errors[i].triple.object = errors[i].triple.object.value;
+                // }
                 console.log(errors[i].triple.subject,parsedTriples[2].subject,errors[i].triple.subject == parsedTriples[2].subject);
                 console.log(errors[i].triple.predicate,parsedTriples[2].predicate,errors[i].triple.predicate == parsedTriples[2].predicate);
                 console.log(errors[i].triple.object,parsedTriples[2].object,errors[i].triple.object == parsedTriples[2].object);
             try {
-
+                //shex validator gives object sometimes
                 
-
                 errors[i].line = parsedTriples.find(function (triple) { return triple.subject === errors[i].triple.subject &&
                                                                             triple.predicate === errors[i].triple.predicate &&
                                                                             triple.object === errors[i].triple.object; }).line;
