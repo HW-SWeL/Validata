@@ -243,8 +243,8 @@ jsonld.toRDF(compacted_doc, {format: 'application/n-quads'}, (err, nquads) => {
 
 var n3 = require('n3');
 var db = n3.Store();
-var parser = n3.Parser();
-parser.parse(dataText,function(error,quad,prefixes){
+var parser2 = n3.Parser();
+parser2.parse(dataText,function(error,quad,prefixes){
   if (error){
     console.log(error);
   } else if (quad){
@@ -253,4 +253,4 @@ parser.parse(dataText,function(error,quad,prefixes){
   } else {
     console.log(db.getQuads());
   }
-})
+});

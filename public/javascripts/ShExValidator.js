@@ -65607,7 +65607,7 @@ function cleanMatches(validationResult){
 function cleanErrors(parsedTriples, validationResult){
     var results = []
     var errors = validationResult.errors;
-
+    console.log('validationResult',validationResult);
     for (var i = errors.length - 1; i >= 0; i--) {
         if (errors[i].triple) {
                 // if (errors[i].triple.object.type) {
@@ -65616,25 +65616,76 @@ function cleanErrors(parsedTriples, validationResult){
                 console.log(errors[i].triple.subject,parsedTriples[2].subject,errors[i].triple.subject == parsedTriples[2].subject);
                 console.log(errors[i].triple.predicate,parsedTriples[2].predicate,errors[i].triple.predicate == parsedTriples[2].predicate);
                 console.log(errors[i].triple.object,parsedTriples[2].object,errors[i].triple.object == parsedTriples[2].object);
+
+                var pairs = [];
+
+
+
             try {
                 //shex validator gives object sometimes
                 
-                errors[i].line = parsedTriples.find(function (triple) { return triple.subject === errors[i].triple.subject &&
-                                                                            triple.predicate === errors[i].triple.predicate &&
-                                                                            triple.object === errors[i].triple.object; }).line;
-                errors[i].message = String(errors[i].type) + ' on line ' + String(errors[i].line);
+
+                var match = parsedTriples.find(function (triple) {
+                    var lookup = []
+                    if (typeof(errors[i].triple.subject) == 'string' ){
+                        if (triple.subject === errors[i].triple.subject){
+                            lookup.push(true)
+                        } else{
+                            return false
+                        }
+                    } else {
+                        lookup.push(true);
+                    }
+                    console.log('subject',errors[i].triple.subject);
+
+                    if (typeof(errors[i].triple.predicate) == 'string'){
+                        if (triple.predicate === errors[i].triple.predicate){
+                            lookup.push(true);
+                        } else {
+                            return false
+                        }
+                    }else {
+                        lookup.push(true);
+                    }
+                    
+                    console.log('predicate',errors[i].triple.predicate);
+                    
+                    if (typeof(errors[i].triple.object) == 'string'){
+                        if (triple.object === errors[i].triple.object){
+                            lookup.push(true);
+                        } else {
+                            return false
+                        }
+                    }else {
+                        lookup.push(true);
+                    }
+                    console.log('object',errors[i].triple.object);
+
+                    return lookup[0] == lookup[1] == lookup[2]
+                });
+                console.log('match',match);
+                errors[i].line = match.line;
+
+                errors[i].message = 'Type mismatch on line ' + String(errors[i].line) + ' in ' + String(validationResult.node);
             }
             catch(error){
                 console.error(error);
+                errors[i].message = ' Missing property ' + String(errors[i].property) + ' in ' + String(validationResult.node);
             }
 
         }
-        else if (validationResult.type == 'MissingProperty') {
-            console.log('missing property error');
+        else if (errors[i].type == 'MissingProperty') {
+            try {
+                errors[i].message = ' Missing property ' + String(errors[i].property) + ' in ' + String(validationResult.node);
+
+            }catch (error){
+                console.error(error);
+            }
+            console.log('missing property error',errors[i]);
 
         }
         else {
-            console.log('VALIDATION ERROR:',errors.type);
+            console.log('VALIDATION ERROR:',errors[i].type);
         }
         results.push(errors[i]);
     }
