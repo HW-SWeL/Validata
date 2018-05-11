@@ -65604,27 +65604,42 @@ function cleanMatches(validationResult){
     return results
 }
 
+function parseErrors(errors){
+    var results = [];
+    for (var i = errors.length - 1; i >= 0; i--) {
+        if (Array.isArray(errors[i])){
+            console.log('rec call',errors[i]);
+            Array.prototype.push.apply(results,parseErrors(errors[i]));
+
+        } else {
+            console.log('non rec call',errors[i]);
+            results.push(errors[i])
+        }
+    }
+    console.log('results',results);
+    return results
+}
+
 function cleanErrors(parsedTriples, validationResult){
     var results = []
-    var errors = validationResult.errors;
+    var errors = parseErrors(validationResult.errors);
+    console.log('errors',validationResult.errors);
+    //sometimes errors are in arrays of length one for some reason :/
+
+    console.log('errors',errors);
     console.log('validationResult',validationResult);
     for (var i = errors.length - 1; i >= 0; i--) {
-        if (errors[i].triple) {
+        if (errors[i].type == 'TypeMismatch'){
+            if (errors[i].triple) {
                 // if (errors[i].triple.object.type) {
                 //     errors[i].triple.object = errors[i].triple.object.value;
                 // }
-                console.log(errors[i].triple.subject,parsedTriples[2].subject,errors[i].triple.subject == parsedTriples[2].subject);
-                console.log(errors[i].triple.predicate,parsedTriples[2].predicate,errors[i].triple.predicate == parsedTriples[2].predicate);
-                console.log(errors[i].triple.object,parsedTriples[2].object,errors[i].triple.object == parsedTriples[2].object);
-
-                var pairs = [];
-
-
+                // console.log(errors[i].triple.subject,parsedTriples[2].subject,errors[i].triple.subject == parsedTriples[2].subject);
+                // console.log(errors[i].triple.predicate,parsedTriples[2].predicate,errors[i].triple.predicate == parsedTriples[2].predicate);
+                // console.log(errors[i].triple.object,parsedTriples[2].object,errors[i].triple.object == parsedTriples[2].object);
 
             try {
                 //shex validator gives object sometimes
-                
-
                 var match = parsedTriples.find(function (triple) {
                     var lookup = []
                     if (typeof(errors[i].triple.subject) == 'string' ){
@@ -65670,13 +65685,15 @@ function cleanErrors(parsedTriples, validationResult){
             }
             catch(error){
                 console.error(error);
-                errors[i].message = ' Missing property ' + String(errors[i].property) + ' in ' + String(validationResult.node);
+                // errors[i].message = ' Missing property ' + String(errors[i].property) + ' in ' + String(validationResult.node);
             }
 
+            }
         }
+
         else if (errors[i].type == 'MissingProperty') {
             try {
-                errors[i].message = ' Missing property ' + String(errors[i].property) + ' in ' + String(validationResult.node);
+                errors[i].message = ' Missing property ' + String(errors[i].property) ;
 
             }catch (error){
                 console.error(error);
