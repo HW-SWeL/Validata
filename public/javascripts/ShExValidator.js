@@ -65551,15 +65551,17 @@ function parseSchema(base, schemaText) {
 function cleanResult(result, parsedTriples, callback){
     console.log('validation result', result);
     var errors = [];
-    var solutions = [];
+    var matches = [];
     if (result.type == 'Failure'){
         errors = cleanErrors(parsedTriples, result);
     } else {
-        solutions = result.solution;
+        matches = cleanMatches(parsedTriples, result);
+        // console.log('result',result);
+        // console.log('matches',matches);
     }
     var clean_result = {
             errors: errors,
-            matches: solutions,
+            matches: matches,
             startingResource: result.node,
             passed: errors.length === 0,
             full_result:result
@@ -65579,28 +65581,54 @@ function parseN3Error(error) {
     }
 }
 // returns the matched triples and the corresponding lines
-function cleanMatches(validationResult){
-    var results = []
-    if (validationResult.type == 'ShapeTest') {
-        cleanMatches(validationResult.solution);
-    }
-    else if (validationResult.type == 'EachOfSolutions') {
+
+function cleanMatches(parsedTriples, validationResult){
+    var results = [];
+    var messages = [];
+    var matches = parseMatches(validationResult.solution);
+    for (var i = matches.length - 1; i >= 0; i--) {
+        var currentMatch = {};
+        currentMatch.line = matchTriple(parsedTriples, matches[i]).line;
+        currentMatch.subject = matches[i].subject;
+        currentMatch.predicate = matches[i].predicate;
+
+        if (matches[i].object.value && matches[i].object.type) {
+                currentMatch.object = '<type>:' +String(matches[i].object.type) +' <value>:'+ String(matches[i].object.value);
+
+
+        } else {
+            currentMatch.object = matches[i].object;
+        }
+            currentMatch.message = 'Matched '+ String(currentMatch.predicate)+' '+ String(currentMatch.object) + ' on line ' + String(currentMatch.line);
+
+        // console.log('cleanMatches',matches[i]);
+
+        if (!messages.includes(currentMatch.message)){
+            results.push(currentMatch);
+            messages.push(currentMatch.message);
+        }
 
     }
-    else if (validationResult.type == 'OneOfSolutions') {
+    // console.log('results returned',results);
+    return results
+}
 
-    }
-    else if (validationResult.type == 'TripleConstraintSolutions') {
-
-    }
-    else if (validationResult.type == 'TestedTriple') {
-
-    }
-    else if (validationResult instanceof Array){
-        for (var i = validationResult.length - 1; i >= 0; i--) {
-            cleanMatches(validationResult[i]);
+function parseMatches(solution){
+    var results = [];
+    var values = Object.values(solution)
+    // console.log('object values',values);
+    for (var i = values.length - 1; i >= 0; i--) {
+        if (values[i].subject && values[i].predicate && values[i].object){
+            // console.log('istriple',values[i]);            
+            results.push(values[i]);
+        }
+        else if (typeof(values[i]) == 'string'){
+            // console.log('string found',values[i])
+        } else {
+            Array.prototype.push.apply(results,parseMatches(values[i]));
         }
     }
+
     return results
 }
 
@@ -65620,8 +65648,59 @@ function parseErrors(errors){
     return results
 }
 
+function matchTriple(parsedTriples, keyTriple){
+    var match;
+
+    try {
+        match = parsedTriples.find(function (triple) {
+            var lookup = []
+            if (typeof(keyTriple.subject) == 'string' ){
+                if (triple.subject === keyTriple.subject){
+                    lookup.push(true)
+                } else{
+                    return false
+                }
+            } else {
+                lookup.push(true);
+            }
+            // console.log('subject',keyTriple.subject);
+
+            if (typeof(keyTriple.predicate) == 'string'){
+                if (triple.predicate === keyTriple.predicate){
+                    lookup.push(true);
+                } else {
+                    return false
+                }
+            }else {
+                lookup.push(true);
+            }
+            
+            // console.log('predicate',keyTriple.predicate);
+            
+            if (typeof(keyTriple.object) == 'string'){
+                if (triple.object === keyTriple.object){
+                    lookup.push(true);
+                } else {
+                    return false
+                }
+            }else {
+                lookup.push(true);
+            }
+            // console.log('object',keyTriple.object);
+
+            return lookup[0] == lookup[1] == lookup[2]
+        });
+    } catch (error) {
+        console.error(error);
+    }
+    console.log('keyTriple',keyTriple,'matchedTriple',match);
+
+    return match
+}
+
 function cleanErrors(parsedTriples, validationResult){
-    var results = []
+    var results = [];
+    var messages = [];
     var errors = parseErrors(validationResult.errors);
     console.log('errors',validationResult.errors);
     //sometimes errors are in arrays of length one for some reason :/
@@ -65704,7 +65783,11 @@ function cleanErrors(parsedTriples, validationResult){
         else {
             console.log('VALIDATION ERROR:',errors[i].type);
         }
-        results.push(errors[i]);
+        //check if the same error has been already parsed, as the validation library does produce duplicates
+        if (!messages.includes(errors[i].message)){
+            results.push(errors[i]);
+            messages.push(errors[i].message);
+        }
     }
 
     return results

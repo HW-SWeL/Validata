@@ -330,7 +330,7 @@ Validata = {
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
                             var requirementLevel = 'default';
                             // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
-                            var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.description) ) + '</span>';
+                            var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.message) ) + '</span>';
 
                             warningsResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
@@ -366,11 +366,11 @@ Validata = {
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'], function (index, rawMatch)
                         {   
                             console.log('rawmatch',index,rawMatch);
-                            var line = Util.isDefined(rawMatch.triple) ? rawMatch.triple.line : "";
+                            var line = Util.isDefined(rawMatch) ? rawMatch.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
                             var requirementLevel = 'default';
                             // var requirementLevel = Util.isDefined(rawMatch.rule.req_lev) ? " [" + Util.stringValue(rawMatch.rule.req_lev) + "] " : "";
-                            var messageBody = '<span class="validationResultsMatchMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawMatch.toString()) ) + '</span>';
+                            var messageBody = '<span class="validationResultsMatchMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawMatch.message) ) + '</span>';
 
                             matchesResourceSectionHTMLString +=
                                 '        <li class="list-group-item">' +
