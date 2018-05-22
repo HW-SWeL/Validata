@@ -365,7 +365,7 @@ Validata = {
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'], function (index, rawMatch)
                         {   
-                            console.log('rawmatch',index,rawMatch);
+                            // console.log('rawmatch',index,rawMatch);
                             var line = Util.isDefined(rawMatch) ? rawMatch.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
                             var requirementLevel = 'default';

@@ -88,7 +88,7 @@ n3.Parser({documentIRI: DefaultBase, format: "text/turtle"}).parse(dataText, fun
 });
 
 
-var shexc = "http://127.0.0.1:8888/doc/Issue.shex";
+var shexc = "http://127.0.0.1:8888/doc/Issue.shex"
 var shape = "http://127.0.0.1:8888/doc/IssueShape";
 var node = "http://127.0.0.1:8888/doc/Issue1";
 var shape = "http://127.0.0.1:8888/doc/IssueShape";

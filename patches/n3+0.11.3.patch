@@ -1,0 +1,270 @@
+patch-package
+--- a/node_modules/n3/lib/N3Parser.js
++++ b/node_modules/n3/lib/N3Parser.js
+@@ -337,7 +337,7 @@ N3Parser.prototype = {
+ 
+     // Store blank node triple
+     if (this._subject !== null)
+-      this._triple(this._subject, this._predicate, this._object, this._graph);
++      this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
+ 
+     // Restore the parent context containing this blank node
+     var empty = this._predicate === null;
+@@ -390,7 +390,7 @@ N3Parser.prototype = {
+       // If this list is contained within a parent list, return the membership triple here.
+       // This will be `<parent list element> rdf:first <this list>.`.
+       if (stack.length !== 0 && stack[stack.length - 1].type === 'list')
+-        this._triple(this._subject, this._predicate, this._object, this._graph);
++        this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
+       // Was this list the parent's subject?
+       if (this._predicate === null) {
+         // The next token is the predicate
+@@ -433,7 +433,7 @@ N3Parser.prototype = {
+     }
+     else {
+       // Continue the previous list with the current list
+-      this._triple(prevList, RDF_REST, list, this._graph);
++      this._triple(prevList, RDF_REST, list, this._graph, token.line);
+     }
+     // Add the item's value
+     if (item !== null) {
+@@ -447,7 +447,7 @@ N3Parser.prototype = {
+       }
+       // Output the item if it is complete
+       if (itemComplete)
+-        this._triple(list, RDF_FIRST, item, this._graph);
++        this._triple(list, RDF_FIRST, item, this._graph, token.line);
+       // Otherwise, save it for completion
+       else
+         this._object = item;
+@@ -487,7 +487,7 @@ N3Parser.prototype = {
+     // If this literal was part of a list, write the item
+     // (we could also check the context stack, but passing in a flag is faster)
+     if (listItem)
+-      this._triple(this._subject, RDF_FIRST, this._object, this._graph);
++      this._triple(this._subject, RDF_FIRST, this._object, this._graph, token.line);
+     // Continue with the rest of the input
+     if (suffix)
+       return this._getContextEndReader();
+@@ -504,7 +504,7 @@ N3Parser.prototype = {
+ 
+     // Store the last triple of the formula
+     if (this._subject !== null)
+-      this._triple(this._subject, this._predicate, this._object, this._graph);
++      this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
+ 
+     // Restore the parent context containing this formula
+     this._restoreContext();
+@@ -551,9 +551,9 @@ N3Parser.prototype = {
+     if (subject !== null) {
+       var predicate = this._predicate, object = this._object;
+       if (!inversePredicate)
+-        this._triple(subject, predicate, object,  graph);
++        this._triple(subject, predicate, object,  graph, token.line);
+       else
+-        this._triple(object,  predicate, subject, graph);
++        this._triple(object,  predicate, subject, graph, token.line);
+     }
+     return next;
+   },
+@@ -574,7 +574,7 @@ N3Parser.prototype = {
+       return this._error('Expected punctuation to follow "' + this._object + '"', token);
+     }
+     // A triple has been completed now, so return it
+-    this._triple(this._subject, this._predicate, this._object, this._graph);
++    this._triple(this._subject, this._predicate, this._object, this._graph, token.line);
+     return next;
+   },
+ 
+@@ -666,13 +666,13 @@ N3Parser.prototype = {
+       // If this is the first item, start a new quantifier list
+       if (this._subject === null)
+         this._triple(this._graph || '', this._predicate,
+-                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH);
++                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH, token.line);
+       // Otherwise, continue the previous list
+       else
+         this._triple(this._subject, RDF_REST,
+-                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH);
++                     this._subject = '_:b' + blankNodeCount++, QUANTIFIERS_GRAPH, token.line);
+       // Output the list item
+-      this._triple(this._subject, RDF_FIRST, entity, QUANTIFIERS_GRAPH);
++      this._triple(this._subject, RDF_FIRST, entity, QUANTIFIERS_GRAPH, token.line);
+     }
+     return this._readQuantifierPunctuation;
+   },
+@@ -686,7 +686,7 @@ N3Parser.prototype = {
+     else {
+       // With explicit quantifiers, close the quantifier list
+       if (this._explicitQuantifiers) {
+-        this._triple(this._subject, RDF_REST, RDF_NIL, QUANTIFIERS_GRAPH);
++        this._triple(this._subject, RDF_REST, RDF_NIL, QUANTIFIERS_GRAPH, token.line);
+         this._subject = null;
+       }
+       // Read a dot
+@@ -718,7 +718,7 @@ N3Parser.prototype = {
+         // Switch back to the context of the list
+         this._restoreContext();
+         // Output the list item
+-        this._triple(this._subject, RDF_FIRST, item, this._graph);
++        this._triple(this._subject, RDF_FIRST, item, this._graph, token.line);
+       }
+       return this._afterPath(token);
+     }
+@@ -754,7 +754,7 @@ N3Parser.prototype = {
+     else
+       object = this._object,  this._object  = subject;
+     // Emit the path's current triple and read its next section
+-    this._triple(subject, predicate, object, this._graph);
++    this._triple(subject, predicate, object, this._graph, token.line);
+     return this._readPath;
+   },
+ 
+@@ -775,9 +775,9 @@ N3Parser.prototype = {
+   },
+ 
+   // ### `_triple` emits a triple through the callback
+-  _triple: function (subject, predicate, object, graph) {
++  _triple: function (subject, predicate, object, graph,line) {
+     this._callback(null,
+-      { subject: subject, predicate: predicate, object: object, graph: graph || '' });
++      { subject: subject, predicate: predicate, object: object, graph: graph || '' ,line:line});
+   },
+ 
+   // ### `_error` emits an error message through the callback
+--- a/node_modules/n3/lib/N3Store.js
++++ b/node_modules/n3/lib/N3Store.js
+@@ -25,12 +25,20 @@ function N3Store(triples, options) {
+     options = triples, triples = null;
+   options = options || {};
+ 
++
++
+   // Add triples and prefixes if passed
+   this._prefixes = Object.create(null);
+   if (options.prefixes)
+     this.addPrefixes(options.prefixes);
+   if (triples)
+     this.addTriples(triples);
++  if (options.meta){
++    // console.log('metadata mode active',options);
++    this._metadata = Object.create(null);
++    this._metadata_index = Object.create(null);
++    this._mid = 0;
++  }
+ }
+ 
+ N3Store.prototype = {
+@@ -57,14 +65,18 @@ N3Store.prototype = {
+ 
+   // ### `_addToIndex` adds a triple to a three-layered index.
+   // Returns if the index has changed, if the entry did not already exist.
+-  _addToIndex: function (index0, key0, key1, key2) {
++  _addToIndex: function (index0, key0, key1, key2, mid) {
+     // Create layers as necessary
+     var index1 = index0[key0] || (index0[key0] = {});
+     var index2 = index1[key1] || (index1[key1] = {});
+     // Setting the key to _any_ value signals the presence of the triple
+     var existed = key2 in index2;
+     if (!existed)
+-      index2[key2] = null;
++      if (mid){
++        index2[key2] = mid;
++      }else{
++        index2[key2] = null;
++      }
+     return !existed;
+   },
+ 
+@@ -95,12 +107,10 @@ N3Store.prototype = {
+     var tmp, index1, index2, varCount = !key0 + !key1 + !key2,
+         // depending on the number of variables, keys or reverse index are faster
+         entityKeys = varCount > 1 ? Object.keys(this._ids) : this._entities;
+-
+     // If a key is specified, use only that part of index 0.
+     if (key0) (tmp = index0, index0 = {})[key0] = tmp[key0];
+     for (var value0 in index0) {
+       var entity0 = entityKeys[value0];
+-
+       if (index1 = index0[value0]) {
+         // If a key is specified, use only that part of index 1.
+         if (key1) (tmp = index1, index1 = {})[key1] = tmp[key1];
+@@ -112,10 +122,18 @@ N3Store.prototype = {
+             var values = key2 ? (key2 in index2 ? [key2] : []) : Object.keys(index2);
+             // Create triples for all items found in index 2.
+             for (var l = values.length - 1; l >= 0; l--) {
+-              var result = { subject: '', predicate: '', object: '', graph: graph };
++              if(this._metadata){
++                var result = { subject: '', predicate: '', object: '', graph: graph , meta:{}};
++                result.meta = this._metadata[index2[values[l]]];
++              } else {
++                var result = { subject: '', predicate: '', object: '', graph: graph };  
++              }
++
+               result[name0] = entity0;
+               result[name1] = entity1;
+               result[name2] = entityKeys[values[l]];
++
++
+               if (array)
+                 array.push(result);
+               else if (callback(result))
+@@ -209,22 +227,23 @@ N3Store.prototype = {
+     };
+   },
+ 
++
+   // ## Public methods
+ 
+   // ### `addTriple` adds a new N3 triple to the store.
+   // Returns if the triple index has changed, if the triple did not already exist.
+-  addTriple: function (subject, predicate, object, graph) {
++  addTriple: function (subject, predicate, object, graph, meta) {
+     // Shift arguments if a triple object is given instead of components
+-    if (!predicate)
++    if (!predicate) //if no predicate
+       graph = subject.graph, object = subject.object,
+-        predicate = subject.predicate, subject = subject.subject;
++        predicate = subject.predicate, subject = subject.subject, meta = subject.meta;
+ 
+     // Find the graph that will contain the triple
+     graph = graph || '';
+     var graphItem = this._graphs[graph];
+     // Create the graph if it doesn't exist yet
+     if (!graphItem) {
+-      graphItem = this._graphs[graph] = { subjects: {}, predicates: {}, objects: {} };
++      graphItem = this._graphs[graph] = { subjects: {}, predicates: {}, objects: {}};
+       // Freezing a graph helps subsequent `add` performance,
+       // and properties will never be modified anyway
+       Object.freeze(graphItem);
+@@ -235,13 +254,19 @@ N3Store.prototype = {
+     // which are then used as keys in the other indexes.
+     var ids = this._ids;
+     var entities = this._entities;
++
+     subject   = ids[subject]   || (ids[entities[++this._id] = subject]   = this._id);
+     predicate = ids[predicate] || (ids[entities[++this._id] = predicate] = this._id);
+     object    = ids[object]    || (ids[entities[++this._id] = object]    = this._id);
+     
+-    var changed = this._addToIndex(graphItem.subjects,   subject,   predicate, object);
+-    this._addToIndex(graphItem.predicates, predicate, object,    subject);
+-    this._addToIndex(graphItem.objects,    object,    subject,   predicate);
++    if (meta){
++      this._metadata[++this._mid] = meta;
++    }
++
++    var changed = this._addToIndex(graphItem.subjects,   subject,   predicate, object, this._mid);
++                  this._addToIndex(graphItem.predicates, predicate, object,    subject, this._mid);
++                  this._addToIndex(graphItem.objects,    object,    subject,   predicate, this._mid);
++                  
+ 
+     // The cached triple count is now invalid
+     this._size = null;
+@@ -276,6 +301,7 @@ N3Store.prototype = {
+     // Find internal identifiers for all components
+     // and verify the triple exists.
+     var graphItem, ids = this._ids, graphs = this._graphs, subjects, predicates;
++
+     if (!(subject    = ids[subject]) || !(predicate = ids[predicate]) ||
+         !(object     = ids[object])  || !(graphItem = graphs[graph])  ||
+         !(subjects   = graphItem.subjects[subject]) ||
