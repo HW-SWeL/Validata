@@ -1,5 +1,5 @@
 # Validata: RDF Validator using Shape Expressions
-Validata is an intuitive, standalone web-based tool to help building RDF documents by validating against preset schemas written in the Shape Expressions ([ShEx](http://shex.io/shex-primer/)) language.  
+Validata is an intuitive, standalone web-based tool to help building RDF documents by validating against preset schemas written in the Shape Expressions ([ShEx](http://shex.io/shex-primer/)) language..
 
 All functionality is implemented client-side, so it can be deployed in any web hosting environment with any web server which can serve static files.  
 
