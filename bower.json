@@ -30,5 +30,8 @@
     "bootstrap-tagsinput": "~0.4.2",
     "codemirror": "~5.1.0",
     "svg4everybody": "~1.0.0"
+  },
+  "resolutions": {
+    "jquery": "~2.1.3"
   }
 }
