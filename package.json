@@ -15,7 +15,8 @@
     "express": "~4.11.1",
     "morgan": "~1.5.1",
     "npm": "^5.7.1",
-    "serve-favicon": "~2.2.0"
+    "serve-favicon": "~2.2.0",
+    "detect-node":"~2.0.4"
   },
   "devDependencies": {
     "patch-package": "^5.1.1"
