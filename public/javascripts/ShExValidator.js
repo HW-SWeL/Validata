@@ -65258,7 +65258,7 @@ Validator.prototype = {
             var node = Object.keys(a[2].resourceShapeMap)[0];
             var validator = shexjs.Validator.construct(a[0].schema);
             try {
-                
+
                 var result = validator.validate(shexjs.Util.makeN3DB(a[1].db), node, a[2].resourceShapeMap[node]);
             } catch (error){
                 console.error(error);
@@ -65301,7 +65301,7 @@ function parseData(dataText){
                 resolve({db: db, triples:triples});
             }
         });
-        
+
     });
 }
 
@@ -65331,7 +65331,7 @@ function parseReqLevels(rawSchema, levels){
         }
     }
 
-    
+
     var lines = [];
     var result = {'data':'',lineRules:{}};
 
@@ -65398,8 +65398,9 @@ function cleanMatches(parsedTriples, validationResult){
 
         if (matches[i].object.value && matches[i].object.type) {
                 currentMatch.object = '<type>:' +String(matches[i].object.type) +' <value>:'+ String(matches[i].object.value);
-
-
+        }
+        else if (matches[i].object.value) {
+                currentMatch.object = '<value>:'+ String(matches[i].object.value);
         } else {
             currentMatch.object = matches[i].object;
         }
@@ -65423,7 +65424,7 @@ function parseMatches(solution){
     // console.log('object values',values);
     for (var i = values.length - 1; i >= 0; i--) {
         if (values[i].subject && values[i].predicate && values[i].object){
-            // console.log('istriple',values[i]);            
+            // console.log('istriple',values[i]);
             results.push(values[i]);
         }
         else if (typeof(values[i]) == 'string'){
@@ -65478,9 +65479,9 @@ function matchTriple(parsedTriples, keyTriple){
             }else {
                 lookup.push(true);
             }
-            
+
             // console.log('predicate',keyTriple.predicate);
-            
+
             if (typeof(keyTriple.object) == 'string'){
                 if (triple.object === keyTriple.object){
                     lookup.push(true);
@@ -65557,11 +65558,11 @@ function Validator(schemaText, dataText, callbacks, options) {
 
     this.callbacks = callbacks;
     this.options = options;
-    
-    this.updateSchema('schema.shex', schemaText); 
+
+    this.updateSchema('schema.shex', schemaText);
     if (isNode) {
         console.log("Running under Node.JS");
-        this.updateSchema('schema.shex', schemaText); 
+        this.updateSchema('schema.shex', schemaText);
     } else {
         this.updateSchema(location.origin + '/schema.shex', schemaText);
     }
@@ -65570,6 +65571,7 @@ function Validator(schemaText, dataText, callbacks, options) {
 }
 
 module.exports.Validator = Validator;
+
 },{"detect-node":289,"n3":186,"promise":196,"shex":248}],289:[function(require,module,exports){
 module.exports = false;
 

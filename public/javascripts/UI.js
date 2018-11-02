@@ -196,7 +196,9 @@ UI = {
             UI.dataSourceText.setSize("100%", old_height + 100);
         });
 
-
+        dataSourceTextarea.siblings(".CodeMirror-resize-inc-100").click(function (e){
+            
+        });
 
         UI.schemaSourceText = CodeMirror.fromTextArea(schemaSourceTextarea[0], {
             lineNumbers: true
