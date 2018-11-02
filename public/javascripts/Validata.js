@@ -122,7 +122,7 @@ Validata = {
         Validata.validator.validate(Validata.Validation.options.resourceShapeMap);
         console.log('called to validate');
     },
-    
+
     schemaParsedCallback: function schemaParsedCallback(responseObject)
     {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -167,7 +167,7 @@ Validata = {
         Validata.triggerValidationMessageUpdate();
     },
 
-    
+
 
     validationResultCallback: function validationResultCallback(resultObject)
     {
@@ -285,11 +285,11 @@ Validata = {
                             '    <ul class="list-group resourceShapeErrorsListGroup">';
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['errors'], function (index, rawError)
-                        {   
+                        {
                             console.log('raw_error',rawError);
                             var line = Util.isDefined(rawError.type) ? rawError.line : ""; //add line finder here
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
-                            var requirementLevel = 'REQ_LEVEL TODO';
+                            var requirementLevel = '';
                             // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
                             var messageBody = '<span class="validationResultsErrorMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.message) ) + '</span>';
 
@@ -310,43 +310,43 @@ Validata = {
                     }
 
                     // Add this resource to the warnings panel and actually print the warnings if we have some
-                    if (Util.iterableLength(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings']))
-                    {
-                        var warningsResourceSectionHTMLString =
-                            '<div class="panel-heading">' +
-                            '    <a data-toggle="collapse" href="#warningsResourceShape' + rawResponseIndex + '" class="panel-title">' +
-                            '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
-                            '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
-                            '        </svg>' +
-                            '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[Validata.Validation.rawResponses[0].startingResource]) + '</span>' +
-                            '    </a>' +
-                            '</div>' +
-                            '<div id="warningsResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
-                            '    <ul class="list-group resourceShapeWarningsListGroup">';
-
-                        $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings'], function (index, rawError)
-                        {
-                            var line = Util.isDefined(rawError.line) ? rawError.line : "";
-                            var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
-                            var requirementLevel = 'default';
-                            // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
-                            var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.message) ) + '</span>';
-
-                            warningsResourceSectionHTMLString +=
-                                '        <li class="list-group-item">' +
-                                '            <svg viewBox="0 24 24 24" class="svg-size-20px svg-path-warning" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
-                                '                <use xlink:href="/images/svg-sprite/svg-sprite-alert.svg#ic_warning_24px"></use>' +
-                                '            </svg>' +
-                                messageBody +
-                                '        </li>';
-                        });
-
-                        warningsResourceSectionHTMLString +=
-                            '    </ul>' +
-                            '</div>';
-
-                        $(warningsResourceSectionHTMLString).appendTo(UI.validationResultsWarningsResourceShapesPanel);
-                    }
+                    // if (Util.iterableLength(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings']))
+                    // {
+                    //     var warningsResourceSectionHTMLString =
+                    //         '<div class="panel-heading">' +
+                    //         '    <a data-toggle="collapse" href="#warningsResourceShape' + rawResponseIndex + '" class="panel-title">' +
+                    //         '        <svg viewBox="0 1416 24 24" class="svg-size-20px " xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+                    //         '            <use xlink:href="/images/svg-sprite/svg-sprite-action.svg#ic_input_24px"></use>' +
+                    //         '        </svg>' +
+                    //         '        <span class="validationResultsResourceShapeHeading">' + Util.escapeHtml(rawResponseStartingResourceString) + ' as ' + Util.escapeHtml(Validata.Validation.options.resourceShapeMap[Validata.Validation.rawResponses[0].startingResource]) + '</span>' +
+                    //         '    </a>' +
+                    //         '</div>' +
+                    //         '<div id="warningsResourceShape' + rawResponseIndex + '" class="panel-collapse collapse in">' +
+                    //         '    <ul class="list-group resourceShapeWarningsListGroup">';
+                    //
+                    //     $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['warnings'], function (index, rawError)
+                    //     {
+                    //         var line = Util.isDefined(rawError.line) ? rawError.line : "";
+                    //         var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
+                    //         var requirementLevel = 'default';
+                    //         // var requirementLevel = Util.isDefined(rawError.req_lev) ? " [" + Util.stringValue(rawError.req_lev) + "] " : "";
+                    //         var messageBody = '<span class="validationResultsWarningMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawError.message) ) + '</span>';
+                    //
+                    //         warningsResourceSectionHTMLString +=
+                    //             '        <li class="list-group-item">' +
+                    //             '            <svg viewBox="0 24 24 24" class="svg-size-20px svg-path-warning" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">' +
+                    //             '                <use xlink:href="/images/svg-sprite/svg-sprite-alert.svg#ic_warning_24px"></use>' +
+                    //             '            </svg>' +
+                    //             messageBody +
+                    //             '        </li>';
+                    //     });
+                    //
+                    //     warningsResourceSectionHTMLString +=
+                    //         '    </ul>' +
+                    //         '</div>';
+                    //
+                    //     $(warningsResourceSectionHTMLString).appendTo(UI.validationResultsWarningsResourceShapesPanel);
+                    // }
 
                     // Add this resource to the matches panel and actually print the matched rules if we have some
                     if (Util.iterableLength(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches']))
@@ -364,11 +364,11 @@ Validata = {
                             '    <ul class="list-group resourceShapeMatchesListGroup">';
 
                         $.each(validationMessagesByResourceShape[rawResponseStartingResourceString]['matches'], function (index, rawMatch)
-                        {   
+                        {
                             // console.log('rawmatch',index,rawMatch);
                             var line = Util.isDefined(rawMatch) ? rawMatch.line : "";
                             var clickableClass = Util.stringIsNotBlank(Util.stringValue(line)) ? "clickable" : "";
-                            var requirementLevel = 'default';
+                            var requirementLevel = '';
                             // var requirementLevel = Util.isDefined(rawMatch.rule.req_lev) ? " [" + Util.stringValue(rawMatch.rule.req_lev) + "] " : "";
                             var messageBody = '<span class="validationResultsMatchMessageBody ' + clickableClass + '" data-linenumber="' + Util.stringValue(line) + '">' + requirementLevel + Util.nl2br( Util.escapeHtml(rawMatch.message) ) + '</span>';
 
@@ -415,7 +415,7 @@ Validata = {
                     UI.activateWizardStep("Data", true);
                 }
             });
-            
+
             UI.validationResultsByErrorLevelAccordion.find('.validationResultsMatchMessageBody').on('click', function ()
             {
                 var lineNumber = $(this).data('linenumber');
@@ -439,43 +439,43 @@ Validata = {
                     UI.activateWizardStep("Data", true);
                 }
             });
-            
-            UI.validationResultsByErrorLevelAccordion.find('.validationResultsWarningMessageBody').on('click', function ()
-            {
-                var lineNumber = $(this).data('linenumber');
-                if (Util.stringIsNotBlank(lineNumber))
-                {
-                    if (UI.highlightedLineNumber)
-                    {
-                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
-                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-warning');
-                        UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-match');
-                        UI.highlightedLineNumber = false;
-                    }
 
-                    UI.dataSourceText.addLineClass(lineNumber - 1, 'background', 'line-warning');
-                    UI.highlightedLineNumber = lineNumber - 1;
-
-                    var lineCoords = UI.dataSourceText.charCoords({line: lineNumber, ch: 0}, "local").top;
-                    var middleHeight = UI.dataSourceText.getScrollerElement().offsetHeight / 2;
-                    UI.dataSourceText.scrollTo(null, lineCoords - middleHeight - 5);
-
-                    UI.activateWizardStep("Data", true);
-                }
-            });
+            // UI.validationResultsByErrorLevelAccordion.find('.validationResultsWarningMessageBody').on('click', function ()
+            // {
+            //     var lineNumber = $(this).data('linenumber');
+            //     if (Util.stringIsNotBlank(lineNumber))
+            //     {
+            //         if (UI.highlightedLineNumber)
+            //         {
+            //             UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
+            //             UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-warning');
+            //             UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-match');
+            //             UI.highlightedLineNumber = false;
+            //         }
+            //
+            //         UI.dataSourceText.addLineClass(lineNumber - 1, 'background', 'line-warning');
+            //         UI.highlightedLineNumber = lineNumber - 1;
+            //
+            //         var lineCoords = UI.dataSourceText.charCoords({line: lineNumber, ch: 0}, "local").top;
+            //         var middleHeight = UI.dataSourceText.getScrollerElement().offsetHeight / 2;
+            //         UI.dataSourceText.scrollTo(null, lineCoords - middleHeight - 5);
+            //
+            //         UI.activateWizardStep("Data", true);
+            //     }
+            // });
 
             UI.validationResultsErrorsCount.text(errorCount);
-            UI.validationResultsWarningsCount.text(warningCount);
+            // UI.validationResultsWarningsCount.text(warningCount);
             UI.validationResultsMatchesCount.text(matchesCount);
 
             if (errorCount)
             {
                 quickSummaryStatusResults = "Invalid";
             }
-            else if (warningCount)
-            {
-                quickSummaryStatusResults = "Warning";
-            }
+            // else if (warningCount)
+            // {
+            //     quickSummaryStatusResults = "Warning";
+            // }
             else if (matchesCount == 0)
             {
                 quickSummaryStatusResults = "Incomplete";

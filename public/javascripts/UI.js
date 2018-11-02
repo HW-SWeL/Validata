@@ -171,7 +171,7 @@ UI = {
     {
         var dataSourceTextarea = $('#dataSourceText');
         var schemaSourceTextarea = $('#schemaSourceText');
-        
+
         UI.dataSourceText = CodeMirror.fromTextArea(dataSourceTextarea[0], {
             lineNumbers: true,
             mode:"turtle"
@@ -181,7 +181,7 @@ UI = {
         {
             UI.triggerStaggeredContentChange();
         });
-        
+
         dataSourceTextarea.siblings(".CodeMirror-resize-sub-100").click(function (e)
         {
             var old_height = $(UI.dataSourceText.getWrapperElement()).height();
@@ -196,7 +196,7 @@ UI = {
             UI.dataSourceText.setSize("100%", old_height + 100);
         });
 
-        
+
 
         UI.schemaSourceText = CodeMirror.fromTextArea(schemaSourceTextarea[0], {
             lineNumbers: true
@@ -242,7 +242,7 @@ UI = {
 
         UI.schemaErrorAlert.fadeOut('fast').find('.sourceText').empty();
         UI.dataErrorAlert.fadeOut('fast').find('.sourceText').empty();
-        
+
         if(UI.highlightedLineNumber)
         {
             UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-error');
@@ -250,7 +250,7 @@ UI = {
             UI.dataSourceText.removeLineClass(UI.highlightedLineNumber, 'background', 'line-match');
             UI.highlightedLineNumber = false;
         }
-        
+
         Util.waitForFinalEvent(function waitForFinalEventCallback()
         {
             UI.staggeredContentChange();
@@ -318,7 +318,7 @@ UI = {
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
-        // Clear any demo buttons which were previously shown 
+        // Clear any demo buttons which were previously shown
         UI.demoPanelButtonGroup.empty();
 
         // Disable clicking the schema change again immediately
@@ -431,7 +431,7 @@ UI = {
 
         if (Util.iterableLength(Validata.Data.rawResponse.triples) &&
             Util.iterableLength(Validata.Schema.rawResponse.shapes)
-        )   
+        )
 
 
         {
@@ -456,13 +456,13 @@ UI = {
 
             var resourceSelectorCell = $('<td></td>').append(resourceSelector);
             resourceShapeRow.append(resourceSelectorCell);
-            
+
             $.each(Validata.Schema.rawResponse.shapes, function schemaResponseIterator(index, shape)
             {
                 // console.log('index, shape',shape);
                 shapeSelector.append('<option value="' + index + '">' + Util.escapeHtml(index) + '</option>');
             });
-            
+
             var shapeSelectorCell = $('<td></td>').append(shapeSelector);
             resourceShapeRow.append(shapeSelectorCell);
 
@@ -500,7 +500,7 @@ UI = {
         UI.resourceShapeMapTableBody.empty();
 
         if (Util.iterableLength(Validata.Validation.options.resourceShapeMap))
-        {   
+        {
             console.log('if in updateResourceShapeMapTable')
             $.each(Validata.Validation.options.resourceShapeMap, function (resource, shape)
             {
@@ -509,7 +509,7 @@ UI = {
                 {
                     return true;
                 }
-                
+
                 var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
 
                 resourceShapeSelectorRow
@@ -560,7 +560,7 @@ UI = {
             //         // resource = resource.replace(/[<>]/g, '');
 
             //         var resourceShapeSelectorRow = UI.generateResourceShapeSelectorRow();
-                    
+
             //         resourceShapeSelectorRow
             //             .find('select.resourceSelector')
             //             .find('option')
@@ -580,7 +580,7 @@ UI = {
             //         //         return $(this).val() == shape;
             //         //     })
             //         //     .prop('selected', true);
-                    
+
             //         UI.resourceShapeMapTableBody.append(resourceShapeSelectorRow);
             //     // }
             // });
