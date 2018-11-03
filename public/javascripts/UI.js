@@ -197,7 +197,7 @@ UI = {
         });
 
         dataSourceTextarea.siblings(".CodeMirror-resize-inc-100").click(function (e){
-            
+
         });
 
         UI.schemaSourceText = CodeMirror.fromTextArea(schemaSourceTextarea[0], {
@@ -300,7 +300,8 @@ UI = {
     updateEnteredData: function updateEnteredData()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
-
+            var data = UI.dataSourceText.getValue();
+            
         Validata.Data = {
             data: UI.dataSourceText.getValue(),
             parsed: false,
@@ -438,7 +439,7 @@ UI = {
 
         {
             // console.log('gen resources');
-            var resources = Validata.Data.rawResponse.db.getSubjectsByIRI()
+            var resources = Validata.Data.rawResponse.db.getSubjfectsByIRI()
             var resourceShapeRow = $('<tr></tr>').addClass('resourceShapeRow');
             var resourceSelector = $('<select></select>').addClass('resourceSelector form-control');
             var shapeSelector = $('<select></select>').addClass('shapeSelector form-control');
