@@ -65398,8 +65398,8 @@ function cleanMatches(parsedTriples, validationResult){
 
         if (matches[i].object.value && matches[i].object.type) {
                 currentMatch.object = '<type>:' +String(matches[i].object.type) +' <value>:'+ String(matches[i].object.value);
-        }
-        else if (matches[i].object.value) {
+
+        } else if (matches[i].object.value) {
                 currentMatch.object = '<value>:'+ String(matches[i].object.value);
         } else {
             currentMatch.object = matches[i].object;

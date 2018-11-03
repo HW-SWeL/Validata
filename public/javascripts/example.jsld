@@ -1,0 +1,99 @@
+{
+  "@context": {
+    "ns0": "http://purl.obolibrary.org/obo/so#",
+    "ns1": "http://semanticscience.org/resource/",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "schema": "http://schema.org/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@graph": [
+    {
+      "@id": "_:ub129bL25C25",
+      "schema:codeValue": "9606",
+      "schema:url": {
+        "@id": "http://purl.uniprot.org/taxonomy/9606"
+      }
+    },
+    {
+      "@id": "_:ub129bL10C17",
+      "@type": "schema:MedicalCode",
+      "schema:codeValue": "608232",
+      "schema:codingSystem": "OMIM"
+    },
+    {
+      "@id": "_:ub129bL5C1",
+      "@type": [
+        "http://purl.obolibrary.org/obo/PR_000000001",
+        "schema:BioChemEntity"
+      ],
+      "ns0:associated_with": {
+        "@id": "_:ub129bL7C23"
+      },
+      "ns1:SIO_000001": "http://pfam.xfam.org/clan/CL0001",
+      "ns1:SIO_010081": {
+        "@id": "_:ub129bL36C18"
+      },
+      "schema:additionalType": {
+        "@id": "ns1:SIO_010043"
+      },
+      "schema:alternateName": [
+        "JTK7",
+        "ABL"
+      ],
+      "schema:description": "Function: Non-receptor tyrosine-protein kinase that plays a role...",
+      "schema:identifier": {
+        "@id": "http://njh.me/P00519"
+      },
+      "schema:isContainedIn": {
+        "@id": "_:ub129bL23C24"
+      },
+      "schema:name": "ABL1",
+      "schema:url": {
+        "@id": "http://www.uniprot.org/uniprot/P00519"
+      }
+    },
+    {
+      "@id": "_:ub129bL36C18",
+      "@type": [
+        "schema:BioChemEntity",
+        "http://purl.obolibrary.org/obo/SO_0000704"
+      ],
+      "schema:identifier": {
+        "@id": "http://njh.me/ABL1"
+      },
+      "schema:name": "ABL1"
+    },
+    {
+      "@id": "_:ub129bL7C23",
+      "@type": "schema:MedicalCondition",
+      "schema:additionalType": {
+        "@id": "ns1:SIO_010299"
+      },
+      "schema:code": {
+        "@id": "_:ub129bL10C17"
+      },
+      "schema:name": "Leukemia, chronic myeloid (CML)",
+      "schema:sameAs": {
+        "@id": "http://purl.uniprot.org/mim/608232"
+      },
+      "schema:url": {
+        "@id": "http://www.uniprot.org/diseases/DI-03735"
+      }
+    },
+    {
+      "@id": "_:ub129bL23C24",
+      "@type": "schema:BioChemEntity",
+      "schema:categoryCode": {
+        "@id": "_:ub129bL25C25"
+      },
+      "schema:identifier": {
+        "@id": "http://njh.me/9606"
+      },
+      "schema:name": "Homo sapiens",
+      "schema:url": {
+        "@id": "http://www.uniprot.org/taxonomy/9606"
+      }
+    }
+  ]
+}
