@@ -30,7 +30,7 @@
     "bootstrap-tagsinput": "~0.4.2",
     "codemirror": "~5.1.0",
     "svg4everybody": "~1.0.0",
-    "is-json":"~2.0.1"
+    "is-json":"https://github.com/joaquimserafim/is-json/commit/88cf3ece3ab41b21dd6fac366ae4a85484470ed0"
   },
   "resolutions": {
     "jquery": "~2.1.3"
