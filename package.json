@@ -14,7 +14,7 @@
     "debug": "~2.1.1",
     "detect-node": "~2.0.4",
     "express": "~4.11.1",
-    "is-json": "git+https://github.com/joaquimserafim/is-json/commit/88cf3ece3ab41b21dd6fac366ae4a85484470ed0",
+    "is-json": "git@github.com:joaquimserafim/is-json.git#v2.0.1",
     "morgan": "~1.5.1",
     "n3": "git+https://github.com/rdfjs/N3.js.git#ff1fe8ee6926f8521a01b565d0994966e87febc7",
     "npm": "^5.7.1",
