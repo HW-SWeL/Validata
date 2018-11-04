@@ -6536,8 +6536,8 @@ function _setExports(ndebug) {
 
 module.exports = _setExports(process.env.NODE_NDEBUG);
 
-}).call(this,{"isBuffer":require("../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
-},{"../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399,"_process":428,"assert":306,"stream":464,"util":476}],51:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")},require('_process'))
+},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399,"_process":428,"assert":306,"stream":464,"util":476}],51:[function(require,module,exports){
 
 /*!
  *  Copyright 2010 LearnBoost <dev@learnboost.com>
@@ -13222,8 +13222,8 @@ CombinedStream.prototype._emitError = function(err) {
   this.emit('error', err);
 };
 
-}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399,"./defer.js":96,"delayed-stream":98,"stream":464,"util":476}],96:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
+},{"../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399,"./defer.js":96,"delayed-stream":98,"stream":464,"util":476}],96:[function(require,module,exports){
 (function (process,setImmediate){
 module.exports = defer;
 
@@ -13363,8 +13363,8 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 
-}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399}],98:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
+},{"../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399}],98:[function(require,module,exports){
 var Stream = require('stream').Stream;
 var util = require('util');
 
@@ -17333,8 +17333,8 @@ module.exports = {
 
 };
 
-}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399,"./utils":135,"assert-plus":50,"crypto":353,"http":465,"jsprim":145,"sshpk":267,"util":476}],135:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
+},{"../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399,"./utils":135,"assert-plus":50,"crypto":353,"http":465,"jsprim":145,"sshpk":267,"util":476}],135:[function(require,module,exports){
 // Copyright 2012 Joyent, Inc.  All rights reserved.
 
 var assert = require('assert-plus');
@@ -58921,8 +58921,8 @@ Key._oldVersionDetect = function (obj) {
 	return ([1, 0]);
 };
 
-}).call(this,{"isBuffer":require("../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399,"./algs":249,"./dhe":251,"./ed-compat":252,"./errors":253,"./fingerprint":254,"./formats/auto":255,"./formats/dnssec":256,"./formats/pem":258,"./formats/pkcs1":259,"./formats/pkcs8":260,"./formats/rfc4253":261,"./formats/ssh":263,"./formats/ssh-private":262,"./private-key":269,"./signature":270,"./utils":272,"assert-plus":50,"crypto":353}],269:[function(require,module,exports){
+}).call(this,{"isBuffer":require("../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js")})
+},{"../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/is-buffer/index.js":399,"./algs":249,"./dhe":251,"./ed-compat":252,"./errors":253,"./fingerprint":254,"./formats/auto":255,"./formats/dnssec":256,"./formats/pem":258,"./formats/pkcs1":259,"./formats/pkcs8":260,"./formats/rfc4253":261,"./formats/ssh":263,"./formats/ssh-private":262,"./private-key":269,"./signature":270,"./utils":272,"assert-plus":50,"crypto":353}],269:[function(require,module,exports){
 // Copyright 2017 Joyent, Inc.
 
 module.exports = PrivateKey;
@@ -61947,7 +61947,7 @@ module.exports={
   "_args": [
     [
       "tough-cookie@2.4.3",
-      "/home/nikita/Documents/vd/Validata/node_modules/ShEx-validator"
+      "/home/nikita/Documents/vd/vtest/Validata/node_modules/ShEx-validator"
     ]
   ],
   "_from": "tough-cookie@2.4.3",
@@ -61971,7 +61971,7 @@ module.exports={
   ],
   "_resolved": "https://registry.npmjs.org/tough-cookie/-/tough-cookie-2.4.3.tgz",
   "_spec": "2.4.3",
-  "_where": "/home/nikita/Documents/vd/Validata/node_modules/ShEx-validator",
+  "_where": "/home/nikita/Documents/vd/vtest/Validata/node_modules/ShEx-validator",
   "author": {
     "name": "Jeremy Stashewsky",
     "email": "jstash@gmail.com"
