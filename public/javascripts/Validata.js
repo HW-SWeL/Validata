@@ -149,6 +149,10 @@ Validata = {
         Log.v("Validata." + Log.getInlineFunctionTrace(arguments, arguments.callee));
 
         Validata.Data.rawResponse = responseObject;
+        if (Validata.Data.rawResponse.turtledata != ''){
+          UI.dataSourceText.setValue(Validata.Data.rawResponse.turtledata);
+          UI.turtledata = Validata.Data.rawResponse.turtledata;
+        }
         Validata.Data.parsed = true;
 
         if (Validata.Schema.parsed)

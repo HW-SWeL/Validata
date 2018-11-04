@@ -1,5 +1,7 @@
 UI = {
-
+    jslddata : "",
+    turtledata : "",
+    showjsld : false,
     documentReady: function documentReady()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -296,19 +298,29 @@ UI = {
             UI["wizardStepPanel" + newStepName][0].scrollIntoView();
         }
     },
-
+    isJSON: function isJSON(str)
+    {
+      try {
+          return (JSON.parse(str) && !!str);
+      } catch (e) {
+          return false;
+      }
+    },
     updateEnteredData: function updateEnteredData()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
             var data = UI.dataSourceText.getValue();
 
-        // if isJson(UI.dataSourceText.getValue()){
+
+        if (UI.isJSON(data)){
           // UI.dataSourceText.mode({name: "javascript", json: true});
-          // console.log('json detected in UI');
-        // } else {
+          UI.dataSourceText.setOption("mode", 'jsld');
+          UI.jslddata = data;
+          console.log('json detected in UI');
+        } else {
           // UI.dataSourceText.mode({name: "turtle"});
           UI.dataSourceText.setOption("mode", 'turtle');
-        // }
+        }
 
         Validata.Data = {
             data: data,
