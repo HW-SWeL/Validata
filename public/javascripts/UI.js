@@ -173,8 +173,8 @@ UI = {
         var schemaSourceTextarea = $('#schemaSourceText');
 
         UI.dataSourceText = CodeMirror.fromTextArea(dataSourceTextarea[0], {
-            lineNumbers: true,
-            mode:"turtle"
+            lineNumbers: true//,
+            // mode:"turtle"
         });
 
         UI.dataSourceText.on('change', function schemaSelectorChange()
@@ -301,9 +301,17 @@ UI = {
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
             var data = UI.dataSourceText.getValue();
-            
+
+        // if isJson(UI.dataSourceText.getValue()){
+          // UI.dataSourceText.mode({name: "javascript", json: true});
+          // console.log('json detected in UI');
+        // } else {
+          // UI.dataSourceText.mode({name: "turtle"});
+          UI.dataSourceText.setOption("mode", 'turtle');
+        // }
+
         Validata.Data = {
-            data: UI.dataSourceText.getValue(),
+            data: data,
             parsed: false,
             errors: [],
             rawResponse: {}
