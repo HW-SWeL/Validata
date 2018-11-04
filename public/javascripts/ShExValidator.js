@@ -65231,7 +65231,7 @@ var shexjs = require("shex");
 var n3 = require("n3");
 var isNode = require('detect-node');
 var DefaultBase = "";
-// var isJson = require('is-json');
+var jsld = require('jsonld')
 
 
 
@@ -65272,11 +65272,34 @@ Validator.prototype = {
     }
 };
 
+function isJSON(str) {
+    try {
+        return (JSON.parse(str) && !!str);
+    } catch (e) {
+        return false;
+    }
+}
+
 function parseData(dataText){
     return new Promise(function (resolve, reject) {
         var lineIndex = new Object();
         var db = n3.Store({meta:true});
-        n3.Parser({documentIRI: DefaultBase}).parse(dataText, function (error, triple, prefixes) {
+        var turtledata = '';
+        var inputData = '';
+        if (isJSON(dataText)) {
+          console.log('json-ld passed to shex-validator');
+          var doc = JSON.parse(dataText);
+          jsld.toRDF(doc, {format: 'application/nquads'}, function(err, nquads) {
+            console.log(nquads);
+            console.log(err);
+            turtledata = nquads;
+            inputData = nquads;
+          });
+        } else {
+          inputData = dataText;
+        }
+
+        n3.Parser({documentIRI: DefaultBase}).parse(inputData, function (error, triple, prefixes) {
             // console.log('db', db);
             // console.log('DB');
             // console.log('triple callback')
@@ -65299,7 +65322,7 @@ function parseData(dataText){
                     var triple_key = JSON.stringify({'subject':triples[i].subject,'predicate':triples[i].predicate,'object':triples[i].object,'graph':""});
                     triples[i].line = lineIndex[triple_key];
                 }
-                resolve({db: db, triples:triples});
+                resolve({db: db, triples:triples, turtledata:turtledata});
             }
         });
 
@@ -65575,7 +65598,7 @@ function Validator(schemaText, dataText, callbacks, options) {
 
 module.exports.Validator = Validator;
 
-},{"detect-node":289,"n3":186,"promise":196,"shex":248}],289:[function(require,module,exports){
+},{"detect-node":289,"jsonld":144,"n3":186,"promise":196,"shex":248}],289:[function(require,module,exports){
 module.exports = false;
 
 

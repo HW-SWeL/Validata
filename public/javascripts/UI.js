@@ -1,7 +1,7 @@
 UI = {
-    jslddata : "",
-    turtledata : "",
-    showjsld : false,
+    // jslddata : "",
+    // turtledata : "",
+    // showjsld : false,
     documentReady: function documentReady()
     {
         Log.v("UI." + Log.getInlineFunctionTrace(arguments, arguments.callee));
@@ -314,12 +314,12 @@ UI = {
 
         if (UI.isJSON(data)){
           // UI.dataSourceText.mode({name: "javascript", json: true});
-          UI.dataSourceText.setOption("mode", 'jsld');
-          UI.jslddata = data;
+          // UI.dataSourceText.setOption("mode", 'jsld');
+          // UI.jslddata = data;
           console.log('json detected in UI');
         } else {
           // UI.dataSourceText.mode({name: "turtle"});
-          UI.dataSourceText.setOption("mode", 'turtle');
+          // UI.dataSourceText.setOption("mode", 'turtle');
         }
 
         Validata.Data = {
