@@ -65231,6 +65231,7 @@ var shexjs = require("shex");
 var n3 = require("n3");
 var isNode = require('detect-node');
 var DefaultBase = "";
+// var isJson = require('is-json');
 
 
 
@@ -65301,6 +65302,8 @@ function parseData(dataText){
                 resolve({db: db, triples:triples});
             }
         });
+
+
 
     });
 }

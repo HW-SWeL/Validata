@@ -447,7 +447,7 @@ UI = {
 
         {
             // console.log('gen resources');
-            var resources = Validata.Data.rawResponse.db.getSubjfectsByIRI()
+            var resources = Validata.Data.rawResponse.db.getSubjectsByIRI()
             var resourceShapeRow = $('<tr></tr>').addClass('resourceShapeRow');
             var resourceSelector = $('<select></select>').addClass('resourceSelector form-control');
             var shapeSelector = $('<select></select>').addClass('shapeSelector form-control');
