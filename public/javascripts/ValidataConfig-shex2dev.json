@@ -1,0 +1,36 @@
+{
+  "schemas": [
+    {
+      "default": true,
+      "enabled": true,
+      "name": "Alasdair's",
+      "description": "test schema and data",
+      "creationDate": 1442235319,
+      "data": "# Validation shapes for Protein resources\r\n# Enforces Protein Specification version 0.4\r\n# http:\/\/bioschemas.org\/specifications\/Protein\/specification\/\r\n\r\nPREFIX schema: <http:\/\/schema.org\/>\r\nPREFIX bs: <http:\/\/bioschemas.org\/>\r\n\r\nPREFIX rdf: <http:\/\/www.w3.org\/1999\/02\/22-rdf-syntax-ns#> \r\nPREFIX rdfs: <http:\/\/www.w3.org\/2000\/01\/rdf-schema#> \r\nPREFIX xsd: <http:\/\/www.w3.org\/2001\/XMLSchema#> \r\n\r\nPREFIX so: <http:\/\/purl.obolibrary.org\/obo\/SO_> \r\nPREFIX soProp: <http:\/\/purl.obolibrary.org\/obo\/so#> \r\nPREFIX sio: <http:\/\/semanticscience.org\/resource\/SIO_> \r\nPREFIX pr: <http:\/\/purl.obolibrary.org\/obo\/PR_> \r\n\r\n<ProteinMinimum>{\r\n  $bs:minimum (\r\n    rdf:type [schema:BioChemEntity] ;\r\n    rdf:type [pr:000000001] ;\r\n    (\r\n      schema:identifier xsd:string |\r\n      schema:identifier IRI |\r\n      schema:identifier schema:PropertyValue |\r\n      schema:identifier schema:Text |\r\n      schema:identifier schema:URL\r\n    ) + ;\r\n    (\r\n      schema:name xsd:string |\r\n      schema:name schema:Text\r\n    ) +\r\n  ) ;\r\n}\r\n\r\n<ProteinRecommended> {\r\n  $bs:recommended (\r\n    &bs:minimum ;\r\n    (\r\n      schema:description xsd:string |\r\n      schema:description schema:Text\r\n    ) + ;\r\n    (\r\n      schema:image IRI |\r\n      schema:image schema:ImageObject |\r\n      schema:image schema:URL\r\n    ) * ;\r\n    (\r\n      schema:url IRI |\r\n      schema:url schema:URL\r\n    ) + ;\r\n    (\r\n      schema:isContainedIn IRI |\r\n      schema:isContainedIn BNODE |\r\n      schema:isContainedIn schema:BioChemEntity |\r\n      schema:isContainedIn schema:URL\r\n    ) + ;\r\n    (\r\n      sio:010081 IRI |\r\n      sio:010081 BNODE |\r\n      sio:010081 schema:BioChemEntity |\r\n      sio:010081 @<Gene>\r\n    ) + ;\r\n    (\r\n      soProp:associated_with IRI |\r\n      soProp:associated_with BNODE |\r\n      soProp:associated_with schema:URL |\r\n      soProp:associated_with schema:MedicalCondition\r\n    ) *\r\n  ) ;\r\n}\r\n\r\n<ProteinOptional> {\r\n  &bs:recommended ;\r\n  (\r\n    schema:additionalType IRI |\r\n    schema:additionaType schema:URL\r\n  ) * ;\r\n  (\r\n    schema:alternateName xsd:string |\r\n    schema:alternateName schema:Text\r\n  ) * ;\r\n  (\r\n    schema:sameAs IRI |\r\n    schema:sameAs schema:URL\r\n  ) * ;\r\n  (\r\n    schema:mainEntityOfPage IRI |\r\n    schema:mainEntityOfPage schema:CreativeWork |\r\n    schema:mainEntityOfPage schema:URL\r\n  ) * ;\r\n  (\r\n    schema:contains IRI |\r\n    schema:contains schema:BioChemEntity |\r\n    schema:contains schema:URL\r\n  ) * \r\n}\r\n\r\n<Gene> {\r\n  rdf:type [schema:BioChemEntity] ;\r\n  rdf:type [so:0000704] \r\n}",
+      "dataDemos": [
+        {
+          "name": "Data Example",
+          "data": "@prefix schema: <http:\/\/schema.org\/> .\r\n@prefix ns0: <http:\/\/purl.obolibrary.org\/obo\/so#> .\r\n@prefix xsd: <http:\/\/www.w3.org\/2001\/XMLSchema#> .\r\n@prefix ns1: <http:\/\/semanticscience.org\/resource\/> .\r\n\r\n[]\r\n  a schema:BioChemEntity, <http:\/\/purl.obolibrary.org\/obo\/PR_000000001> ;\r\n  ns0:associated_with [\r\n    a schema:MedicalCondition ;\r\n    schema:additionalType <http:\/\/semanticscience.org\/resource\/SIO_010299> ;\r\n    schema:code [\r\n      a schema:MedicalCode ;\r\n      schema:codeValue \"608232\"^^xsd:string ;\r\n      schema:codingSystem \"OMIM\"^^xsd:string\r\n    ] ;\r\n    schema:name \"Leukemia, chronic myeloid (CML)\"^^xsd:string ;\r\n    schema:sameAs <http:\/\/purl.uniprot.org\/mim\/608232> ;\r\n    schema:url <http:\/\/www.uniprot.org\/diseases\/DI-03735>\r\n  ] ;\r\n  schema:additionalType <http:\/\/semanticscience.org\/resource\/SIO_010043> ;\r\n  schema:alternateName \"ABL\"^^xsd:string, \"JTK7\"^^xsd:string ;\r\n  schema:description \"Function: Non-receptor tyrosine-protein kinase that plays a role...\"^^xsd:string ;\r\n  schema:identifier <http:\/\/njh.me\/P00519> ;\r\n  schema:isContainedIn [\r\n    a schema:BioChemEntity ;\r\n    schema:categoryCode [\r\n      schema:codeValue \"9606\"^^xsd:string ;\r\n      schema:url <http:\/\/purl.uniprot.org\/taxonomy\/9606>\r\n    ] ;\r\n    schema:identifier <http:\/\/njh.me\/9606> ;\r\n    schema:name \"Homo sapiens\"^^xsd:string ;\r\n    schema:url <http:\/\/www.uniprot.org\/taxonomy\/9606>\r\n  ] ;\r\n  schema:name \"ABL1\"^^xsd:string ;\r\n  schema:url <http:\/\/www.uniprot.org\/uniprot\/P00519> ;\r\n  ns1:SIO_000001 \"http:\/\/pfam.xfam.org\/clan\/CL0001\"^^xsd:string ;\r\n  ns1:SIO_010081 [\r\n    a schema:BioChemEntity, <http:\/\/purl.obolibrary.org\/obo\/SO_0000704> ;\r\n    schema:identifier <http:\/\/njh.me\/ABL1> ;\r\n    schema:name \"ABL1\"^^xsd:string\r\n  ] ."
+        }
+      ]
+    },
+    {
+      "default": true,
+      "enabled": true,
+      "name": "Eric Default",
+      "description": "Default",
+      "creationDate": 1518297355,
+      "data": "#BASE <http://base.example/#>\nPREFIX ex: <http://ex.example/#>\nPREFIX foaf: <http://xmlns.com/foaf/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\nPREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nstart = <IssueShape>  # Issue validation starts with <IssueShape>\n<IssueShape> {# An <IssueShape> has:\n    ex:state [ex:unassigned            # state which is\nex:assigned], #   unassigned or assigned.\nex:reportedBy @<UserShape>,        # reported by a <UserShape>.\nex:reportedOn xsd:dateTime,        # reported some date/time.\n(\nex:reproducedBy @<EmployeeShape>, #   reproduced by someone\nex:reproducedOn xsd:dateTime#   at some data/time.\n)?,\nex:related @<IssueShape>*# n related issues.\n}\n<UserShape> {                        # A <UserShape> has:\n    (                                  # either\n       foaf:name xsd:string            #   a FOAF name\n     |                                 #  or\n       foaf:givenName xsd:string+,     #   one or more givenNames\n       foaf:familyName xsd:string),    #   and one familyName.\n    foaf:mbox IRI                      # one FOAF mbox.\n}\n<EmployeeShape> { # An <EmployeeShape> has:\n    foaf:givenName xsd:string+,        # at least one givenName.\n    foaf:familyName xsd:string,        # one familyName.\n    foaf:phone IRI*,                   # any number of phone numbers.\n    foaf:mbox IRI                      # one FOAF mbox.\n}",
+      "dataDemos": [
+        {
+          "name": "Erics shex.js demo",
+          "data": "\nPREFIX ex: <http://ex.example/#>\nPREFIX foaf: <http://xmlns.com/foaf/>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n<Issue1>\nex:state   ex:unassigned ;\nex:reportedBy   <User2> ;\nex:reportedOn   \"2013-01-23T10:18:00\"^^xsd:dateTime ;\nex:reproducedBy <Thompson.J> ;\nex:reproducedOn \"2013-01-23T11:00:00\"^^xsd:dateTime ; .\n<User2>\n    foaf:givenName \"Bob\" ;foaf:familyName \"Smith\";foaf:mbox <mailto:bob@example.org>.\n<Thompson.J>\nfoaf:givenName \"Joe\", \"Joseph\" ;\n    foaf:familyName \"Thompson\" ;\n    foaf:phone <tel:+456> ;    foaf:mbox <mailto:joe@example.org>."
+        }
+      ]
+    }
+  ],
+  "options": {
+    "showSourceButton": true,
+    "allowCustomSchema": false
+  }
+}

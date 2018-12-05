@@ -1,0 +1,22 @@
+{
+  "schemas": [
+    {
+      "default": true,
+      "enabled": true,
+      "name": "Dataset Profile",
+      "description": "Validates input data against the Bioschemas Dataset Profile version 0.2",
+      "creationDate": 1544009346,
+      "data": "# Validation shapes for Dataset resources\r\n# Enforces Dataset Specification version 0.2\r\n# http:\/\/bioschemas.org\/specifications\/Dataset\r\n\r\nPREFIX schema: <http:\/\/schema.org\/>\r\nPREFIX bs: <http:\/\/bioschemas.org\/>\r\n\r\nPREFIX rdf: <http:\/\/www.w3.org\/1999\/02\/22-rdf-syntax-ns#>\r\nPREFIX rdfs: <http:\/\/www.w3.org\/2000\/01\/rdf-schema#>\r\nPREFIX xsd: <http:\/\/www.w3.org\/2001\/XMLSchema#>\r\n\r\n<DatasetMinimum>{\r\n  $bs:minimum (\r\n    rdf:type [schema:Dataset] ;\r\n    (\r\n      schema:description schema:Text |\r\n      schema:description xsd:string\r\n    ) ;\r\n    (\r\n      schema:identifier xsd:string |\r\n      schema:identifier IRI |\r\n      schema:identifier schema:PropertyValue |\r\n      schema:identifier schema:Text |\r\n      schema:identifier schema:URL\r\n    ) + ;\r\n    (\r\n      schema:keywords xsd:string |\r\n      schema:keywords schema:Text\r\n    ) ;\r\n    (\r\n      schema:name xsd:string |\r\n      schema:name schema:Text\r\n    ) ;\r\n    (\r\n      schema:url IRI |\r\n      schema:url schema:URL\r\n    ) ;\r\n  ) ;\r\n}\r\n\r\n<DatasetRecommended> {\r\n  $bs:recommended (\r\n    &bs:minimum ;\r\n    schema:citation schema:Text\r\n  ) ;\r\n}",
+      "dataDemos": [
+        {
+          "name": "BioSamples Dataset Example",
+          "data": "{\r\n    \"@context\": \"http:\/\/schema.org\",\r\n    \"@type\": \"Dataset\",\r\n    \"@id\": \"https:\/\/www.ebi.ac.uk\/biosamples\/samples\",\r\n    \"description\": \"BioSamples stores and supplies descriptions and metadata about biological samples used in research and development by academia and industry. Samples are either 'reference' samples (e.g. from 1000 Genomes, HipSci, FAANG) or have been used in an assay database such as the European Nucleotide Archive (ENA) or ArrayExpress.\",\r\n    \"includedInDataCatalog\": {\r\n        \"@id\": \"https:\/\/www.ebi.ac.uk\/biosamples\",\r\n        \"@type\": \"DataCatalog\"\r\n    },\r\n    \"name\": \"Sample collection\",\r\n    \"url\": \"https:\/\/www.ebi.ac.uk\/biosamples\/samples\"\r\n}"
+        }
+      ]
+    }
+  ],
+  "options": {
+    "showSourceButton": true,
+    "allowCustomSchema": false
+  }
+}
