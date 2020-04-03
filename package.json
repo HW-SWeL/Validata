@@ -14,7 +14,7 @@
     "debug": "~2.1.1",
     "detect-node": "~2.0.4",
     "express": "~4.11.1",
-    "morgan": "~1.5.1",
+    "morgan": "~1.10.0",
     "n3": "git+https://github.com/rdfjs/N3.js.git#ff1fe8ee6926f8521a01b565d0994966e87febc7",
     "npm": "^5.7.1",
     "serve-favicon": "~2.2.0"
