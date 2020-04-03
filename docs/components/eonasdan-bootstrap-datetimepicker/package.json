@@ -18,7 +18,7 @@
     "moment"
   ],
   "dependencies": {
-    "moment": "~2.8.2",
+    "moment": "~2.24.0",
 	"bootstrap": "^3.0",
     "jquery": "latest"
   },
